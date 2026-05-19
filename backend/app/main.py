@@ -1,0 +1,59 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.db.session import engine, Base, SessionLocal
+from app.models.user import PromptPolicy
+
+# Import all models so they register with Base
+import app.models.user  # noqa
+
+from app.api.routes.auth import router as auth_router
+from app.api.routes.users import router as users_router
+from app.api.routes.geo_domain import geo_router, domain_router, subdomain_router
+from app.api.routes.security import sg_router, rls_router, cls_router
+from app.api.routes.guardrails import router as guardrails_router
+from app.api.routes.chat import router as chat_router
+from app.api.routes.config import slm_router, db_router
+
+app = FastAPI(title="SLM Application API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Create tables on startup (use alembic migrations in production)
+Base.metadata.create_all(bind=engine)
+
+# Cache for guardrails
+app.state.guardrails = []
+
+@app.on_event("startup")
+async def load_guardrails():
+    db = SessionLocal()
+    try:
+        app.state.guardrails = db.query(PromptPolicy).filter(
+            PromptPolicy.is_active == True
+        ).order_by(PromptPolicy.priority).all()
+    finally:
+        db.close()
+
+app.include_router(auth_router,       prefix="/api/auth",            tags=["Auth"])
+app.include_router(users_router,      prefix="/api/users",           tags=["Users"])
+app.include_router(geo_router,        prefix="/api/geographies",     tags=["Geography"])
+app.include_router(domain_router,     prefix="/api/domains",         tags=["Domains"])
+app.include_router(subdomain_router,  prefix="/api/subdomains",      tags=["SubDomains"])
+app.include_router(sg_router,         prefix="/api/security-groups", tags=["Security Groups"])
+app.include_router(rls_router,        prefix="/api/rls",             tags=["RLS"])
+app.include_router(cls_router,        prefix="/api/cls",             tags=["CLS"])
+app.include_router(guardrails_router, prefix="/api/guardrails",      tags=["Guardrails"])
+app.include_router(chat_router,       prefix="/api/chats",           tags=["Chat"])
+app.include_router(slm_router,        prefix="/api/slm-config",      tags=["SLM Config"])
+app.include_router(db_router,         prefix="/api/db-connections",  tags=["DB Connections"])
+
+
+@app.get("/")
+def root():
+    return {"message": "SLM Application API", "docs": "/docs"}

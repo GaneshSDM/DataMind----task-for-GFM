@@ -1,0 +1,1689 @@
+/* ═══════════════════════════════════════════════════════════════
+   Sentra Design System — Design Token Definitions
+   Reskinned to Meta "Dolly" Store design language.
+   Every existing token name is preserved so components don't break;
+   only the values are remapped to Meta palette / scale.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Fonts (Montserrat stands in for Optimistic VF — same geometric-humanist feel) ── */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ═══════════════════════════════════════════════════════════════
+   LIGHT MODE — :root
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+
+  /* ── Font Families ── */
+  --font-display: 'Montserrat', 'Optimistic Display', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  --font-body:    'Montserrat', 'Optimistic Text', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  /* OpenType stylistic sets — Montserrat supports ss01/ss02 */
+  --font-feature-display: 'ss01', 'ss02';
+
+  /* ── Page & Background Colors (Meta light palette) ── */
+  --bg-base:     #FFFFFF;   /* White — primary page canvas */
+  --bg-surface:  #FFFFFF;   /* White — card surface */
+  --bg-elevated: #F7F8FA;   /* Warm Gray — flat card bg */
+  --bg-overlay:  #FFFFFF;   /* Modals, popovers */
+  --bg-subtle:   #F1F4F7;   /* Soft Gray — secondary sections */
+  --bg-muted:    #DEE3E9;   /* Divider Gray — disabled states */
+  --bg-header:   rgba(241, 244, 247, 0.80); /* Frosted nav */
+  --toggle-thumb: #FFFFFF;  /* Toggle knob — always white for contrast */
+
+  /* Meta surface accents for sectioned backgrounds */
+  --bg-linen:        #F2F0E6;   /* Lifestyle-adjacent sections */
+  --bg-baby-blue:    #E8F3FF;   /* Info highlight */
+  --bg-web-wash:     #F0F2F5;   /* Deemphasized footer areas */
+  --bg-dark-section: #1C1E21;   /* Standard dark product section */
+  --bg-quest-dark:   #181A1B;   /* Quest dark surface */
+  --bg-pure-black:   #000000;   /* Max-contrast display */
+
+  /* ── Brand & Accent Colors (Meta Blue takes over from violet/coral) ── */
+  --brand-violet:            #0064E0;   /* remapped → Meta Blue */
+  --brand-violet-light:      #47A5FA;   /* Meta Blue Light */
+  --brand-violet-dim:        rgba(0, 100, 224, 0.06);
+  --brand-coral:             #D6311F;   /* remapped → Ray-Ban Red (secondary accent) */
+  --brand-coral-light:       #E5564A;
+  --gradient-brand:          linear-gradient(135deg, #0064E0 0%, #47A5FA 100%);
+  --gradient-brand-btn:      linear-gradient(135deg, rgba(0, 100, 224, 0.92) 0%, rgba(71, 165, 250, 0.92) 100%);
+  --gradient-cyan-light:     linear-gradient(135deg, #47A5FA 0%, #0064E0 100%);
+  --gradient-cyan-btn:       linear-gradient(135deg, rgba(71, 165, 250, 0.15) 0%, rgba(0, 100, 224, 0.15) 100%);
+
+  --brand-primary:           #0064E0;
+  --brand-primary-rgb:       0, 100, 224;
+  --brand-secondary:         #1877F2;   /* Facebook Blue (deemphasized) */
+  --brand-secondary-rgb:     24, 119, 242;
+
+  --accent-primary:          #0064E0;   /* Meta Blue */
+  --accent-primary-hover:    #0143B5;
+  --accent-primary-pressed:  #004BB9;
+  --accent-primary-subtle:   rgba(0, 100, 224, 0.07);
+  --accent-primary-muted:    rgba(0, 100, 224, 0.12);
+  --accent-secondary:        #1877F2;
+  --accent-secondary-subtle: rgba(24, 119, 242, 0.08);
+  --theme-color:             var(--accent-primary);
+  --badge-bg:                transparent;
+  --badge-text:              var(--theme-color);
+  --badge-border:            var(--theme-color);
+
+  /* Meta product-specific accents (opt-in via direct usage) */
+  --meta-rayban-red:     #D6311F;
+  --meta-oculus-purple:  #A121CE;
+  --meta-work-purple:    #6441D2;
+  --meta-portal-navy:    #1B365D;
+  --meta-portal-hero:    #C8E4E8;
+  --meta-portal-light:   #ADD4E0;
+
+  /* FDS Base Color Spectrum — categorical chart palette + plugin accents
+     (Sentra is a centralized monitor for many support apps; each integration
+      can claim one of these for visual identity without inventing new hex) */
+  --fds-cherry:   #F3425F;
+  --fds-grape:    #9360F7;
+  --fds-lime:     #45BD62;
+  --fds-seafoam:  #54C7EC;
+  --fds-teal:     #2ABBA7;
+  --fds-tomato:   #FB724B;
+  --fds-pink:     #FF66BF;
+
+  /* Plugin / Provider tile tokens (centralized monitoring surfaces) */
+  --plugin-card-bg:           var(--bg-surface);
+  --plugin-card-border:       var(--border-default);
+  --plugin-card-hover-border: var(--accent-primary);
+  --plugin-icon-bg:           var(--bg-elevated);
+  --plugin-icon-size:         40px;
+
+  /* Disabled button state (Dolly spec) */
+  --btn-disabled-bg:   #DEE3E9;
+  --btn-disabled-text: #8595A4;
+
+  /* Skeleton / Glimmer loader (enterprise async placeholder) */
+  --skeleton-bg:       #979A9F;
+  --skeleton-radius:   8px;
+
+  /* ═══════════════════════════════════════════════════════════════
+     UNIFIED DASHBOARD SYSTEM — Insights pages
+     (Executive / Operations / Infrastructure / Data Platform /
+      Application / Custom) all follow this token layer.
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* Shell */
+  --dashboard-shell-py:   var(--page-py);
+  --dashboard-shell-px:   var(--page-px);
+  --dashboard-shell-gap:  var(--section-gap);
+  --dashboard-shell-maxw: 1600px;
+
+  /* Header (title row + actions) */
+  --dashboard-header-gap:       var(--space-3);
+  --dashboard-header-mb:        var(--space-4);
+  --dashboard-title-size:       var(--text-xl);
+  --dashboard-title-weight:     var(--fw-bold);
+  --dashboard-title-color:      var(--text-primary);
+  --dashboard-title-tracking:   var(--ls-tight);
+  --dashboard-subtitle-size:    var(--text-sm);
+  --dashboard-subtitle-color:   var(--text-tertiary);
+
+  /* Section label (above a group of cards) */
+  --dashboard-section-label-size:     var(--text-xs);
+  --dashboard-section-label-weight:   var(--fw-bold);
+  --dashboard-section-label-color:    var(--text-secondary);
+  --dashboard-section-label-tracking: 0.06em;
+  --dashboard-section-gap:            var(--space-3);
+
+  /* Cards (KPI + chart + table) */
+  --dashboard-card-bg:            var(--bg-surface);
+  --dashboard-card-border:        var(--border-default);
+  --dashboard-card-radius:        var(--radius-md);
+  --dashboard-card-shadow:        var(--shadow-card);
+  --dashboard-card-hover-shadow:  var(--shadow-hover);
+  --dashboard-card-padding:       16px 20px;
+  --dashboard-card-title-size:    var(--text-sm);
+  --dashboard-card-title-weight:  var(--fw-semibold);
+  --dashboard-card-title-color:   var(--text-primary);
+  --dashboard-card-title-mb:      var(--space-3);
+
+  /* KPI accent rail (left-border style used across dashboards) */
+  --dashboard-kpi-rail-width:     2px;
+  --dashboard-kpi-rail-primary:   var(--accent-primary);
+  --dashboard-kpi-rail-success:   var(--color-success);
+  --dashboard-kpi-rail-warning:   var(--color-warning);
+  --dashboard-kpi-rail-error:     var(--color-error);
+  --dashboard-kpi-rail-neutral:   var(--border-strong);
+  --dashboard-kpi-label-family:   var(--metric-label-family);
+  --dashboard-kpi-label-size:     var(--metric-label-size);
+  --dashboard-kpi-label-weight:   var(--metric-label-weight);
+  --dashboard-kpi-label-tracking: var(--metric-label-tracking);
+  --dashboard-kpi-label-line:     var(--metric-label-lh);
+  --dashboard-kpi-value-family:   var(--metric-value-family);
+  --dashboard-kpi-value-size:     var(--metric-value-size);
+  --dashboard-kpi-value-weight:   var(--metric-value-weight);
+  --dashboard-kpi-value-tracking: var(--metric-value-tracking);
+  --dashboard-kpi-value-line:     var(--metric-value-lh);
+  --dashboard-kpi-meta-family:    var(--font-body);
+  --dashboard-kpi-meta-size:      var(--text-xs);
+  --dashboard-kpi-meta-weight:    var(--fw-medium);
+  --dashboard-kpi-meta-line:      var(--lh-snug);
+
+  --dashboard-kpi-tint-primary-bg: var(--accent-primary-subtle);
+  --dashboard-kpi-tint-success-bg: var(--color-success-muted);
+  --dashboard-kpi-tint-warning-bg: var(--color-warning-muted);
+  --dashboard-kpi-tint-error-bg:   var(--color-error-muted);
+
+  /* Chart frame */
+  --dashboard-chart-padding:    var(--space-4) var(--space-5);
+  --dashboard-chart-title-mb:   var(--space-3);
+  --dashboard-chart-h-sm:       180px;
+  --dashboard-chart-h-md:       260px;
+  --dashboard-chart-h-lg:       320px;
+  --cp-requests-card-hover-shadow: 0 4px 10px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --cp-requests-card-hover-border: var(--border-default);
+
+  /* Table inside dashboard */
+  --dashboard-table-bg:           var(--bg-surface);
+  --dashboard-table-header-bg:    var(--bg-subtle);
+  --dashboard-table-header-color: var(--text-secondary);
+  --dashboard-table-row-hover:    var(--bg-elevated);
+  --dashboard-table-border:       var(--border-subtle);
+
+  /* ── Text Colors (Meta hierarchy) ── */
+  --text-primary:     #1C2B33;   /* Dolly Dark Charcoal */
+  --text-secondary:   #5D6C7B;   /* Slate Gray */
+  --text-tertiary:    #65676B;   /* FDS secondary */
+  --text-placeholder: #8595A4;   /* CTA disabled text tone */
+  --text-inverse:     #FFFFFF;
+  --text-brand:       #0064E0;
+  --text-icon-secondary: #465A69;
+  --text-section-header: #4B4C4F;
+  --text-button-default: #444950;
+
+  /* ── Border Colors ── */
+  --border-subtle:  rgba(10, 19, 23, 0.08);
+  --border-default: #DEE3E9;   /* Dolly Divider Gray */
+  --border-strong:  #CBD2D9;   /* CTA gray border */
+  --border-brand:   rgba(0, 100, 224, 0.22);
+  --border-focus:   rgba(0, 100, 224, 0.35);
+
+  /* ── Semantic Colors ── */
+  --color-success:        #007D1E;   /* Dolly store success */
+  --color-success-muted:  rgba(0, 125, 30, 0.09);
+  --color-warning:        #F7B928;   /* Meta warning amber */
+  --color-warning-muted:  rgba(247, 185, 40, 0.12);
+  --color-warning-hover:  rgba(247, 185, 40, 0.20);  /* hover / pressed intensity */
+  --color-error:          #C80A28;   /* Dolly store error */
+  --color-error-muted:    rgba(200, 10, 40, 0.09);
+  --color-error-hover:    rgba(200, 10, 40, 0.16);   /* hover / pressed intensity */
+  --color-info:           #0064E0;
+  --bg-success:           rgba(36, 228, 0, 0.12);
+  --bg-warning:           rgba(255, 226, 0, 0.14);
+  --bg-error:             rgba(255, 123, 145, 0.14);
+  --bg-info:              #E8F3FF;    /* Baby Blue */
+  --border-success:       rgba(0, 125, 30, 0.25);
+  --border-warning:       rgba(247, 185, 40, 0.30);
+  --border-error:         rgba(200, 10, 40, 0.25);
+  --border-info:          rgba(0, 100, 224, 0.25);
+
+  /* ── Severity (remapped onto Meta palette) ── */
+  --severity-critical: #C80A28;
+  --severity-high:     #D6311F;
+  --severity-medium:   #F7B928;
+  --severity-low:      #1877F2;
+  --severity-info:     #0064E0;
+
+  /* ── Shadows & Elevation (Meta dual-shadow pattern) ── */
+  --shadow-xs:             0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm:             0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-card:           0 2px 4px rgba(0, 0, 0, 0.10);
+  --shadow-card-prominent: 0 12px 28px 0 rgba(0, 0, 0, 0.20), 0 2px 4px 0 rgba(0, 0, 0, 0.10);
+  --shadow-hover:          0 12px 28px 0 rgba(0, 0, 0, 0.20), 0 2px 4px 0 rgba(0, 0, 0, 0.10);
+  --shadow-header:         0 1px 0 rgba(0, 0, 0, 0.06);
+  --shadow-modal:          0 24px 60px rgba(0, 0, 0, 0.22), 0 4px 12px rgba(0, 0, 0, 0.10);
+  --shadow-sidebar:        1px 0 0 var(--sidebar-border);
+
+  /* ── Border Radius (Meta: no sharp corners; pill-forward) ── */
+  --radius-sm: 8px;     /* Inputs, small UI */
+  --radius-md: 12px;    /* Mid-size chips */
+  --radius-lg: 20px;    /* Standard cards (--card-corner-radius) */
+  --radius-xl: 24px;    /* Feature/product cards */
+  --radius-pill: 100px; /* Pill buttons, tags, badges */
+
+  /* ── Sidebar Tokens (stay light, Meta-ized) ── */
+  --sidebar-bg:            #FFFFFF;
+  --sidebar-border:        rgba(0, 0, 0, 0.08);
+  --sidebar-hover:         #F1F4F7;
+  --sidebar-active:        #E8F3FF;
+  --sidebar-active-hover:  #DCEBFF;
+  --sidebar-active-text:   #0064E0;
+  --sidebar-icon-default:  #465A69;
+  --sidebar-icon-active:   #0064E0;
+  --sidebar-text-default:  #1C2B33;
+  --sidebar-text-active:   #0064E0;
+  --sidebar-section-label: #5D6C7B;
+
+  /* ── Easing Tokens ── */
+  --ease-out:    cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-in:     cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-inout:  cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Timing Tokens ── */
+  --t-fast:   150ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --t-normal: 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --t-slow:   300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* ── Button Shadows (Meta — soft/flat) ── */
+  --shadow-btn:                   0 1px 2px rgba(0, 100, 224, 0.15);
+  --shadow-btn-hover:             0 2px 6px rgba(0, 100, 224, 0.22), 0 4px 12px rgba(0, 100, 224, 0.12);
+  --shadow-btn-active:            0 1px 2px rgba(0, 100, 224, 0.25);
+  --shadow-btn-secondary:         0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-btn-secondary-hover:   0 2px 6px rgba(0, 0, 0, 0.10);
+  --shadow-btn-secondary-active:  0 1px 2px rgba(0, 0, 0, 0.15);
+
+  /* ── Unified Button Tokens ── */
+  --button-radius-default:        18px;
+  --button-min-height:            42px;
+  --button-padding-y:             10px;
+  --button-padding-x:             24px;
+  --button-gap:                   var(--space-2);
+  --button-font-size:             13px;
+  --button-font-weight:           var(--fw-semibold);
+  --button-primary-bg:            var(--accent-primary);
+  --button-primary-hover-bg:      var(--accent-primary-hover);
+  --button-primary-active-bg:     var(--accent-primary-pressed);
+  --button-primary-text:          var(--text-inverse);
+  --button-primary-border:        transparent;
+  --button-primary-shadow:        var(--shadow-btn);
+  --button-primary-shadow-hover:  var(--shadow-btn-hover);
+  --button-primary-shadow-active: var(--shadow-btn-active);
+  --button-neutral-bg:            var(--bg-surface);
+  --button-neutral-hover-bg:      var(--bg-elevated);
+  --button-neutral-active-bg:     var(--bg-muted);
+  --button-neutral-text:          var(--text-primary);
+  --button-neutral-border:        var(--border-default);
+  --button-neutral-border-hover:  var(--border-strong);
+  --button-neutral-shadow:        var(--shadow-xs);
+  --button-muted-bg:              var(--bg-muted);
+  --button-muted-hover-bg:        var(--bg-elevated);
+  --button-muted-active-bg:       var(--bg-muted);
+  --button-muted-text:            var(--text-secondary);
+  --button-muted-border:          var(--border-default);
+
+  /* ── Button Shine Overlay ── */
+  --gradient-btn-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, transparent 100%);
+
+  /* ── Severity Badge Backgrounds & Rings ── */
+  --severity-badge-fg:      #0064E0;
+  --severity-badge-bg:      #E8F3FF;
+  --severity-badge-ring:    rgba(0, 100, 224, 0.25);
+  --severity-critical-bg:   rgba(200, 10, 40, 0.10);
+  --severity-critical-ring: rgba(200, 10, 40, 0.35);
+  --severity-high-bg:       rgba(214, 49, 31, 0.10);
+  --severity-high-ring:     rgba(214, 49, 31, 0.35);
+  --severity-medium-bg:     rgba(247, 185, 40, 0.14);
+  --severity-medium-ring:   rgba(247, 185, 40, 0.40);
+  --severity-low-bg:        rgba(24, 119, 242, 0.10);
+  --severity-low-ring:      rgba(24, 119, 242, 0.30);
+  --severity-info-bg:       #E8F3FF;
+  --severity-info-ring:     rgba(0, 100, 224, 0.25);
+
+  /* ── NavBadge Rings ── */
+  --nav-badge-error-ring:   rgba(200, 10, 40, 0.22);
+  --nav-badge-warning-ring: rgba(247, 185, 40, 0.30);
+
+  /* ── Overlay Backdrop ── */
+  --overlay-backdrop: rgba(0, 0, 0, 0.60);  /* Meta modal overlay */
+
+  /* ── Control Plane Overview ── */
+  --cp-overview-timeline-bg:          var(--bg-elevated);
+  --cp-overview-timeline-border-width: 1px;
+  --cp-overview-timeline-border:      var(--border-default);
+  --cp-overview-timeline-text:        var(--text-primary);
+  --cp-overview-badge-bg:             rgba(0, 100, 224, 0.08);
+  --cp-overview-badge-text:           #0064E0;
+  --cp-overview-badge-border:         rgba(0, 100, 224, 0.25);
+  --cp-overview-badge-hover-bg:       #DCEBFF;
+  --cp-overview-badge-hover-border:   rgba(0, 100, 224, 0.35);
+  --cp-overview-badge-hover-text:     #0143B5;
+
+  /* ── Typography Scale (Meta Dolly sizes, kept dashboard-dense) ── */
+  --text-2xs:    10px;
+  --text-xs:     12px;
+  --text-sm:     13px;
+  --text-md:     14px;   /* Body compact / UI label */
+  --text-base:   16px;   /* Body compact */
+  --text-lg:     18px;   /* Body / H3 */
+  --text-xl:     20px;
+  --text-2xl:    24px;
+  --text-3xl:    28px;   /* Heading 2 */
+  --text-4xl:    36px;   /* Heading 1 */
+  --text-5xl:    48px;   /* Display 2 */
+  --text-6xl:    64px;   /* Display 1 */
+
+  --fw-light:     300;
+  --fw-regular:   400;
+  --fw-medium:    500;
+  --fw-semibold:  600;
+  --fw-bold:      700;
+  --fw-extrabold: 800;
+
+  --lh-tight:   1.16;
+  --lh-snug:    1.28;
+  --lh-normal:  1.44;
+  --lh-loose:   1.50;
+
+  --ls-tighter: -0.02em;
+  --ls-tight:   -0.01em;
+  --ls-normal:  0em;
+  --ls-wide:    0.04em;
+  --ls-wider:   0.08em;
+
+  /* ── Extended Semantic Tokens ── */
+  --text-heading-strong:  var(--text-primary);
+  --text-muted:           var(--text-tertiary);
+  --brand-blue-light:     #47A5FA;
+  --brand-blue:           #0064E0;
+  --brand-blue-deep:      #0143B5;
+  --brand-purple-accent:  #A121CE;
+  --brand-blue-50:        rgba(0, 100, 224, 0.05);
+  --brand-blue-100:       rgba(0, 100, 224, 0.10);
+  --brand-blue-200:       rgba(0, 100, 224, 0.16);
+  --accent-soft:          rgba(0, 100, 224, 0.10);
+  --accent-softer:        rgba(0, 100, 224, 0.05);
+  --badge-accent-bg:      rgba(0, 100, 224, 0.10);
+  --badge-accent-text:    #0064E0;
+  --ai-primary:           var(--accent-primary);
+  --ai-primary-hover:     var(--accent-primary-hover);
+  --ai-success:           var(--color-success);
+  --ai-warning:           var(--color-warning);
+  --ai-surface:           var(--bg-surface);
+  --ai-elevated:          var(--bg-elevated);
+  --ai-subtle:            var(--bg-subtle);
+  --deployment-kpi-icon-color:  var(--text-secondary);
+  --deployment-uptime-color:    var(--text-primary);
+  --deployment-table-bg:                var(--security-card-bg);
+  --deployment-table-border:            var(--security-card-border);
+  --deployment-table-shadow:            var(--security-card-shadow);
+  --deployment-table-radius:            var(--radius-md);
+  --deployment-table-header-bg:         var(--security-card-header-bg);
+  --deployment-table-header-padding:    var(--space-4) var(--space-6) 13px;
+  --deployment-table-title-family:      var(--security-card-title-family);
+  --deployment-table-title-size:        var(--security-card-title-size);
+  --deployment-table-title-weight:      var(--security-card-title-weight);
+  --deployment-table-title-color:       var(--security-card-title-color);
+  --deployment-table-title-line:        var(--security-card-title-line);
+  --deployment-table-title-spacing:     var(--ls-tight);
+  --deployment-table-head-bg:           var(--security-card-header-bg);
+  --deployment-table-head-size:         var(--text-xs);
+  --deployment-table-head-weight:       var(--fw-semibold);
+  --deployment-table-head-spacing:      var(--ls-wide);
+  --deployment-table-row-padding-y:     var(--space-4);
+  --deployment-table-hover-bg:          var(--governance-hover-bg);
+  --ai-studio-card-hover-border:  var(--border-default);
+  --ai-studio-card-hover-shadow:  0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -4px rgba(0, 0, 0, 0.10);
+  --ai-studio-surface-hover-bg:   transparent;
+
+  /* ── Spacing Scale (8px grid) ── */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-7:   32px;
+  --space-8:   40px;
+  --space-9:   48px;
+  --space-10:  64px;
+  --space-11:  80px;
+
+  /* ── Chart Color Palette (Meta: blue-led, crisp) ── */
+  --chart-1: #0064E0;
+  --chart-2: #47A5FA;
+  --chart-3: #007D1E;
+  --chart-4: #F7B928;
+  --chart-5: #D6311F;
+  --chart-6: #A121CE;
+  --chart-7: #1877F2;
+  --chart-8: #6441D2;
+
+  /* Mist palette (kept for pastel chart mode) */
+  --chart-purple-mist: #E8F3FF;
+  --chart-blue-mist:   #bfdbfe;
+  --chart-green-mist:  #bbf7d0;
+  --chart-orange-mist: #fed7aa;
+  --chart-pink-mist:   #fbcfe8;
+  --chart-teal-mist:   #99f6e4;
+  --chart-amber-mist:  #fde68a;
+  --chart-red-mist:    #fecaca;
+
+  --chart-purple-soft: #E8F3FF;
+  --chart-blue-soft:   #bfdbfe;
+  --chart-green-soft:  #bbf7d0;
+  --chart-orange-soft: #fed7aa;
+  --chart-pink-soft:   #fbcfe8;
+  --chart-teal-soft:   #99f6e4;
+  --chart-amber-soft:  #fde68a;
+  --chart-red-soft:    #fecaca;
+
+  --chart-primary:   #0064E0;
+  --chart-secondary: #47A5FA;
+  --chart-tertiary:  #bbf7d0;
+  --chart-deep:      #0143B5;
+  --chart-muted:     #F1F4F7;
+  --chart-accent:    #E8F3FF;
+  --chart-positive:  #007D1E;
+  --chart-negative:  #C80A28;
+
+  --chart-area-fill:      rgba(0, 100, 224, 0.10);
+  --chart-area-fill-soft: rgba(0, 100, 224, 0.06);
+  --chart-area-fill-mist: rgba(0, 100, 224, 0.06);
+
+  --chart-grid-soft:  rgba(28, 43, 51, 0.05);
+  --chart-grid-mist:  rgba(28, 43, 51, 0.04);
+  --chart-grid-solid: rgba(28, 43, 51, 0.12);
+
+  --chart-bar-overview-fill:   #47A5FA;
+  --chart-bar-overview-stroke: #0064E0;
+  --chart-bar-overview-hover:  #0143B5;
+
+  --chart-gradient-start:     #0064E0;
+  --chart-gradient-end:       #47A5FA;
+  --chart-gradient-bot-start: #E8F3FF;
+  --chart-gradient-bot-end:   #FFFFFF;
+
+  --chart-dot-incident: #C80A28;
+
+  /* ── Chart Semantic Palette (severity + status + pair distinguishability) ──
+     Use these for charts where color carries MEANING, not just category.
+     Call via chartColorByName('critical' | 'high' | 'medium' | 'low' |
+                                 'info' | 'neutral' | 'pair1' | 'pair2'). */
+  --chart-critical: #C80A28;   /* P1 — dark red (Dolly store-error) */
+  --chart-high:     #D6311F;   /* P2 — red-orange (Ray-Ban red) */
+  --chart-medium:   #F7B928;   /* P3 — amber */
+  --chart-low:      #1877F2;   /* P4 — calm blue */
+  --chart-info:     #0064E0;   /* Info / in-progress — Meta blue */
+  --chart-neutral:  #8595A4;   /* Idle / pending — slate */
+  /* Pair colors for 2-series charts that need high distinguishability
+     (Frontend vs Backend, Manual vs Auto, etc). Blue + Red reads clean
+     in both modes and stays colorblind-safe. */
+  --chart-pair-a:   #0064E0;   /* Meta blue */
+  --chart-pair-b:   #D6311F;   /* Ray-Ban red */
+
+  /* ── Workflow Status Palette ──
+     Same status = same color ACROSS EVERY dashboard.
+     Use via chartColorByName('completed' | 'inProgress' | 'pending' |
+                                'failed' | 'idle').
+     - Completed   → green   (resolved / healthy)
+     - In Progress → Meta blue (active work)
+     - Pending     → amber   (waiting, needs attention)
+     - Failed      → red     (error state)
+     - Idle        → slate   (no activity / not started) */
+  --chart-status-completed:   #007D1E;
+  --chart-status-in-progress: #0064E0;
+  --chart-status-pending:     #F7B928;
+  --chart-status-failed:      #C80A28;
+  --chart-status-idle:        #8595A4;
+
+  /* ── Categorical Ramp (for charts with 4-8 neutral categories) ──
+     Use when you have many categories that are NOT severities or statuses
+     (e.g. "Top Incident Categories" = Database / API / UI / Network / Auth
+     / Batch).  Stays in a perceptually ordered cool→warm range without
+     leaking red/purple (which read as error/critical elsewhere). */
+  --chart-cat-1: #0064E0;   /* Meta blue */
+  --chart-cat-2: #47A5FA;   /* light blue */
+  --chart-cat-3: #54C7EC;   /* seafoam */
+  --chart-cat-4: #2ABBA7;   /* teal */
+  --chart-cat-5: #45BD62;   /* lime */
+  --chart-cat-6: #F7B928;   /* amber */
+  --chart-cat-7: #FB724B;   /* tomato */
+  --chart-cat-8: #8595A4;   /* slate */
+
+  /* ── Chart Structural Tokens ── */
+  --chart-grid:            rgba(28, 43, 51, 0.06);
+  --chart-axis-color:      #8595A4;
+  --chart-axis-size:       11px;
+  --chart-legend-size:     12px;
+  --chart-legend-color:    #5D6C7B;
+  --chart-tooltip-bg:      #FFFFFF;
+  --chart-tooltip-border:  #DEE3E9;
+  --chart-tooltip-title:   #1C2B33;
+  --chart-tooltip-text:    #5D6C7B;
+  --chart-tooltip-radius:  8;
+  --chart-tooltip-padding: 12;
+  --shadow-tooltip:        0 4px 16px rgba(17, 24, 39, 0.12), 0 2px 4px rgba(17, 24, 39, 0.06);
+  --chart-line-width:      2;
+  --chart-point-radius:    4;
+  --chart-point-border:    2;
+  --chart-bar-radius:      6;
+  --chart-doughnut-cutout: 68%;
+
+  /* ── Activity Heatmap (5-step GitHub-style ramp) ──
+     Used by the Engineering Ops heatmap and any other "less → more"
+     density visualization.  Step 0 is the empty-cell background. */
+  --heatmap-step-0: var(--bg-subtle);
+  --heatmap-step-1: #CCE8FF;
+  --heatmap-step-2: #88C0E8;
+  --heatmap-step-3: #47A5FA;
+  --heatmap-step-4: #0064E0;
+
+  /* ── Chart Heights ── */
+  --chart-h-xs:  150px;
+  --chart-h-sm:  180px;
+  --chart-h-md:  260px;
+  --chart-h-lg:  320px;
+
+  /* ── Page Layout (kept dashboard-dense; Meta reserves 64–80px for hero sections — see meta-section utilities) ── */
+  --page-px:     24px;
+  --page-py:     24px;
+  --section-gap: 24px;
+  --card-gap:    16px;
+  --card-gap-sm: 12px;
+
+  /* Meta hero/section rhythm (opt-in via .meta-section utility) */
+  --meta-section-py:        64px;
+  --meta-section-py-sm:     48px;
+  --meta-section-py-hero:   80px;
+
+  /* ── Status Badge Tokens (Meta Dolly — tints strengthened for visibility)
+     Canonical badge system: use .sen-badge + .sen-badge--{modifier}
+     See globals.css "Universal badge — sen-badge" section.
+     ── */
+  --badge-success-bg:   rgba(0, 125, 30, 0.14);
+  --badge-success-text: #007D1E;
+  --badge-warning-bg:   rgba(247, 185, 40, 0.22);
+  --badge-warning-text: #8B5A00;
+  --badge-error-bg:     rgba(200, 10, 40, 0.14);
+  --badge-error-text:   #C80A28;
+  --badge-info-bg:      rgba(0, 100, 224, 0.12);
+  --badge-info-text:    #0064E0;
+  --badge-neutral-bg:   #E4E9EF;
+  --badge-neutral-text: #465A69;
+  --badge-pending-bg:   rgba(70, 90, 105, 0.10);
+  --badge-pending-text: #3D5168;
+  --soft-status-badge-bg:      #DCEBFF;
+  --soft-status-badge-text:    #0064E0;
+  --soft-status-badge-border:  rgba(0, 100, 224, 0.08);
+  --incident-severity-badge-bg:   rgba(0, 100, 224, 0.12);
+  --incident-severity-badge-text: #0064E0;
+  --incident-severity-badge-ring: rgba(0, 100, 224, 0.30);
+
+  /* ── Table Tokens ── */
+  --table-th-size:      var(--text-sm);
+  --table-th-weight:    var(--fw-semibold);
+  --table-th-color:     var(--text-secondary);
+  --table-td-size:      var(--text-sm);
+  --table-td-color:     var(--text-primary);
+  --table-row-py:       var(--space-3);
+  --table-row-px:       var(--space-4);
+  --table-border:       var(--border-subtle);
+  --table-hover-bg:     var(--bg-elevated);
+  --table-header-bg:    var(--bg-subtle);
+  --table-bg:           var(--bg-surface);
+  --table-cell-padding: 10px 12px;
+  --table-th-font-size: 10.5px;
+  --table-th-tracking:  0.07em;
+  --table-transition:   130ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* ── Page Header Tokens ── */
+  --page-title-size:      var(--text-2xl);
+  --page-title-weight:    var(--fw-medium);
+  --page-title-tracking:  var(--ls-tight);
+  --page-subtitle-size:   var(--text-sm);
+  --page-subtitle-color:  var(--text-tertiary);
+
+  /* ── Chart Card Tokens ── */
+  --chart-card-header-mb: var(--space-4);
+  --chart-card-title-size: var(--text-sm);
+  --chart-card-title-weight: var(--fw-semibold);
+  --chart-card-subtitle-size: var(--text-xs);
+
+  /* ════════════════════════════════════════════════════════════════
+     METRIC CARD — Canonical KPI card pattern (single source of truth)
+     ════════════════════════════════════════════════════════════════
+     HOW TO USE IN ANY PAGE:
+       Option A (recommended) — <SentraMetricCard> component
+         import SentraMetricCard from "@/components/ui/MetricCard";
+         Props: label, value, deltaValue, deltaDirection ("up"|"down"),
+                deltaType ("positive"|"negative"), staggerIndex
+         Component is already wired to every --metric-* token below.
+
+       Option B — globals.css utility classes (no component needed)
+         Container:  class="app-card"       (bg-surface, border, radius, shadow)
+         Grid:       class="metric-grid"    (responsive 1→2→4-col, gap = --metric-grid-gap)
+         Label row:  font = --metric-label-family, size = --metric-label-size,
+                     weight = --metric-label-weight, tracking = --metric-label-tracking
+         Value:      font = --metric-value-family (MONOSPACE), size = --metric-value-size,
+                     weight = --metric-value-weight, tracking = --metric-value-tracking
+         Delta (all):         color = --text-tertiary  (neutral — no semantic green/red)
+
+     TYPOGRAPHY RULE: labels → body font (uppercase), values → MONO font.
+     COLOR RULE:      all colors via tokens only — no hardcoded hex.
+     ════════════════════════════════════════════════════════════════ */
+  --metric-card-padding:        20px 24px;
+  --metric-header-mb:           12px;
+  --metric-label-family:        var(--font-body);
+  --metric-label-size:          11px;
+  --metric-label-weight:        600;
+  --metric-label-tracking:      0.06em;
+  --metric-label-lh:            1.4;
+  --metric-icon-size:           14px;
+  --metric-value-family:        var(--font-mono);
+  --metric-value-size:          2rem;
+  --metric-value-weight:        500;
+  --metric-value-tracking:      -0.02em;
+  --metric-value-lh:            1.16;
+  --metric-value-mb:            8px;
+  --metric-delta-family:        var(--font-body);
+  --metric-delta-gap:           6px;
+  --metric-delta-value-size:    12px;
+  --metric-delta-value-weight:  600;
+  --metric-delta-label-size:    11px;
+  --metric-grid-gap:            16px;
+  --metric-card-hover-duration: 200ms;
+
+  /* ── Card System (Meta Dolly) ── */
+  --card-corner-radius:   20px;   /* Dolly standard */
+  --card-feature-radius:  24px;   /* Feature/product cards */
+  --card-padding:         20px;
+
+  /* ═══════════════════════════════════════════════════════════════
+     Security / Governance — semantic pass-throughs (unchanged names)
+     ═══════════════════════════════════════════════════════════════ */
+  --sidebar-accordion-active-bg:   var(--sidebar-active);
+  --sidebar-accordion-active-text: var(--sidebar-active-text);
+  --sidebar-accordion-active-icon: var(--sidebar-icon-active);
+  --sidebar-item-selected-bg:      var(--sidebar-active);
+  --sidebar-item-selected-text:    var(--sidebar-active-text);
+  --sidebar-item-disabled-opacity: 0.45;
+
+  --security-card-bg:                 var(--bg-surface);
+  --security-card-border:             var(--border-default);
+  --security-card-shadow:             var(--shadow-card);
+  --security-card-header-bg:          var(--bg-subtle);
+  --security-card-hover-shadow:       var(--shadow-hover);
+
+  --security-progress-track-bg:       var(--bg-muted);
+  --security-progress-fill-success:   var(--color-success);
+  --security-progress-fill-warning:   var(--color-warning);
+  --security-progress-fill-info:      var(--brand-blue);
+
+  --security-badge-compliant-bg:      var(--badge-success-bg);
+  --security-badge-compliant-text:    var(--badge-success-text);
+  --security-badge-approved-bg:       var(--badge-info-bg);
+  --security-badge-approved-text:     var(--badge-info-text);
+  --security-badge-released-bg:       var(--badge-success-bg);
+  --security-badge-released-text:     var(--badge-success-text);
+  --security-badge-operating-bg:      var(--badge-success-bg);
+  --security-badge-operating-text:    var(--badge-success-text);
+  --security-badge-critical-bg:       var(--bg-error);
+  --security-badge-critical-text:     var(--color-error);
+  --security-badge-critical-border:   var(--border-error);
+  --security-badge-high-bg:           rgba(214, 49, 31, 0.10);
+  --security-badge-high-text:         #D6311F;
+  --security-badge-high-border:       rgba(214, 49, 31, 0.30);
+  --security-badge-medium-bg:         rgba(247, 185, 40, 0.14);
+  --security-badge-medium-text:       #8B5A00;
+  --security-badge-medium-border:     rgba(247, 185, 40, 0.35);
+  --security-badge-low-bg:            var(--badge-info-bg);
+  --security-badge-low-text:          var(--badge-info-text);
+  --security-badge-status-completed-bg:    var(--badge-success-bg);
+  --security-badge-status-completed-text:  var(--badge-success-text);
+  --security-badge-status-passed-bg:       var(--badge-success-bg);
+  --security-badge-status-passed-text:     var(--badge-success-text);
+  --security-badge-status-failed-bg:       var(--badge-error-bg);
+  --security-badge-status-failed-text:     var(--badge-error-text);
+  --security-badge-status-inprogress-bg:   var(--badge-info-bg);
+  --security-badge-status-inprogress-text: var(--badge-info-text);
+  --security-badge-status-pending-bg:      var(--bg-subtle);
+  --security-badge-status-pending-text:    var(--text-tertiary);
+  --security-badge-status-fixed-bg:        var(--badge-success-bg);
+  --security-badge-status-fixed-text:      var(--badge-success-text);
+  --security-badge-status-planned-bg:      var(--bg-subtle);
+  --security-badge-status-planned-text:    var(--text-tertiary);
+
+  --security-panel-blue-bg:           rgba(0, 100, 224, 0.06);
+  --security-panel-blue-border:       rgba(0, 100, 224, 0.25);
+  --security-panel-green-bg:          rgba(0, 125, 30, 0.07);
+  --security-panel-green-border:      rgba(0, 125, 30, 0.25);
+  --security-panel-yellow-bg:         rgba(247, 185, 40, 0.12);
+  --security-panel-yellow-border:     rgba(247, 185, 40, 0.30);
+  --security-panel-red-bg:            var(--color-error-muted);
+  --security-panel-red-border:        var(--border-error);
+
+  --security-icon-blue:               var(--brand-blue);
+  --security-icon-green:              var(--color-success);
+  --security-icon-orange:             #D6311F;
+  --security-icon-red:                var(--color-error);
+  --security-icon-brand:              var(--accent-primary);
+  --security-neutral-icon-color:      var(--text-secondary);
+
+  --security-dot-critical:            var(--color-error);
+  --security-dot-high:                #D6311F;
+  --security-dot-medium:              var(--color-warning);
+  --security-neutral-dot-color:       var(--border-strong);
+
+  --security-link-color:              var(--brand-blue);
+  --security-link-hover-color:        var(--brand-blue-deep);
+
+  --security-step-bg:                 var(--accent-primary-subtle);
+  --security-step-border:             var(--border-brand);
+  --security-step-text:               var(--accent-primary);
+
+  --security-trend-positive:          var(--color-success);
+
+  /* ── Security typography tokens (centralized, from amirtha branch) ── */
+  --security-page-title-family:       var(--font-display);
+  --security-page-title-size:         var(--dashboard-title-size);
+  --security-page-title-weight:       var(--dashboard-title-weight);
+  --security-page-title-tracking:     var(--dashboard-title-tracking);
+  --security-page-title-line:         var(--lh-tight);
+  --security-page-subtitle-family:    var(--font-body);
+  --security-page-subtitle-size:      var(--dashboard-subtitle-size);
+  --security-page-subtitle-weight:    var(--fw-regular);
+  --security-page-subtitle-color:     var(--dashboard-subtitle-color);
+  --security-page-subtitle-line:      var(--lh-normal);
+  --security-card-title-family:       var(--font-body);
+  --security-card-title-size:         var(--dashboard-card-title-size);
+  --security-card-title-weight:       var(--dashboard-card-title-weight);
+  --security-card-title-color:        var(--text-primary);
+  --security-card-title-line:         var(--lh-tight);
+  --security-card-subtitle-family:    var(--font-body);
+  --security-card-subtitle-size:      var(--chart-card-subtitle-size);
+  --security-card-subtitle-weight:    var(--fw-regular);
+  --security-card-subtitle-color:     var(--text-tertiary);
+  --security-card-subtitle-line:      var(--lh-snug);
+  --security-stat-label-family:       var(--font-body);
+  --security-stat-label-size:         var(--text-sm);
+  --security-stat-label-weight:       var(--fw-medium);
+  --security-stat-label-color:        var(--text-tertiary);
+  --security-stat-label-line:         var(--lh-snug);
+  --security-stat-value-family:       var(--metric-value-family);
+  --security-stat-value-size:         var(--text-2xl);
+  --security-stat-value-weight:       var(--fw-semibold);
+  --security-stat-value-color:        var(--text-primary);
+  --security-stat-value-tracking:     var(--ls-tight);
+  --security-stat-value-line:         1.1;
+  --security-stat-meta-family:        var(--font-body);
+  --security-stat-meta-size:          var(--text-xs);
+  --security-stat-meta-weight:        var(--fw-regular);
+  --security-stat-meta-color:         var(--text-tertiary);
+  --security-stat-meta-line:          var(--lh-snug);
+  --security-score-value-family:      var(--metric-value-family);
+  --security-score-value-size:        3.5rem;
+  --security-score-value-weight:      var(--metric-value-weight);
+  --security-score-value-tracking:    var(--metric-value-tracking);
+  --security-score-value-line:        1;
+  --security-score-value-color:       var(--text-primary);
+  --security-section-eyebrow-family:  var(--font-body);
+  --security-section-eyebrow-size:    var(--dashboard-section-label-size);
+  --security-section-eyebrow-weight:  var(--dashboard-section-label-weight);
+  --security-section-eyebrow-color:   var(--dashboard-section-label-color);
+  --security-section-eyebrow-track:   var(--dashboard-section-label-tracking);
+  --security-section-eyebrow-line:    1.4;
+  --security-link-family:             var(--font-body);
+  --security-link-size:               var(--text-sm);
+  --security-link-weight:             var(--fw-medium);
+  --security-link-line:               var(--lh-snug);
+
+  /* ── Security text tokens (added from amirtha branch) ── */
+  --security-text-strong-family:      var(--font-body);
+  --security-text-strong-size:        var(--text-sm);
+  --security-text-strong-weight:      var(--fw-medium);
+  --security-text-strong-color:       var(--text-primary);
+  --security-text-strong-line:        var(--lh-snug);
+  --security-text-body-family:        var(--font-body);
+  --security-text-body-size:          var(--text-sm);
+  --security-text-body-weight:        var(--fw-regular);
+  --security-text-body-color:         var(--text-secondary);
+  --security-text-body-line:          var(--lh-normal);
+  --security-text-meta-family:        var(--font-body);
+  --security-text-meta-size:          var(--text-xs);
+  --security-text-meta-weight:        var(--fw-regular);
+  --security-text-meta-color:         var(--text-tertiary);
+  --security-text-meta-line:          var(--lh-snug);
+
+  /* ── Settings module tokens (added from amirtha branch) ── */
+  --settings-surface-bg:              var(--dashboard-table-bg);
+  --settings-surface-muted-bg:        var(--dashboard-table-header-bg);
+  --settings-surface-hover-bg:        var(--table-hover-bg);
+  --settings-surface-border:          var(--dashboard-card-border);
+  --settings-surface-border-subtle:   var(--dashboard-table-border);
+  --settings-surface-shadow:          var(--dashboard-card-shadow);
+  /* Shared app/page icon surfaces */
+  --settings-icon-bg:                 var(--accent-primary-subtle);
+  --settings-icon-color:              var(--accent-primary);
+  --settings-table-head-bg:           var(--table-header-bg);
+  --settings-table-row-hover-bg:      var(--table-hover-bg);
+  --settings-dot-success:             var(--color-success);
+  --settings-dot-warning:             var(--color-warning);
+  --settings-dot-error:               var(--color-error);
+
+  --governance-surface-bg:            var(--bg-surface);
+  --governance-surface-muted-bg:      var(--bg-elevated);
+  --governance-surface-subtle-bg:     var(--bg-subtle);
+  --governance-surface-border:        var(--border-default);
+  --governance-surface-border-strong: var(--border-strong);
+  --governance-surface-shadow:        var(--shadow-card);
+  --governance-surface-padding:       var(--space-5);
+  --governance-tabs-padding:          var(--space-5) var(--space-5) 0;
+  --governance-tabs-border:           var(--border-subtle);
+  --governance-table-min-width:       920px;
+  --governance-table-header-bg:       var(--governance-surface-subtle-bg);
+  --governance-table-header-size:     var(--text-xs);
+  --governance-table-header-weight:   var(--fw-semibold);
+  --governance-table-header-spacing:  var(--ls-wide);
+  --governance-table-cell-padding-x:  var(--space-4);
+  --governance-table-cell-padding-y:  var(--space-4);
+  --governance-table-row-hover-bg:    var(--governance-hover-bg);
+  --governance-table-cell-max-width:  360px;
+  --governance-table-footer-padding:  var(--space-3) var(--space-4);
+  --governance-table-footer-gap:      var(--space-3);
+  --governance-pagination-gap:        var(--space-2);
+  --governance-pagination-button-min: 38px;
+  --governance-pagination-button-height: 38px;
+  --governance-pagination-button-padding: 0 var(--space-3);
+  --governance-pagination-button-radius: var(--radius-md);
+  --governance-pagination-button-font-size: var(--text-sm);
+  --ps-detail-card-bg:                  var(--bg-surface);
+  --ps-detail-card-border:              var(--border-default);
+  --ps-detail-card-shadow:              var(--shadow-card);
+  --ps-detail-icon-bg:                  var(--bg-subtle);
+  --ps-detail-icon-color:               var(--text-secondary);
+  --ps-detail-progress-color:           var(--text-secondary);
+  --ps-detail-table-header-bg:          var(--table-header-bg);
+  --ps-detail-table-border:             var(--table-border);
+  --ps-detail-table-hover-bg:           var(--table-hover-bg);
+  --governance-report-card-hover-bg:      var(--governance-surface-bg);
+  --governance-report-card-hover-border:  var(--border-default);
+  --governance-report-card-hover-shadow:  var(--ai-studio-card-hover-shadow);
+  --governance-report-grid-min:       280px;
+  --governance-report-icon-size:      40px;
+  --governance-report-row-padding:    var(--space-2) 0;
+  --governance-hover-bg:              var(--bg-elevated);
+  --governance-active-bg:             var(--accent-primary-subtle);
+  --governance-active-border:         var(--border-brand);
+  --governance-icon-bg:               var(--accent-primary-subtle);
+  --governance-icon-color:            var(--accent-primary);
+  --governance-icon-muted-bg:         var(--bg-subtle);
+  --governance-icon-muted-color:      var(--text-tertiary);
+  --governance-disabled-opacity:      var(--sidebar-item-disabled-opacity);
+  --governance-title-color:           var(--text-primary);
+  --governance-subtitle-color:        var(--text-tertiary);
+  --governance-row-title-color:       var(--text-primary);
+  --governance-row-meta-color:        var(--text-secondary);
+  --governance-row-subtext-color:     var(--text-tertiary);
+  --governance-link-color:            var(--accent-primary);
+  --governance-link-hover-color:      var(--accent-primary-hover);
+  --governance-transition:            var(--t-normal);
+
+  /* ═══════════════════════════════════════════════════════════════
+     OBSERVE MODULE — Enterprise Design Tokens
+     ═══════════════════════════════════════════════════════════════ */
+  --observe-page-bg:          var(--bg-base);
+  --observe-page-padding:     32px;
+  --observe-page-max:         1600px;
+  --observe-page-gap:         24px;
+
+  --observe-surface:          var(--bg-surface);
+  --observe-surface-elevated: var(--bg-elevated);
+  --observe-surface-subtle:   var(--bg-subtle);
+  --observe-surface-inverse:  #1C1E21;
+
+  --observe-border:           var(--border-default);
+  --observe-border-strong:    var(--border-strong);
+  --observe-border-focus:     var(--border-focus);
+  --observe-divider:          rgba(28, 43, 51, 0.08);
+
+  --observe-radius-sm:        8px;
+  --observe-radius-md:        12px;
+  --observe-radius-lg:        20px;
+  --observe-radius-pill:      100px;
+
+  --observe-shadow-card:      0 2px 4px rgba(0, 0, 0, 0.08);
+  --observe-shadow-hover:     0 12px 28px 0 rgba(0, 0, 0, 0.20), 0 2px 4px 0 rgba(0, 0, 0, 0.10);
+  --observe-shadow-focus:     0 0 0 3px rgba(0, 100, 224, 0.25);
+  --observe-shadow-sticky:    0 1px 0 var(--observe-border);
+
+  --observe-font-display:     var(--font-display);
+  --observe-font-body:        var(--font-body);
+  --observe-font-mono:        var(--font-mono);
+
+  --observe-title-size:       24px;
+  --observe-title-weight:     500;
+  --observe-title-line:       1.28;
+  --observe-title-color:      var(--text-primary);
+
+  --observe-subtitle-size:    13px;
+  --observe-subtitle-color:   var(--text-tertiary);
+
+  --observe-section-title:    14px;
+  --observe-section-weight:   700;
+
+  --observe-metric-size:      32px;
+  --observe-metric-weight:    500;
+  --observe-metric-color:     var(--text-primary);
+
+  --observe-label-size:       11px;
+  --observe-label-weight:     700;
+  --observe-label-tracking:   0.06em;
+  --observe-label-color:      var(--text-tertiary);
+
+  --observe-value-size:       14px;
+  --observe-value-weight:     700;
+  --observe-value-color:      var(--text-primary);
+
+  --observe-accent:           #0064E0;
+  --observe-accent-soft:      rgba(0, 100, 224, 0.08);
+  --observe-accent-ring:      rgba(0, 100, 224, 0.22);
+  --observe-accent-strong:    #0143B5;
+
+  --observe-status-ok-fg:      #007D1E;
+  --observe-status-ok-bg:      rgba(0, 125, 30, 0.10);
+  --observe-status-ok-border:  rgba(0, 125, 30, 0.25);
+
+  --observe-status-warn-fg:    #8B5A00;
+  --observe-status-warn-bg:    rgba(247, 185, 40, 0.14);
+  --observe-status-warn-border:rgba(247, 185, 40, 0.35);
+
+  --observe-status-err-fg:     #C80A28;
+  --observe-status-err-bg:     rgba(200, 10, 40, 0.10);
+  --observe-status-err-border: rgba(200, 10, 40, 0.25);
+
+  --observe-status-info-fg:    #0064E0;
+  --observe-status-info-bg:    rgba(0, 100, 224, 0.10);
+  --observe-status-info-border:rgba(0, 100, 224, 0.25);
+
+  --observe-status-brand-fg:    #0064E0;
+  --observe-status-brand-bg:    rgba(0, 100, 224, 0.08);
+  --observe-status-brand-border:rgba(0, 100, 224, 0.25);
+
+  --observe-status-neutral-fg:     #5D6C7B;
+  --observe-status-neutral-bg:     rgba(28, 43, 51, 0.05);
+  --observe-status-neutral-border: rgba(28, 43, 51, 0.10);
+
+  --observe-rail-brand:   #0064E0;
+  --observe-rail-info:    #1877F2;
+  --observe-rail-success: #007D1E;
+  --observe-rail-warn:    #F7B928;
+  --observe-rail-error:   #C80A28;
+
+  --observe-delta-up-fg:   #007D1E;
+  --observe-delta-up-bg:   rgba(0, 125, 30, 0.10);
+  --observe-delta-down-fg: #C80A28;
+  --observe-delta-down-bg: rgba(200, 10, 40, 0.10);
+  --observe-delta-flat-fg: var(--text-tertiary);
+  --observe-delta-flat-bg: rgba(28, 43, 51, 0.05);
+
+  --observe-ease:      var(--ease-out);
+  --observe-dur-fast:  150ms;
+  --observe-dur-base:  200ms;
+  --observe-dur-slow:  300ms;
+
+  --observe-grid-gap:        16px;
+  --observe-grid-gap-lg:     24px;
+  --observe-grid-col-min:    240px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — html.dark
+   Meta "Dolly" dark product-showcase palette:
+     #1C1E21 standard dark   |   #181A1B Quest dark   |   #000000 pure black
+   ═══════════════════════════════════════════════════════════════ */
+html.dark,
+[data-theme="dark"] {
+
+  /* ── Backgrounds ── */
+  --bg-base:     #1C1E21;   /* Meta dark section bg */
+  --bg-surface:  #181A1B;   /* Slightly warmer surface */
+  --bg-elevated: #232528;
+  --bg-overlay:  #2A2D31;
+  --bg-subtle:   #2C2F33;
+  --bg-muted:    #3A3D41;
+  --bg-header:   rgba(24, 26, 27, 0.80);  /* frosted dark nav */
+
+  /* ── Brand ── */
+  --brand-violet:            #47A5FA;     /* Meta Blue Light for dark */
+  --brand-violet-light:      #7BC2FF;
+  --brand-violet-dim:        rgba(71, 165, 250, 0.12);
+  --gradient-brand-btn:      linear-gradient(135deg, #0064E0 0%, #47A5FA 100%);
+
+  /* ── Accent ── */
+  --accent-primary:          #47A5FA;
+  --accent-primary-hover:    #7BC2FF;
+  --accent-primary-pressed:  #0064E0;
+  --accent-primary-subtle:   rgba(71, 165, 250, 0.12);
+  --accent-primary-muted:    rgba(71, 165, 250, 0.18);
+  --accent-secondary:        #1877F2;
+  --accent-secondary-subtle: rgba(24, 119, 242, 0.12);
+  --theme-color:             #FFFFFF;
+  --badge-bg:                transparent;
+  --badge-text:              #FFFFFF;
+  --badge-border:            rgba(255, 255, 255, 0.25);
+
+  /* ── Text ── */
+  --text-primary:     #F5F6F7;
+  --text-secondary:   #B0B3B8;
+  --text-tertiary:    #8A8D91;
+  --text-placeholder: #6A6D70;
+  --text-brand:       #47A5FA;
+  --text-icon-secondary: #B0B3B8;
+  --text-section-header: #D1D4D7;
+  --text-button-default: #E4E6EB;
+
+  /* ── Borders ── */
+  --border-subtle:  rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.11);
+  --border-strong:  rgba(255, 255, 255, 0.20);
+  --border-brand:   rgba(71, 165, 250, 0.40);
+  --border-focus:   rgba(71, 165, 250, 0.60);
+
+  /* ── Semantic ── */
+  --color-success:        #45BD62;    /* FDS lime */
+  --color-success-muted:  rgba(69, 189, 98, 0.12);
+  --color-warning:        #F7B928;
+  --color-warning-muted:  rgba(247, 185, 40, 0.14);
+  --color-warning-hover:  rgba(247, 185, 40, 0.22);
+  --color-error:          #F3425F;    /* FDS cherry */
+  --color-error-muted:    rgba(243, 66, 95, 0.12);
+  --color-error-hover:    rgba(243, 66, 95, 0.20);
+  --color-info:           #47A5FA;
+  --bg-success:           rgba(69, 189, 98, 0.12);
+  --bg-warning:           rgba(247, 185, 40, 0.14);
+  --bg-error:             rgba(243, 66, 95, 0.12);
+  --bg-info:              rgba(71, 165, 250, 0.16);
+  --border-success:       rgba(69, 189, 98, 0.35);
+  --border-warning:       rgba(247, 185, 40, 0.35);
+  --border-error:         rgba(243, 66, 95, 0.35);
+  --border-info:          rgba(71, 165, 250, 0.30);
+
+  /* ── Severity ── */
+  --severity-critical: #F3425F;
+  --severity-high:     #FB724B;    /* FDS tomato */
+  --severity-medium:   #F7B928;
+  --severity-low:      #47A5FA;
+  --severity-info:     #47A5FA;
+
+  /* ── Sidebar (dark) ── */
+  --sidebar-bg:            #181A1B;
+  --sidebar-border:        rgba(255, 255, 255, 0.08);
+  --sidebar-hover:         rgba(255, 255, 255, 0.06);
+  --sidebar-active:        rgba(71, 165, 250, 0.18);
+  --sidebar-active-hover:  rgba(71, 165, 250, 0.24);
+  --sidebar-active-text:   #47A5FA;
+  --sidebar-icon-default:  #B0B3B8;
+  --sidebar-icon-active:   #47A5FA;
+  --sidebar-text-default:  #E4E6EB;
+  --sidebar-text-active:   #47A5FA;
+  --sidebar-section-label: #8A8D91;
+
+  /* ── Shadows (dark) ── */
+  --shadow-xs:             0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-sm:             0 2px 4px rgba(0, 0, 0, 0.50);
+  --shadow-card:           0 2px 4px rgba(0, 0, 0, 0.45);
+  --shadow-card-prominent: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.30);
+  --shadow-hover:          0 12px 28px rgba(0, 0, 0, 0.60), 0 2px 4px rgba(0, 0, 0, 0.30);
+  --shadow-header:         0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-modal:          0 24px 60px rgba(0, 0, 0, 0.70);
+  --shadow-sidebar:        1px 0 0 rgba(255, 255, 255, 0.06);
+
+  /* ── Button Shadows (dark) ── */
+  --shadow-btn:        0 1px 2px rgba(71, 165, 250, 0.20);
+  --shadow-btn-hover:  0 2px 6px rgba(71, 165, 250, 0.28), 0 4px 12px rgba(71, 165, 250, 0.18);
+  --shadow-btn-active: 0 1px 2px rgba(71, 165, 250, 0.30);
+  --button-radius-default:        18px;
+  --button-min-height:            42px;
+  --button-padding-y:             10px;
+  --button-padding-x:             24px;
+  --button-gap:                   var(--space-2);
+  --button-font-size:             13px;
+  --button-font-weight:           var(--fw-semibold);
+  --button-primary-bg:            var(--accent-primary);
+  --button-primary-hover-bg:      var(--accent-primary-hover);
+  --button-primary-active-bg:     var(--accent-primary-pressed);
+  --button-primary-text:          var(--text-inverse);
+  --button-primary-border:        transparent;
+  --button-primary-shadow:        var(--shadow-btn);
+  --button-primary-shadow-hover:  var(--shadow-btn-hover);
+  --button-primary-shadow-active: var(--shadow-btn-active);
+  --button-neutral-bg:            var(--bg-surface);
+  --button-neutral-hover-bg:      var(--bg-elevated);
+  --button-neutral-active-bg:     var(--bg-muted);
+  --button-neutral-text:          var(--text-primary);
+  --button-neutral-border:        var(--border-default);
+  --button-neutral-border-hover:  var(--border-strong);
+  --button-neutral-shadow:        var(--shadow-xs);
+  --button-muted-bg:              var(--bg-muted);
+  --button-muted-hover-bg:        var(--bg-elevated);
+  --button-muted-active-bg:       var(--bg-muted);
+  --button-muted-text:            var(--text-secondary);
+  --button-muted-border:          var(--border-default);
+
+  /* ── Severity Badge (dark) ── */
+  --severity-badge-fg:      #47A5FA;
+  --severity-badge-bg:      rgba(71, 165, 250, 0.16);
+  --severity-badge-ring:    rgba(71, 165, 250, 0.40);
+  --severity-critical-bg:   rgba(243, 66, 95, 0.14);
+  --severity-critical-ring: rgba(243, 66, 95, 0.45);
+  --severity-high-bg:       rgba(251, 114, 75, 0.14);
+  --severity-high-ring:     rgba(251, 114, 75, 0.45);
+  --severity-medium-bg:     rgba(247, 185, 40, 0.16);
+  --severity-medium-ring:   rgba(247, 185, 40, 0.45);
+  --severity-low-bg:        rgba(71, 165, 250, 0.14);
+  --severity-low-ring:      rgba(71, 165, 250, 0.40);
+  --severity-info-bg:       rgba(71, 165, 250, 0.14);
+  --severity-info-ring:     rgba(71, 165, 250, 0.35);
+
+  /* ── NavBadge Rings (dark) ── */
+  --nav-badge-error-ring:   rgba(243, 66, 95, 0.30);
+  --nav-badge-warning-ring: rgba(247, 185, 40, 0.32);
+
+  /* ── Overlay Backdrop (dark) ── */
+  --overlay-backdrop: rgba(0, 0, 0, 0.70);
+
+  /* ── Control Plane (dark) ── */
+  --cp-overview-timeline-bg:          var(--bg-elevated);
+  --cp-overview-timeline-border-width: 0px;
+  --cp-overview-timeline-border:      var(--border-default);
+  --cp-overview-timeline-text:        var(--text-primary);
+  --cp-overview-badge-bg:             rgba(71, 165, 250, 0.14);
+  --cp-overview-badge-text:           #47A5FA;
+  --cp-overview-badge-border:         rgba(71, 165, 250, 0.35);
+  --cp-overview-badge-hover-bg:       rgba(71, 165, 250, 0.20);
+  --cp-overview-badge-hover-border:   rgba(71, 165, 250, 0.50);
+  --cp-overview-badge-hover-text:     #7BC2FF;
+  --deployment-kpi-icon-color:        var(--text-secondary);
+  --deployment-uptime-color:          var(--text-primary);
+  --deployment-table-bg:              var(--security-card-bg);
+  --deployment-table-border:          var(--security-card-border);
+  --deployment-table-shadow:          var(--security-card-shadow);
+  --deployment-table-radius:          var(--radius-md);
+  --deployment-table-header-bg:       var(--security-card-header-bg);
+  --deployment-table-header-padding:  var(--space-4) var(--space-6) 13px;
+  --deployment-table-title-family:    var(--security-card-title-family);
+  --deployment-table-title-size:      var(--security-card-title-size);
+  --deployment-table-title-weight:    var(--security-card-title-weight);
+  --deployment-table-title-color:     var(--security-card-title-color);
+  --deployment-table-title-line:      var(--security-card-title-line);
+  --deployment-table-title-spacing:   var(--ls-tight);
+  --deployment-table-head-bg:         var(--security-card-header-bg);
+  --deployment-table-head-size:       var(--text-xs);
+  --deployment-table-head-weight:     var(--fw-semibold);
+  --deployment-table-head-spacing:    var(--ls-wide);
+  --deployment-table-row-padding-y:   var(--space-4);
+  --deployment-table-hover-bg:        var(--governance-hover-bg);
+  --governance-report-card-hover-bg:      var(--governance-surface-bg);
+  --governance-report-card-hover-border:  var(--border-default);
+  --governance-report-card-hover-shadow:  var(--ai-studio-card-hover-shadow);
+  --ai-studio-card-hover-border:      var(--border-default);
+  --ai-studio-card-hover-shadow:      0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -4px rgba(0, 0, 0, 0.10);
+  --ai-studio-surface-hover-bg:       transparent;
+  --cp-requests-card-hover-shadow:    0 4px 10px rgba(0, 0, 0, 0.34), 0 1px 2px rgba(0, 0, 0, 0.18);
+  --cp-requests-card-hover-border:    var(--border-default);
+
+  /* ── Chart Color Palette (dark — FDS base colors) ── */
+  --chart-1: #47A5FA;
+  --chart-2: #54C7EC;    /* Seafoam */
+  --chart-3: #45BD62;    /* Lime */
+  --chart-4: #F7B928;
+  --chart-5: #F3425F;    /* Cherry */
+  --chart-6: #9360F7;    /* Grape */
+  --chart-7: #2ABBA7;    /* Teal */
+  --chart-8: #FF66BF;    /* Pink */
+
+  --chart-purple-soft: rgba(147, 96, 247, 0.30);
+  --chart-blue-soft:   rgba(71, 165, 250, 0.30);
+  --chart-green-soft:  rgba(69, 189, 98, 0.30);
+  --chart-orange-soft: rgba(251, 114, 75, 0.30);
+  --chart-pink-soft:   rgba(255, 102, 191, 0.30);
+  --chart-teal-soft:   rgba(42, 187, 167, 0.30);
+  --chart-amber-soft:  rgba(247, 185, 40, 0.30);
+  --chart-red-soft:    rgba(243, 66, 95, 0.30);
+
+  --chart-primary:   #47A5FA;
+  --chart-secondary: #54C7EC;
+  --chart-tertiary:  #45BD62;
+  --chart-deep:      #0064E0;
+  --chart-muted:     rgba(255, 255, 255, 0.08);
+  --chart-accent:    rgba(71, 165, 250, 0.20);
+  --chart-positive:  #45BD62;
+  --chart-negative:  #F3425F;
+
+  --chart-area-fill:      rgba(71, 165, 250, 0.14);
+  --chart-area-fill-soft: rgba(71, 165, 250, 0.08);
+  --chart-grid-soft:      rgba(255, 255, 255, 0.05);
+  --chart-grid-solid:     rgba(255, 255, 255, 0.14);
+  --chart-dot-incident:   #F3425F;
+
+  /* ── Chart Semantic Palette (dark) ── */
+  --chart-critical: #F3425F;   /* FDS cherry */
+  --chart-high:     #FB724B;   /* FDS tomato */
+  --chart-medium:   #F7B928;
+  --chart-low:      #47A5FA;
+  --chart-info:     #47A5FA;
+  --chart-neutral:  #8A8D91;
+  --chart-pair-a:   #47A5FA;
+  --chart-pair-b:   #F3425F;
+
+  /* ── Workflow Status Palette (dark) ── */
+  --chart-status-completed:   #45BD62;   /* FDS lime */
+  --chart-status-in-progress: #47A5FA;   /* FDS seafoam-blue */
+  --chart-status-pending:     #F7B928;
+  --chart-status-failed:      #F3425F;   /* FDS cherry */
+  --chart-status-idle:        #8A8D91;
+
+  /* ── Categorical Ramp (dark) ── */
+  --chart-cat-1: #47A5FA;
+  --chart-cat-2: #54C7EC;
+  --chart-cat-3: #4BBFB4;
+  --chart-cat-4: #45BD62;
+  --chart-cat-5: #A8D86E;
+  --chart-cat-6: #F7B928;
+  --chart-cat-7: #FB724B;
+  --chart-cat-8: #B0B3B8;
+
+  --chart-bar-overview-fill:   #47A5FA;
+  --chart-bar-overview-stroke: #0064E0;
+  --chart-bar-overview-hover:  #7BC2FF;
+
+  --chart-gradient-start:     #47A5FA;
+  --chart-gradient-end:       #0064E0;
+  --chart-gradient-bot-start: rgba(71, 165, 250, 0.40);
+  --chart-gradient-bot-end:   rgba(71, 165, 250, 0.05);
+
+  /* ── Chart Structural (dark) ── */
+  --chart-grid:           rgba(255, 255, 255, 0.06);
+  --chart-axis-color:     #8A8D91;
+  --chart-legend-color:   #B0B3B8;
+  /* Dark-mode tooltip: noticeably LIGHTER than the card surface so it
+     reads as a floating panel, not a flat patch on the card (Grafana /
+     Datadog approach).  Strong double shadow anchors the elevation. */
+  --chart-tooltip-bg:     #2E3138;
+  --chart-tooltip-border: rgba(255, 255, 255, 0.18);
+  --chart-tooltip-title:  #FFFFFF;
+  --chart-tooltip-text:   #E5E7EB;
+  --shadow-tooltip:       0 8px 24px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+
+  /* Activity Heatmap (dark) — steps brighten from near-card background
+     up to the brand blue.  Step 0 uses a subtle surface so empty cells
+     don't disappear into the card. */
+  --heatmap-step-0: rgba(255, 255, 255, 0.04);
+  --heatmap-step-1: #1E3A5F;
+  --heatmap-step-2: #2B5B8F;
+  --heatmap-step-3: #3B7BC4;
+  --heatmap-step-4: #47A5FA;
+
+  /* ── Status Badge Tokens (dark) ── */
+  --badge-success-bg:   rgba(69, 189, 98, 0.14);
+  --badge-success-text: #45BD62;
+  --badge-warning-bg:   rgba(247, 185, 40, 0.14);
+  --badge-warning-text: #F7B928;
+  --badge-error-bg:     rgba(243, 66, 95, 0.14);
+  --badge-error-text:   #F3425F;
+  --badge-info-bg:      rgba(71, 165, 250, 0.14);
+  --badge-info-text:    #47A5FA;
+  --badge-neutral-bg:   rgba(255, 255, 255, 0.08);
+  --badge-neutral-text: #B0B3B8;
+  --badge-pending-bg:   rgba(176, 179, 184, 0.12);
+  --badge-pending-text: #9BA8B4;
+  --soft-status-badge-bg:      rgba(71, 165, 250, 0.16);
+  --soft-status-badge-text:    #7BC2FF;
+  --soft-status-badge-border:  rgba(71, 165, 250, 0.14);
+  --incident-severity-badge-bg:   rgba(71, 165, 250, 0.14);
+  --incident-severity-badge-text: #47A5FA;
+  --incident-severity-badge-ring: rgba(71, 165, 250, 0.35);
+
+  /* Disabled button (dark) */
+  --btn-disabled-bg:   rgba(255, 255, 255, 0.08);
+  --btn-disabled-text: rgba(255, 255, 255, 0.32);
+
+  /* Skeleton / Glimmer (dark) — visible on #181A1B */
+  --skeleton-bg:       #3A3D41;
+
+  /* ── Dropdown / Filter (dark overrides) ── */
+  --filter-pill-bg:              var(--bg-surface);
+  --filter-pill-bg-hover:        var(--bg-elevated);
+  --filter-pill-bg-active:       var(--accent-primary-subtle);
+  --filter-pill-border:          var(--border-default);
+  --filter-pill-border-hover:    var(--border-strong);
+  --filter-pill-border-active:   var(--accent-primary);
+  --filter-pill-text:            var(--text-secondary);
+  --filter-pill-text-hover:      var(--text-primary);
+  --filter-pill-text-active:     var(--accent-primary);
+  --filter-pill-shadow-active:   0 0 0 2px var(--accent-primary-subtle);
+
+  --dropdown-bg:                 var(--bg-overlay);
+  --dropdown-border:             var(--border-default);
+  --dropdown-shadow:             none;
+
+  --dropdown-option-bg-hover:    var(--bg-elevated);
+  --dropdown-option-bg-selected: var(--accent-primary-subtle);
+  --dropdown-option-text-selected: var(--accent-primary);
+
+  --dropdown-search-bg:          var(--bg-subtle);
+  --dropdown-search-border:      var(--border-default);
+
+  --select-capsule-bg:           var(--bg-surface);
+  --select-capsule-border:       var(--border-default);
+
+  /* ── Dropdown Icon (dark) ── */
+  --dropdown-icon-color:         var(--sidebar-icon-default);
+  --dropdown-icon-color-hover:   var(--text-primary);
+  --dropdown-icon-color-selected: var(--accent-primary);
+
+  /* ── Status Icon Colors (dark) ── */
+  --status-firing-color:         var(--severity-critical);
+  --status-resolved-color:       var(--color-success);
+  --status-acknowledged-color:   var(--text-tertiary);
+  --status-merged-color:         #9360F7;
+  --status-deleted-color:        var(--text-tertiary);
+
+  /* ── Severity Icon Colors (dark) ── */
+  --severity-icon-critical:      var(--severity-critical);
+  --severity-icon-high:          var(--severity-high);
+  --severity-icon-warning:       var(--severity-medium);
+  --severity-icon-low:           var(--severity-low);
+  --severity-icon-info:          var(--severity-info);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR MENU ITEM STYLING — Hover & Active States
+   ═══════════════════════════════════════════════════════════════ */
+.sidebar .menu-item:hover {
+  background-color: var(--sidebar-hover);
+}
+
+.sidebar .menu-item.active,
+.sidebar .menu-item.selected,
+.sidebar .menu-item[aria-current="page"],
+.sidebar .nav-item.active {
+  background-color: var(--sidebar-active) !important;
+  color: var(--sidebar-active-text);
+}
+
+.sidebar .menu-item.active svg,
+.sidebar .menu-item:hover svg {
+  color: var(--sidebar-icon-active);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Deduplication placeholder tokens
+   ────────────────────────────────────────────────────────────── */
+:root {
+  --dedup-placeholder-gap:       var(--space-8, 2rem);
+  --dedup-placeholder-padding:   var(--space-8, 2rem);
+  --dedup-placeholder-text-gap:  var(--space-3, 0.75rem);
+  --dedup-placeholder-text-max:  640px;
+  --dedup-placeholder-min-h:     60vh;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Correlation drawer tokens — extendable, theme-aligned
+   ────────────────────────────────────────────────────────────── */
+:root {
+  /* Width: default + hard min/max for the drag handle to clamp to */
+  --corr-drawer-w:        720px;
+  --corr-drawer-w-min:    480px;
+  --corr-drawer-w-max:    1400px;
+
+  /* Chrome */
+  --corr-header-py:       var(--space-5, 1.25rem);
+  --corr-header-px:       var(--space-6, 1.5rem);
+  --corr-footer-py:       var(--space-4, 1rem);
+  --corr-footer-px:       var(--space-6, 1.5rem);
+  --corr-body-pad:        var(--space-6, 1.5rem);
+  --corr-body-gap:        var(--space-4, 1rem);
+
+  /* Sections */
+  --corr-section-bg:      var(--bg-surface);
+  --corr-section-border:  var(--border-subtle);
+  --corr-section-radius:  var(--radius-md, 12px);
+  --corr-section-pad-y:   var(--space-4, 1rem);
+  --corr-section-pad-x:   var(--space-5, 1.25rem);
+  --corr-section-gap:     var(--space-4, 1rem);
+
+  /* Form grid — responsive auto-fit */
+  --corr-field-min:       240px;
+  --corr-field-gap:       var(--space-3, 0.75rem);
+
+  /* Resize handle */
+  --corr-resize-w:        6px;
+  --corr-resize-color:    var(--accent-primary, #0064E0);
+
+  /* Correlation Sankey placeholder — soft brand ribbon */
+  --sankey-ribbon:        rgba(0, 100, 224, 0.18);
+
+  /* ── Workflow card — refined for breathing room & visual rhythm ── */
+  --wf-card-radius:        14px;                  /* less bubbly than 20px */
+  --wf-card-bg:            var(--bg-surface);
+  --wf-card-border:        var(--border-default);
+  --wf-card-hover-border:  rgba(var(--brand-primary-rgb), 0.32);
+  --wf-card-shadow:        0 1px 0 rgba(15, 23, 42, 0.02);
+  --wf-card-shadow-hover:  0 8px 20px -8px rgba(15, 23, 42, 0.10), 0 2px 6px -2px rgba(15, 23, 42, 0.06);
+  --wf-graph-bg:           var(--bg-elevated);
+  --wf-graph-h:            104px;
+  --wf-body-px:            18px;
+  --wf-body-py:            18px;
+  --wf-body-gap:           12px;                  /* was 8px — looked clumsy */
+  --wf-footer-px:          18px;
+  --wf-footer-py:          12px;
+
+  /* ═══════════════════════════════════════════════════════════════
+     DROPDOWN / FILTER SYSTEM — Unified tokens for all dropdowns,
+     filter pills, facet selectors, and select menus.
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* ── Filter Pill (trigger button) ── */
+  --filter-pill-bg:              var(--bg-surface);
+  --filter-pill-bg-hover:        var(--bg-elevated);
+  --filter-pill-bg-active:       var(--accent-primary-subtle);
+  --filter-pill-border:          var(--border-default);
+  --filter-pill-border-hover:    var(--border-strong);
+  --filter-pill-border-active:   var(--accent-primary);
+  --filter-pill-text:            var(--text-secondary);
+  --filter-pill-text-hover:      var(--text-primary);
+  --filter-pill-text-active:     var(--accent-primary);
+  --filter-pill-radius:          var(--radius-pill);
+  --filter-pill-height:          32px;
+  --filter-pill-px:              14px;
+  --filter-pill-font-size:       13px;
+  --filter-pill-font-weight:     var(--fw-medium);
+  --filter-pill-gap:             6px;
+  --filter-pill-shadow:          none;
+  --filter-pill-shadow-active:   0 0 0 2px var(--accent-primary-subtle);
+
+  /* ── Filter Badge (count inside pill) ── */
+  --filter-badge-bg:             var(--accent-primary);
+  --filter-badge-text:           #FFFFFF;
+  --filter-badge-size:           18px;
+  --filter-badge-font-size:      10px;
+  --filter-badge-font-weight:    var(--fw-bold);
+  --filter-badge-radius:         var(--radius-pill);
+
+  /* ── Dropdown Menu (floating panel) ── */
+  --dropdown-bg:                 var(--bg-surface);
+  --dropdown-border:             var(--border-default);
+  --dropdown-radius:             var(--radius-sm);
+  --dropdown-shadow:             none;
+  --dropdown-min-width:          220px;
+  --dropdown-max-height:         300px;
+  --dropdown-padding:            4px;
+
+  /* ── Dropdown Option (single item) ── */
+  --dropdown-option-bg:          transparent;
+  --dropdown-option-bg-hover:    var(--bg-elevated);
+  --dropdown-option-bg-selected: var(--accent-primary-subtle);
+  --dropdown-option-text:        var(--text-primary);
+  --dropdown-option-text-hover:  var(--text-primary);
+  --dropdown-option-text-selected: var(--accent-primary);
+  --dropdown-option-radius:      4px;
+  --dropdown-option-px:          10px;
+  --dropdown-option-py:          9px;
+  --dropdown-option-font-size:   13px;
+  --dropdown-option-font-weight: var(--fw-regular);
+  --dropdown-option-gap:         9px;
+
+  /* ── Dropdown Search Input ── */
+  --dropdown-search-bg:          var(--bg-subtle);
+  --dropdown-search-border:      var(--border-default);
+  --dropdown-search-radius:      6px;
+  --dropdown-search-px:          10px;
+  --dropdown-search-py:          7px;
+  --dropdown-search-font-size:   13px;
+  --dropdown-search-text:        var(--text-primary);
+  --dropdown-search-placeholder: var(--text-placeholder);
+  --dropdown-search-focus-border: var(--accent-primary);
+
+  /* ── Dropdown Checkbox ── */
+  --dropdown-checkbox-size:      15px;
+  --dropdown-checkbox-border:    var(--border-strong);
+  --dropdown-checkbox-radius:    4px;
+  --dropdown-checkbox-checked-bg: var(--accent-primary);
+  --dropdown-checkbox-checked-border: var(--accent-primary);
+
+  /* ── Dropdown Count Badge ── */
+  --dropdown-count-text:         var(--text-tertiary);
+  --dropdown-count-font-size:    11px;
+  --dropdown-count-font-weight:  var(--fw-medium);
+
+  /* ── Select Capsule (inline status/severity selector) ── */
+  --select-capsule-bg:           var(--bg-surface);
+  --select-capsule-border:       var(--border-default);
+  --select-capsule-border-focus: var(--accent-primary);
+  --select-capsule-radius:       var(--radius-pill);
+  --select-capsule-height:       26px;
+  --select-capsule-px:           8px;
+  --select-capsule-font-size:    11px;
+  --select-capsule-font-weight:  var(--fw-medium);
+  --select-capsule-text:         var(--text-primary);
+  --select-capsule-icon-size:    12px;
+  --select-capsule-arrow-size:   10px;
+  --select-capsule-arrow-color:  var(--text-tertiary);
+
+  /* ── Dropdown Icon (option-level icon wrapper) ── */
+  --dropdown-icon-size:          16px;
+  --dropdown-icon-color:         var(--sidebar-icon-default);
+  --dropdown-icon-color-hover:   var(--text-primary);
+  --dropdown-icon-color-selected: var(--accent-primary);
+  --dropdown-icon-bg:            transparent;
+  --dropdown-icon-bg-hover:      transparent;
+  --dropdown-icon-radius:        4px;
+
+  /* ── Status Icon Colors (centralized — replaces hardcoded Tailwind) ── */
+  --status-firing-color:         var(--severity-critical);
+  --status-resolved-color:       var(--color-success);
+  --status-acknowledged-color:   var(--text-tertiary);
+  --status-merged-color:         var(--meta-oculus-purple);
+  --status-deleted-color:        var(--text-tertiary);
+
+  /* ── Severity Icon Colors (centralized — replaces hardcoded Tailwind) ── */
+  --severity-icon-critical:      var(--severity-critical);
+  --severity-icon-high:          var(--severity-high);
+  --severity-icon-warning:       var(--severity-medium);
+  --severity-icon-low:           var(--severity-low);
+  --severity-icon-info:          var(--severity-info);
+
+  /* ── Chevron (shared across all dropdowns) ── */
+  --dropdown-chevron-size:       14px;
+  --dropdown-chevron-color:      var(--text-tertiary);
+  --dropdown-chevron-color-hover: var(--text-secondary);
+
+  /* ── Transition ── */
+  --dropdown-transition:         150ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* ── Add Filter Button ── */
+  --filter-add-bg:               transparent;
+  --filter-add-border:           1px dashed var(--border-default);
+  --filter-add-text:             var(--text-tertiary);
+  --filter-add-hover-bg:         var(--bg-elevated);
+  --filter-add-hover-border:     1px dashed var(--border-strong);
+  --filter-add-hover-text:       var(--text-secondary);
+
+  /* ── Action Buttons (page-level CTA) ── */
+  --action-btn-height:           32px;
+  --action-btn-px:               12px;
+  --action-btn-radius:           var(--radius-sm);
+  --action-btn-font-size:        13px;
+  --action-btn-font-weight:      var(--fw-medium);
+  --action-btn-icon-size:        15px;
+  --action-btn-gap:              6px;
+
+  --action-btn-primary-bg:       var(--accent-primary);
+  --action-btn-primary-bg-hover: var(--accent-primary-hover);
+  --action-btn-primary-text:     #FFFFFF;
+  --action-btn-primary-border:   transparent;
+  --action-btn-primary-shadow:   0 1px 2px rgba(0,0,0,0.08);
+
+  --action-btn-secondary-bg:       transparent;
+  --action-btn-secondary-bg-hover: var(--bg-elevated);
+  --action-btn-secondary-text:     var(--text-secondary);
+  --action-btn-secondary-text-hover: var(--text-primary);
+  --action-btn-secondary-border:   var(--border-default);
+  --action-btn-secondary-shadow:   none;
+
+  --action-btn-ghost-bg:           transparent;
+  --action-btn-ghost-bg-hover:     var(--bg-elevated);
+  --action-btn-ghost-text:         var(--text-tertiary);
+  --action-btn-ghost-text-hover:   var(--text-secondary);
+  --action-btn-ghost-border:       transparent;
+
+  /* ── Toolbar Layout ── */
+  --toolbar-gap:                 8px;
+  --toolbar-section-gap:         12px;
+  --toolbar-divider-color:       var(--border-default);
+  --toolbar-divider-height:      20px;
+
+  /* ── Executive Overview Cards ── */
+  --overview-card-bg:            var(--bg-surface);
+  --overview-card-border:        var(--border-default);
+  --overview-card-radius:        var(--radius-sm);
+  --overview-card-px:            16px;
+  --overview-card-py:            14px;
+  --overview-card-label-family:  var(--metric-label-family);
+  --overview-card-label-size:    11px;
+  --overview-card-label-weight:  var(--fw-semibold);
+  --overview-card-label-color:   var(--text-tertiary);
+  --overview-card-value-family:  var(--metric-value-family);
+  --overview-card-value-size:    22px;
+  --overview-card-value-weight:  var(--fw-bold);
+  --overview-card-value-color:   var(--text-primary);
+  --overview-card-meta-family:   var(--metric-delta-family);
+  --overview-card-meta-size:     12px;
+  --overview-card-meta-color:    var(--text-tertiary);
+
+  /* ── Incident Detail Page ── */
+  --incident-breadcrumb-color:       var(--text-tertiary);
+  --incident-breadcrumb-link-color:  var(--accent-primary);
+  --incident-breadcrumb-separator:   var(--text-placeholder);
+  --incident-breadcrumb-current:     var(--text-primary);
+
+  --incident-section-bg:             var(--bg-surface);
+  --incident-section-border:         var(--border-default);
+  --incident-section-radius:         var(--radius-md);
+  --incident-section-padding:        20px;
+
+  --incident-field-label-size:       11px;
+  --incident-field-label-weight:     var(--fw-semibold);
+  --incident-field-label-color:      var(--text-tertiary);
+  --incident-field-label-tracking:   0.05em;
+  --incident-field-value-size:       13px;
+  --incident-field-value-color:      var(--text-primary);
+
+  --incident-tab-height:             38px;
+  --incident-tab-font-size:          13px;
+  --incident-tab-font-weight:        var(--fw-medium);
+  --incident-tab-color:              var(--text-secondary);
+  --incident-tab-color-active:       var(--accent-primary);
+  --incident-tab-border-active:      var(--accent-primary);
+  --incident-tab-hover-bg:           var(--bg-elevated);
+  --incident-tab-gap:                0px;
+  --incident-tab-px:                 16px;
+  --incident-tab-radius:             var(--radius-sm);
+
+  --incident-summary-max-width:      640px;
+}
+
+/* ── Global Focus Ring — single outer ring, no inner/double ring ── */
+:root {
+  --focus-ring-color:  var(--accent-primary);
+  --focus-ring-width:  2px;
+  --focus-ring-offset: 0px;
+}
+
