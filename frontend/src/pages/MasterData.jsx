@@ -4,6 +4,8 @@ import {
   getGeographies, createGeography, updateGeography, deleteGeography,
   getDomains, createDomain, updateDomain, deleteDomain,
   getSubDomains, createSubDomain, updateSubDomain, deleteSubDomain,
+  getRagCategories, createRagCategory, updateRagCategory,
+  getRagSubCategories, createRagSubCategory, updateRagSubCategory,
 } from '../api/client'
 
 export function GeographyPage() {
@@ -92,6 +94,70 @@ export function SubDomainPage() {
         { key: 'DomainID', label: 'Domain', required: true, type: 'select', options: domainOptions },
         { key: 'SubDomainName', label: 'Sub-Domain Name', required: true, placeholder: 'e.g. Revenue Analytics' },
         { key: 'IsActive', label: 'Active', type: 'checkbox', editOnly: true },
+      ]}
+    />
+  )
+}
+
+
+// ── RAG Category ──────────────────────────────────────────────────────────────
+export function RagCategoryPage() {
+  return (
+    <CRUDPage
+      title="RAG Categories"
+      subtitle="Manage document categories for RAG pipeline"
+      fetchFn={getRagCategories}
+      createFn={createRagCategory}
+      updateFn={updateRagCategory}
+      deleteFn={null}
+      noDelete={true}
+      getItemId={i => i.category_id}
+      getItemLabel={i => i.category_name}
+      columns={[
+        { key: 'category_id',   label: '#' },
+        { key: 'category_name', label: 'Category' },
+        { key: 'description',   label: 'Description', render: v => v || '—' },
+        { key: 'is_active',     label: 'Status', render: v => (
+          <span className={`badge badge-${v ? 'success' : 'neutral'}`}>{v ? 'Active' : 'Inactive'}</span>
+        )},
+        { key: 'created_date',  label: 'Created', render: v => v ? new Date(v).toLocaleDateString() : '—' },
+      ]}
+      formFields={[
+        { key: 'category_name', label: 'Category Name', required: true, placeholder: 'e.g. SOPs' },
+        { key: 'description',   label: 'Description', type: 'textarea', placeholder: 'Optional description' },
+        { key: 'is_active',     label: 'Active', type: 'checkbox', editOnly: true },
+      ]}
+    />
+  )
+}
+
+
+// ── RAG Sub-Category ──────────────────────────────────────────────────────────
+export function RagSubCategoryPage() {
+  return (
+    <CRUDPage
+      title="RAG Sub-Categories"
+      subtitle="Manage document sub-categories for RAG pipeline"
+      fetchFn={getRagSubCategories}
+      createFn={createRagSubCategory}
+      updateFn={updateRagSubCategory}
+      deleteFn={null}
+      noDelete={true}
+      getItemId={i => i.sub_category_id}
+      getItemLabel={i => i.sub_category_name}
+      columns={[
+        { key: 'sub_category_id',   label: '#' },
+        { key: 'sub_category_name', label: 'Sub-Category' },
+        { key: 'description',       label: 'Description', render: v => v || '—' },
+        { key: 'is_active',         label: 'Status', render: v => (
+          <span className={`badge badge-${v ? 'success' : 'neutral'}`}>{v ? 'Active' : 'Inactive'}</span>
+        )},
+        { key: 'created_date', label: 'Created', render: v => v ? new Date(v).toLocaleDateString() : '—' },
+      ]}
+      formFields={[
+        { key: 'sub_category_name', label: 'Sub-Category Name', required: true, placeholder: 'e.g. Domestic_Orders' },
+        { key: 'description',       label: 'Description', type: 'textarea', placeholder: 'Optional description' },
+        { key: 'is_active',         label: 'Active', type: 'checkbox', editOnly: true },
       ]}
     />
   )

@@ -337,6 +337,7 @@ class PromptPolicy(Base):
     policy_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     check_type = Column(String, nullable=False)
+    guardrail = Column(String, nullable=True, server_default='prompt')
     check_value = Column(JSONB, nullable=False)
     action = Column(String, nullable=False)
     severity = Column(String, nullable=False)

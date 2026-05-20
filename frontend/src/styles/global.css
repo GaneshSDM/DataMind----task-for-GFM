@@ -463,6 +463,65 @@ a { color: inherit; text-decoration: none; }
   font-size: 11px; color: var(--text-secondary); font-weight: 500;
 }
 
+/* ── RAG Pipelines page ──────────────────────────────────── */
+.rag-source-card {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 6px; padding: 16px 12px;
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer; text-align: center;
+  transition: all var(--transition-fast);
+}
+.rag-source-card:hover { border-color: var(--brand-primary); background: var(--brand-primary-subtle); }
+.rag-source-card[data-active="true"] { border-color: var(--brand-primary); background: var(--brand-primary-subtle); }
+.rag-source-icon {
+  width: 38px; height: 38px; border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+}
+.rag-source-card[data-active="true"] .rag-source-icon,
+.rag-source-card:hover .rag-source-icon {
+  background: var(--brand-primary-muted); color: var(--brand-primary);
+}
+.rag-source-label { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.rag-source-desc  { font-size: 11px; color: var(--text-tertiary); line-height: 1.4; }
+
+.rag-dropzone {
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 32px 20px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; text-align: center;
+  background: var(--bg-elevated);
+  transition: all var(--transition-fast);
+}
+.rag-dropzone:hover, .rag-dropzone--drag {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary-subtle);
+}
+.rag-file-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 200px; overflow-y: auto;
+}
+.rag-file-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.rag-info-box {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 12px;
+  background: var(--color-info-bg);
+  border: 1px solid rgba(26,79,160,0.15);
+  border-radius: var(--radius-sm);
+  font-size: 12px; color: var(--text-secondary); line-height: 1.55;
+}
+
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }

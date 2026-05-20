@@ -215,10 +215,11 @@ class GuardrailCreate(BaseModel):
     policy_name: str
     description: Optional[str] = None
     check_type: str
-    check_value: Dict[str, Any]
+    guardrail: str = 'prompt'
+    check_value: Optional[Dict[str, Any]] = None
     action: str
     severity: str
-    priority: int = 100
+    priority: Optional[int] = 100
 
 class GuardrailOut(BaseModel):
     id: int
@@ -316,3 +317,131 @@ class MessageResponse(BaseModel):
 class StatusResponse(BaseModel):
     status: str
     detail: Optional[str] = None
+
+
+# ── RAG Category ──────────────────────────────────────────────────────────────
+class RagCategoryCreate(BaseModel):
+    category_name: str
+    description:   Optional[str] = None
+
+class RagCategoryUpdate(BaseModel):
+    category_name: Optional[str] = None
+    description:   Optional[str] = None
+    is_active:     Optional[bool] = None
+
+class RagCategoryOut(BaseModel):
+    category_id:   int
+    category_name: str
+    description:   Optional[str]
+    is_active:     bool
+    created_by:    int
+    created_date:  Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# ── RAG Sub-Category ──────────────────────────────────────────────────────────
+class RagSubCategoryCreate(BaseModel):
+    sub_category_name: str
+    description:       Optional[str] = None
+
+class RagSubCategoryUpdate(BaseModel):
+    sub_category_name: Optional[str] = None
+    description:       Optional[str] = None
+    is_active:         Optional[bool] = None
+
+class RagSubCategoryOut(BaseModel):
+    sub_category_id:   int
+    sub_category_name: str
+    description:       Optional[str]
+    is_active:         bool
+    created_by:        int
+    created_date:      Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# ── RAG Ingestion Runs ────────────────────────────────────────────────────────
+class RagRunCreate(BaseModel):
+    run_name:    Optional[str] = None
+    source_type: str                      # local / gdrive / sharepoint
+    # file metadata submitted by frontend for job record creation
+    files: Optional[List[Dict[str, Any]]] = []
+
+class RagRunOut(BaseModel):
+    run_id:            str
+    run_name:          Optional[str]
+    source_type:       str
+    started_at:        Optional[datetime]
+    completed_at:      Optional[datetime]
+    status:            str
+    total_files_found: int
+    processed_files:   int
+    skipped_files:     int
+    failed_files:      int
+    invalid_files:     int
+    run_summary:       Optional[Dict[str, Any]]
+    created_by:        int
+    created_date:      Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# ── RAG Files ─────────────────────────────────────────────────────────────────
+class RagFileOut(BaseModel):
+    file_id:            str
+    original_file_name: str
+    storage_uri:        str
+    relative_path:      str
+    file_type:          str
+    file_size_bytes:    int
+    page_count:         Optional[int]
+    domain_id:          int
+    sub_domain_id:      int
+    category_id:        int
+    sub_category_id:    Optional[int]
+    description:        Optional[str]
+    subcategory_path:   Optional[str]
+    version_no:         int
+    status:             str
+    extraction_method:  Optional[str]
+    embedding_model:    Optional[str]
+    is_active:          bool
+    created_date:       Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# ── RAG Ingestion Jobs ────────────────────────────────────────────────────────
+class RagJobOut(BaseModel):
+    job_id:       str
+    run_id:       str
+    file_id:      Optional[str]
+    storage_uri:  str
+    job_type:     str
+    status:       str
+    message:      Optional[str]
+    started_at:   Optional[datetime]
+    completed_at: Optional[datetime]
+    created_date: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# ── RAG Ingestion Errors ──────────────────────────────────────────────────────
+class RagErrorOut(BaseModel):
+    error_id:      str
+    run_id:        str
+    job_id:        Optional[str]
+    file_path:     str
+    error_type:    str
+    error_message: str
+    created_date:  Optional[datetime]
+
+    class Config:
+        from_attributes = True

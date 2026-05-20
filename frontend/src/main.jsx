@@ -6,10 +6,11 @@ import { AuthProvider } from './contexts/AuthContext'
 import AppShell from './components/layout/AppShell'
 import SignIn from './pages/SignIn'
 import Chats from './pages/Chats'
-import { GeographyPage, DomainPage, SubDomainPage } from './pages/MasterData'
+import { GeographyPage, DomainPage, SubDomainPage, RagCategoryPage, RagSubCategoryPage } from './pages/MasterData'
 import SecurityGroups from './pages/SecurityGroups'
 import Guardrails from './pages/Guardrails'
 import { UserManagement, RLSPage, CLSPage, SLMConfigPage, DBConnectionsPage } from './pages/AdminPages'
+import RAGPipelines from './pages/RAGPipelines'
 import './styles/global.css'
 
 createRoot(document.getElementById('root')).render(
@@ -31,6 +32,9 @@ createRoot(document.getElementById('root')).render(
             <Route path="users"          element={<UserManagement />} />
             <Route path="slm-config"     element={<SLMConfigPage />} />
             <Route path="db-connections" element={<DBConnectionsPage />} />
+            <Route path="rag-pipelines"    element={<RAGPipelines />} />
+            <Route path="rag-categories"   element={<RagCategoryPage />} />
+            <Route path="rag-sub-categories" element={<RagSubCategoryPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

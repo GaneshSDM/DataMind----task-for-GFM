@@ -106,3 +106,22 @@ export const getDBConnections = () => api.get('/db-connections/').then(r => r.da
 export const createDBConnection = d => api.post('/db-connections/', d).then(r => r.data)
 export const testDBConnection = d => api.post('/db-connections/test', d).then(r => r.data)
 export const deleteDBConnection = id => api.delete(`/db-connections/${id}`).then(r => r.data)
+
+// ── RAG ─────────────────────────────────────────────────────
+export const getRagCategories     = ()        => api.get('/rag/categories').then(r => r.data)
+export const createRagCategory    = d         => api.post('/rag/categories', d).then(r => r.data)
+export const updateRagCategory    = (id, d)   => api.put(`/rag/categories/${id}`, d).then(r => r.data)
+export const deleteRagCategory    = id        => api.delete(`/rag/categories/${id}`).then(r => r.data)
+
+export const getRagSubCategories  = ()        => api.get('/rag/sub-categories').then(r => r.data)
+export const createRagSubCategory = d         => api.post('/rag/sub-categories', d).then(r => r.data)
+export const updateRagSubCategory = (id, d)   => api.put(`/rag/sub-categories/${id}`, d).then(r => r.data)
+export const deleteRagSubCategory = id        => api.delete(`/rag/sub-categories/${id}`).then(r => r.data)
+
+export const getRagRuns   = ()  => api.get('/rag/runs').then(r => r.data)
+export const getRagRun    = id  => api.get(`/rag/runs/${id}`).then(r => r.data)
+export const createRagRun = (formData) =>
+  api.post('/rag/runs', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+export const getRagJobs    = runId => api.get(`/rag/runs/${runId}/jobs`).then(r => r.data)
+export const getRagErrors  = runId => api.get(`/rag/runs/${runId}/errors`).then(r => r.data)
+export const getRagFiles   = p     => api.get('/rag/files', { params: p }).then(r => r.data)

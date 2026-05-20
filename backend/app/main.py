@@ -4,7 +4,8 @@ from app.db.session import engine, Base, SessionLocal
 from app.models.user import PromptPolicy
 
 # Import all models so they register with Base
-import app.models.user  # noqa
+import app.models.user      # noqa
+import app.models.rag_models # noqa
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as users_router
@@ -13,6 +14,7 @@ from app.api.routes.security import sg_router, rls_router, cls_router
 from app.api.routes.guardrails import router as guardrails_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.config import slm_router, db_router
+from app.api.routes.rag import router as rag_router
 
 app = FastAPI(title="SLM Application API", version="1.0.0")
 
@@ -31,7 +33,8 @@ Base.metadata.create_all(bind=engine)
 app.state.guardrails = []
 
 @app.on_event("startup")
-async def load_guardrails():
+async def startup():
+    # Load guardrails cache
     db = SessionLocal()
     try:
         app.state.guardrails = db.query(PromptPolicy).filter(
@@ -39,6 +42,12 @@ async def load_guardrails():
         ).order_by(PromptPolicy.priority).all()
     finally:
         db.close()
+
+    # Pre-warm embedding model (runs in thread pool so it doesn't block event loop)
+    import asyncio
+    from app.rag.embedder import warmup
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, warmup)
 
 app.include_router(auth_router,       prefix="/api/auth",            tags=["Auth"])
 app.include_router(users_router,      prefix="/api/users",           tags=["Users"])
@@ -52,6 +61,7 @@ app.include_router(guardrails_router, prefix="/api/guardrails",      tags=["Guar
 app.include_router(chat_router,       prefix="/api/chats",           tags=["Chat"])
 app.include_router(slm_router,        prefix="/api/slm-config",      tags=["SLM Config"])
 app.include_router(db_router,         prefix="/api/db-connections",  tags=["DB Connections"])
+app.include_router(rag_router,        prefix="/api/rag",             tags=["RAG"])
 
 
 @app.get("/")

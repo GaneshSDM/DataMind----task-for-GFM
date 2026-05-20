@@ -9,9 +9,11 @@ const CHECK_TYPES = ['keyword_block', 'max_length', 'regex', 'context']
 const ACTIONS = ['allow', 'block', 'warn', 'redact', 'escalate']
 const SEVERITIES = ['low', 'medium', 'high', 'critical']
 
+const GUARDRAIL_TYPES = ['prompt', 'response']
+
 const EMPTY = {
   policy_name: '', description: '',
-  check_type: 'keyword_block', check_value: {}, action: 'block',
+  check_type: 'keyword_block', guardrail: 'prompt', check_value: {}, action: 'block',
   severity: 'high', priority: 100
 }
 
@@ -86,7 +88,7 @@ export default function Guardrails() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Priority</th><th>Name</th><th>Check Type</th>
+                  <th>Priority</th><th>Name</th><th>Guardrail Type</th><th>Check Type</th>
                   <th>Action</th><th>Severity</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
@@ -97,6 +99,11 @@ export default function Guardrails() {
                     <td>
                       <div style={{ fontWeight: 600, fontSize: 12.5 }}>{item.policy_name}</div>
                       {item.description && <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{item.description}</div>}
+                    </td>
+                    <td>
+                      <span className={`badge ${item.guardrail === 'response' ? 'badge-warning' : 'badge-info'}`}>
+                        {item.guardrail || 'prompt'}
+                      </span>
                     </td>
                     <td><span className="tag">{item.check_type}</span></td>
                     <td><span className="tag">{item.action}</span></td>
@@ -144,6 +151,12 @@ export default function Guardrails() {
           </div>
           <div className="grid-2">
             <div className="form-group">
+              <label className="form-label">Guardrail Type</label>
+              <select className="form-select" value={form.guardrail || 'prompt'} onChange={e => setForm(p => ({ ...p, guardrail: e.target.value }))}>
+                {GUARDRAIL_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
               <label className="form-label">Check Type</label>
               <select className="form-select" value={form.check_type} onChange={e => {
                 setForm(p => ({ ...p, check_type: e.target.value }))
@@ -152,24 +165,24 @@ export default function Guardrails() {
                 {CHECK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
+          </div>
+          <div className="grid-2">
             <div className="form-group">
               <label className="form-label">Action</label>
               <select className="form-select" value={form.action} onChange={e => setForm(p => ({ ...p, action: e.target.value }))}>
                 {ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
-          </div>
-          <div className="grid-2">
             <div className="form-group">
               <label className="form-label">Severity</label>
               <select className="form-select" value={form.severity} onChange={e => setForm(p => ({ ...p, severity: e.target.value }))}>
                 {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-            <div className="form-group">
-              <label className="form-label">Priority (lower = first)</label>
-              <input className="form-input" type="number" value={form.priority} onChange={e => setForm(p => ({ ...p, priority: parseInt(e.target.value) }))} />
-            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Priority (lower = first)</label>
+            <input className="form-input" type="number" value={form.priority ?? ''} onChange={e => { const v = parseInt(e.target.value); setForm(p => ({ ...p, priority: isNaN(v) ? null : v })) }} />
           </div>
           <div className="form-group">
             <label className="form-label">Check Value (JSON)</label>
