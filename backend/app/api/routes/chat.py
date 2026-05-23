@@ -242,10 +242,12 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
     sql_status        = pipeline_result.get("sql_status")
     sql_result        = pipeline_result.get("sql_result")
     sql_error         = pipeline_result.get("sql_error")
-    valkyrie_status   = pipeline_result.get("valkyrie_status")
-    valkyrie_result   = pipeline_result.get("valkyrie_result")
-    valkyrie_error    = pipeline_result.get("valkyrie_error")
+    valkyrie_status     = pipeline_result.get("valkyrie_status")
+    valkyrie_result     = pipeline_result.get("valkyrie_result")
+    valkyrie_error      = pipeline_result.get("valkyrie_error")
     synthesizer_context = pipeline_result.get("synthesizer_context")
+    correction_attempt  = pipeline_result.get("correction_attempt", 0)
+    correction_history  = pipeline_result.get("correction_history", [])
 
     # Get or create chat
     if payload.chat_id:
@@ -324,14 +326,15 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
             if n_err:
                 sql_note += f", {n_err} failed"
             # Append VALKYRIE validation outcome
+            corr_note = f" (after {correction_attempt} correction(s))" if correction_attempt > 0 else ""
             if valkyrie_status == "pass":
-                sql_note += "\n✅ **VALKYRIE validation passed**"
+                sql_note += f"\n✅ **VALKYRIE validation passed**{corr_note}"
             elif valkyrie_status == "partial":
                 val_results = (valkyrie_result or {}).get("validated_results", [])
                 n_fail = sum(1 for r in val_results if r.get("status") == "fail")
-                sql_note += f"\n⚠️ **VALKYRIE: {n_fail} query(ies) have violations** — corrections applied"
+                sql_note += f"\n⚠️ **VALKYRIE: {n_fail} query(ies) still have violations**{corr_note}"
             elif valkyrie_status == "fail":
-                sql_note += "\n⚠️ **VALKYRIE validation failed** — queries may not satisfy security policies"
+                sql_note += f"\n⚠️ **VALKYRIE validation failed**{corr_note} — queries may not satisfy security policies"
             elif valkyrie_status == "error":
                 sql_note += f"\n⚠️ **VALKYRIE unavailable** — {valkyrie_error or 'validation skipped'}"
         elif sql_status == "error":
@@ -360,6 +363,8 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
         "valkyrie_status":    valkyrie_status,
         "valkyrie_result":    valkyrie_result,
         "synthesizer_context": synthesizer_context,
+        "correction_attempt": correction_attempt,
+        "correction_history": correction_history,
         "response":           assistant_content,
     }
 
