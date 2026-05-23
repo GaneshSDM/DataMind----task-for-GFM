@@ -1,0 +1,10 @@
+#,User Natural Language Input,Intent 1,Intent 2,Intent 3,Domain 1,Sub-Domain 1,Domain 2,Sub-Domain 2,Domain 3,Sub-Domain 3,"Intent 1
+Type","Intent 2
+Type","Intent 3
+Type","Overall
+Operation Type",Complexity,Testing Notes
+1,I want to place a domestic order and also understand the delivery timeline before I confirm.,Place Domestic Order,Enquire Delivery Timeline,,Sales,Bookings,Sales,Shipment,,,Action,Retrieve,,Mixed (Retrieve + Action),Medium,Booking intent gated by logistics enquiry
+2,Can I book an international order and get a copy of the customs procedures?,Place International Order,Request Customs Documentation,,Sales,Bookings,Sales,Bookings,,,Action,Action,,Action Only,Medium,Cross-border order + procedural doc request
+3,I need the monthly booking report for Q1 and want to cross-check it with the quarterly booking report.,Retrieve Monthly Booking Report,Retrieve Quarterly Booking Report,,Sales,Bookings,Sales,Bookings,,,Retrieve,Retrieve,,Retrieve Only,Low,"Dual report retrieval, same sub-domain"
+4,Place an order for 50 units and forecast how this affects next month's booking trends.,Place Domestic Order,Retrieve Monthly Booking Report,,Sales,Bookings,Sales,Bookings,,,Action,Retrieve,,Mixed (Retrieve + Action),Medium,Transactional + analytical intent
+5,I want to cancel my order and understand what the refund rules are before I proceed.,Cancel Order,Enquire Refund Rules,,Sales,Cancellation,Sales,Cancellation,,,Action,Retrieve,,Mixed (Retrieve + Action),Low,"Cancellation + policy enquiry, same sub-domain"

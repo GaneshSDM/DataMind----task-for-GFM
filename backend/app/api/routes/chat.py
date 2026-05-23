@@ -1,13 +1,11 @@
 import uuid
-import json
 import time
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.security import get_current_user
 from app.models.user import (
-    ChatHistory, ChatMessage, SLMConfig, PromptPolicy, PromptPolicyCheck,
+    ChatHistory, ChatMessage,
     UserSecurityGroup, SecurityGroup, SecurityGroupRLS, SecurityGroupCLS,
     SecurityGroupDomain, SecurityGroupSubDomain, SecurityGroupGeography,
     RowLevelSecurity, ColumnLevelSecurity, ColumnSecurityMapping,
@@ -37,17 +35,6 @@ def get_cached_user_profile(db, user_id):
     profile = build_security_payload(db, user_id)
     _user_profile_cache[user_id] = (profile, now)
     return profile
-
-
-def safe_json(obj):
-    """JSON serializer that handles UUID and other non-serializable types."""
-    if isinstance(obj, uuid.UUID):
-        return str(obj)
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
-
-
-def json_dumps(obj):
-    return json.dumps(obj, default=safe_json, indent=2)
 
 
 def get_user_role_name(db, user_id):
@@ -174,49 +161,25 @@ def build_security_payload(db, user_id, security_group_id=None, security_group_i
     }
 
 
-def apply_guardrails(db, prompt, request_id, fastapi_app):
-    policies = fastapi_app.state.guardrails
+async def run_guardrail_pipeline(prompt, guardrails_list, security_profile, metadata):
+    """
+    Calls the LangGraph orchestrator → Heimdall guardrail microservice.
+    Returns OrchestratorState dict.
+    """
+    from app.agents.orchestrator import run_pipeline
 
-    final_action = "allow"
-    for policy in policies:
-        matched, reason = False, None
-        check_val = policy.check_value or {}
+    prompt_guardrails = [
+        {"id": str(g.id), "name": g.policy_name, "type": g.check_type}
+        for g in guardrails_list
+    ]
+    guardrails_payload = {"prompt_guardrails": prompt_guardrails, "response_guardrails": []}
 
-        if policy.check_type == "keyword_block":
-            for kw in check_val.get("keywords", []):
-                if kw.lower() in prompt.lower():
-                    matched, reason = True, f"Keyword '{kw}' detected"
-                    break
-        elif policy.check_type == "max_length":
-            max_len = check_val.get("max_length", 1000)
-            if len(prompt) > max_len:
-                matched, reason = True, f"Prompt exceeds max length {max_len}"
-        elif policy.check_type == "regex":
-            import re
-            pattern = check_val.get("pattern", "")
-            if pattern and re.search(pattern, prompt, re.IGNORECASE):
-                matched, reason = True, "Pattern matched"
-        elif policy.check_type == "context":
-            forbidden = check_val.get("forbidden_topics", [])
-            for topic in forbidden:
-                if topic.lower() in prompt.lower():
-                    matched, reason = True, f"Forbidden topic '{topic}' detected"
-                    break
-
-        if matched and policy.action in ("block", "escalate"):
-            final_action = policy.action
-
-        db.add(PromptPolicyCheck(
-            request_id=uuid.UUID(request_id),
-            policy_id=policy.id,
-            matched=matched,
-            action_taken=policy.action if matched else "pass",
-            reason=reason,
-            prompt=prompt[:500] if prompt else None,
-        ))
-
-    db.commit()
-    return {"action": final_action}
+    return await run_pipeline(
+        prompt=prompt,
+        guardrails=guardrails_payload,
+        security_profile=security_profile,
+        metadata=metadata,
+    )
 
 
 @router.get("/")
@@ -244,9 +207,41 @@ def get_messages(chat_id: int, current_user=Depends(get_current_user), db: Sessi
 async def send_prompt(request: Request, payload: SendPromptRequest, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     request_id = str(uuid.uuid4())
 
-    guardrail_result = apply_guardrails(db, payload.prompt, request_id, request.app)
-    if guardrail_result["action"] == "block":
-        raise HTTPException(status_code=400, detail="Prompt blocked by guardrails")
+    # Build security profile — use provided SG list, single SG, or all assigned
+    sg_ids = payload.security_group_ids or None
+    sg_id = payload.security_group_id or None
+    if sg_ids:
+        security_profile = build_security_payload(db, current_user.user_id, security_group_ids=sg_ids)
+    elif sg_id:
+        security_profile = build_security_payload(db, current_user.user_id, security_group_id=sg_id)
+    else:
+        security_profile = get_cached_user_profile(db, current_user.user_id)
+
+    metadata = {
+        "domain": payload.domain,
+        "sub_domain": payload.subdomain,
+        "geography": payload.geography,
+        "request_id": request_id,
+    }
+
+    # ── Phase 2: run full pipeline (guardrail → intent classifier via LangGraph) ──
+    pipeline_result = await run_guardrail_pipeline(
+        prompt=payload.prompt,
+        guardrails_list=request.app.state.guardrails,
+        security_profile=security_profile,
+        metadata=metadata,
+    )
+
+    guardrail_status = pipeline_result.get("guardrail_status", "error")
+    blocked_by       = pipeline_result.get("blocked_by")
+    guardrail_message = pipeline_result.get("guardrail_message", "")
+    intent_status    = pipeline_result.get("intent_status")
+    intent_result    = pipeline_result.get("intent_result")
+    intent_error     = pipeline_result.get("intent_error")
+    queue_path       = pipeline_result.get("queue_path")
+    sql_status       = pipeline_result.get("sql_status")
+    sql_result       = pipeline_result.get("sql_result")
+    sql_error        = pipeline_result.get("sql_error")
 
     # Get or create chat
     if payload.chat_id:
@@ -262,96 +257,92 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
         db.add(chat)
         db.flush()
 
-    # Build security profile — use provided SG list, single SG, or all assigned
-    sg_ids = payload.security_group_ids or None
-    sg_id = payload.security_group_id or None
-    if sg_ids:
-        security_profile = build_security_payload(db, current_user.user_id, security_group_ids=sg_ids)
-    elif sg_id:
-        security_profile = build_security_payload(db, current_user.user_id, security_group_id=sg_id)
-    else:
-        security_profile = get_cached_user_profile(db, current_user.user_id)
-
-    # Guardrails list (UUID → str)
-    prompt_guardrails = [
-        {"id": str(g.id), "name": g.policy_name, "type": g.check_type}
-        for g in request.app.state.guardrails
-    ]
-
+    # Build slm_payload for audit/storage
     slm_payload = {
         "prompt": payload.prompt,
-        "guardrails": {"prompt_guardrails": prompt_guardrails, "response_guardrails": []},
+        "guardrails": {
+            "prompt_guardrails": [
+                {"id": str(g.id), "name": g.policy_name, "type": g.check_type}
+                for g in request.app.state.guardrails
+            ],
+            "response_guardrails": [],
+        },
         "security_profile": security_profile,
-        "metadata": {
-            "domain": payload.domain,
-            "sub_domain": payload.subdomain,
-            "geography": payload.geography,
-            "request_id": request_id,
-        }
+        "metadata": metadata,
+        "intent_result": intent_result,
     }
 
     # Save user message
     db.add(ChatMessage(chat_id=chat.chat_id, role="user", content=payload.prompt, payload=slm_payload))
 
-    # Call LLM
-    from app.core.config import settings as app_settings
-    slm_config = db.query(SLMConfig).filter(SLMConfig.is_active == True).first()
-    api_key = app_settings.LLM_API_KEY or (slm_config.api_key if slm_config else None)
-    base_url = app_settings.LLM_BASE_URL or (slm_config.base_url if slm_config else None)
-    model = app_settings.LLM_MODEL
-
-    if api_key and base_url:
-        try:
-            # Build system prompt with context guardrail restrictions
-            context_policies = db.query(PromptPolicy).filter(
-                PromptPolicy.is_active == True,
-                PromptPolicy.check_type == "context"
-            ).order_by(PromptPolicy.priority).all()
-
-            system_lines = [
-                "You are a data assistant. You ONLY answer questions based on data from the connected database.",
-                "Refuse any question that is not related to the database or its data.",
-                "If asked something outside your scope, respond: 'I can only answer questions about data in the connected database.'",
-            ]
-            for cp in context_policies:
-                cv = cp.check_value or {}
-                if cv.get("description"):
-                    system_lines.append(cv["description"])
-                if cv.get("forbidden_topics"):
-                    system_lines.append(f"Do NOT answer questions about: {', '.join(cv['forbidden_topics'])}")
-            system_lines.append(f"Security profile: {json.dumps(security_profile)}")
-            system_content = "\n".join(system_lines)
-
-            llm_request = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_content},
-                    {"role": "user", "content": payload.prompt}
-                ]
-            }
-            async with httpx.AsyncClient(timeout=30) as client:
-                resp = await client.post(base_url, json=llm_request, headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key}"
-                })
-                resp.raise_for_status()
-                assistant_content = resp.json()["choices"][0]["message"]["content"]
-        except httpx.HTTPStatusError as e:
-            error_body = e.response.text
-            assistant_content = f"[LLM Error {e.response.status_code}]: {error_body}"
-        except Exception as e:
-            assistant_content = f"[LLM Error: {str(e)}]\n\n```json\n{json_dumps(slm_payload)}\n```"
+    # ── Build assistant response based on pipeline outcome ──
+    if guardrail_status == "blocked":
+        assistant_content = (
+            f"⚠️ **Prompt blocked by guardrail** — {blocked_by}\n\n"
+            f"{guardrail_message}\n\n"
+            f"*Please revise your prompt and try again.*"
+        )
+    elif guardrail_status in ("error", None):
+        assistant_content = (
+            f"⚠️ **Guardrail check failed** — {guardrail_message}\n\n"
+            f"*Your prompt could not be processed. Please contact your administrator.*"
+        )
+    elif intent_status == "error":
+        assistant_content = (
+            f"✅ Guardrails passed.\n\n"
+            f"⚠️ **Intent classification failed** — {intent_error}\n\n"
+            f"*Please try again or contact your administrator.*"
+        )
     else:
-        assistant_content = f"**No LLM API key configured.** Add LLM_API_KEY to .env\n\n```json\n{json_dumps(slm_payload)}\n```"
+        # Full success — build intent summary
+        intents = intent_result.get("intents", []) if intent_result else []
+        total = intent_result.get("total_intents", len(intents)) if intent_result else 0
+
+        intent_lines = []
+        for i in intent_result.get("intents", []):
+            types_str = "/".join(i.get("intent_types", []))
+            source = i.get("data_source", "")
+            domain = i.get("domain", "")
+            sub = i.get("sub_domain", "")
+            desc = i.get("description", "")
+            intent_lines.append(f"  {i.get('intent_id', '?')}. [{types_str}·{source}] {domain} › {sub} — {desc}")
+
+        intent_block = "\n".join(intent_lines) if intent_lines else "  No intents detected."
+
+        # SQL status note
+        if sql_status == "skipped":
+            sql_note = "\n\n*No structured intents — SQL generation skipped.*"
+        elif sql_status in ("success", "partial"):
+            results = (sql_result or {}).get("sql_results", [])
+            n_ok  = sum(1 for r in results if r.get("status") == "success")
+            n_err = sum(1 for r in results if r.get("status") == "error")
+            sql_note = f"\n\n✅ **SAGE generated SQL** — {n_ok} query(ies)"
+            if n_err:
+                sql_note += f", {n_err} failed"
+        elif sql_status == "error":
+            sql_note = f"\n\n⚠️ **SQL generation failed** — {sql_error or 'unknown error'}"
+        else:
+            sql_note = ""
+
+        assistant_content = (
+            f"✅ **Guardrails passed.** ARIA detected **{total} intent(s)**:\n\n"
+            f"{intent_block}"
+            f"{sql_note}"
+        )
 
     db.add(ChatMessage(chat_id=chat.chat_id, role="assistant", content=assistant_content))
     db.commit()
 
     return {
-        "chat_id": chat.chat_id,
-        "request_id": request_id,
-        "guardrail_result": guardrail_result,
-        "response": assistant_content,
+        "chat_id":          chat.chat_id,
+        "request_id":       request_id,
+        "guardrail_status": guardrail_status,
+        "blocked_by":       blocked_by,
+        "intent_status":    intent_status,
+        "intent_result":    intent_result,
+        "sql_status":       sql_status,
+        "sql_result":       sql_result,
+        "response":         assistant_content,
     }
 
 

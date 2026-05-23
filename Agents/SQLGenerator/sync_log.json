@@ -1,0 +1,34 @@
+{
+  "runs": [
+    {
+      "timestamp": "2026-05-21T04:26:48.777460+00:00",
+      "had_changes": true,
+      "examples_regenerated": true,
+      "tables_added": [
+        "dim_customer",
+        "dim_date",
+        "dim_domain_metadata",
+        "dim_location",
+        "dim_payment",
+        "dim_product",
+        "fact_order_items",
+        "fact_orders",
+        "order_item_agg_view",
+        "raw_ecommerce",
+        "sales_business_view"
+      ],
+      "tables_removed": [
+        "customers",
+        "order_items",
+        "orders",
+        "products",
+        "returns",
+        "sales_targets",
+        "salespeople"
+      ],
+      "columns_added": {},
+      "columns_removed": {},
+      "types_changed": {}
+    }
+  ]
+}

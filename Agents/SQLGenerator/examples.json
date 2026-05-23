@@ -1,0 +1,1514 @@
+{
+  "version": "2.0",
+  "domain": "Sales",
+  "description": "30 e-commerce sales examples generated from actual DB schema.",
+  "tables": [
+    "sales.dim_payment",
+    "sales.fact_orders",
+    "sales.dim_date",
+    "sales.fact_order_items",
+    "sales.dim_product",
+    "sales.sales_business_view",
+    "sales.dim_location",
+    "sales.raw_ecommerce",
+    "sales.dim_customer"
+  ],
+  "examples": [
+    {
+      "id": 1,
+      "prompt": "Total revenue, order count, and average order value by country, ranked by revenue descending.",
+      "tables_used": [
+        "sales.sales_business_view"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "WITH country_revenue AS (SELECT country, SUM(total_order_value) AS total_revenue, COUNT(order_id) AS order_count, AVG(total_order_value) AS avg_order_value FROM sales.sales_business_view GROUP BY country) SELECT country, total_revenue, order_count, avg_order_value FROM country_revenue ORDER BY total_revenue DESC",
+      "sample_output": {
+        "columns": [
+          "country",
+          "total_revenue",
+          "order_count",
+          "avg_order_value"
+        ],
+        "rows": [
+          [
+            "United States",
+            1000000.0,
+            5000,
+            200.0
+          ],
+          [
+            "Canada",
+            800000.0,
+            4000,
+            200.0
+          ],
+          [
+            "Mexico",
+            600000.0,
+            3000,
+            200.0
+          ],
+          [
+            "United Kingdom",
+            400000.0,
+            2000,
+            200.0
+          ],
+          [
+            "Germany",
+            200000.0,
+            1000,
+            200.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "prompt": "Monthly revenue trend with month-over-month growth percentage.",
+      "tables_used": [
+        "sales.fact_orders"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "\n    WITH monthly_revenue AS (\n      SELECT \n        EXTRACT(YEAR FROM order_date) AS year,\n        EXTRACT(MONTH FROM order_date) AS month,\n        SUM(total_order_value) AS revenue\n      FROM \n        sales.fact_orders\n      GROUP BY \n        EXTRACT(YEAR FROM order_date),\n        EXTRACT(MONTH FROM order_date)\n    )\n    SELECT \n      year,\n      month,\n      revenue,\n      LAG(revenue) OVER (ORDER BY year, month) AS prev_revenue,\n      ROUND(((revenue - LAG(revenue) OVER (ORDER BY year, month)) / LAG(revenue) OVER (ORDER BY year, month)) * 100, 2) AS mom_growth\n    FROM \n      monthly_revenue\n    ORDER BY \n      year, month\n  ",
+      "sample_output": {
+        "columns": [
+          "year",
+          "month",
+          "revenue",
+          "prev_revenue",
+          "mom_growth"
+        ],
+        "rows": [
+          [
+            2022,
+            1,
+            100000.0,
+            null,
+            null
+          ],
+          [
+            2022,
+            2,
+            110000.0,
+            100000.0,
+            10.0
+          ],
+          [
+            2022,
+            3,
+            115000.0,
+            110000.0,
+            4.55
+          ],
+          [
+            2022,
+            4,
+            125000.0,
+            115000.0,
+            8.7
+          ],
+          [
+            2022,
+            5,
+            130000.0,
+            125000.0,
+            4.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "prompt": "Top 10 customers by total order value with their segment and country.",
+      "tables_used": [
+        "sales.fact_orders",
+        "sales.dim_customer"
+      ],
+      "rls_filters": [
+        {
+          "column": "customer_segment",
+          "operator": "IN",
+          "values": [
+            "Premium",
+            "Regular"
+          ]
+        }
+      ],
+      "excluded_columns": [
+        "customer_loyalty_score"
+      ],
+      "expected_sql": "WITH customer_orders AS (SELECT dc.customer_id, dc.customer_segment, dc.country, SUM(fo.total_order_value) AS total_order_value FROM sales.dim_customer dc JOIN sales.fact_orders fo ON dc.customer_id = fo.customer_id WHERE dc.customer_segment IN ('Premium', 'Regular') GROUP BY dc.customer_id, dc.customer_segment, dc.country) SELECT customer_id, customer_segment, country, total_order_value FROM customer_orders ORDER BY total_order_value DESC LIMIT 10",
+      "sample_output": {
+        "columns": [
+          "customer_id",
+          "customer_segment",
+          "country",
+          "total_order_value"
+        ],
+        "rows": [
+          [
+            "CUST-123",
+            "Premium",
+            "USA",
+            12345.67
+          ],
+          [
+            "CUST-456",
+            "Premium",
+            "Canada",
+            9876.54
+          ],
+          [
+            "CUST-789",
+            "Regular",
+            "Mexico",
+            7654.32
+          ],
+          [
+            "CUST-012",
+            "Premium",
+            "USA",
+            6543.21
+          ],
+          [
+            "CUST-345",
+            "Regular",
+            "Canada",
+            5432.1
+          ],
+          [
+            "CUST-678",
+            "Premium",
+            "Mexico",
+            4321.09
+          ],
+          [
+            "CUST-901",
+            "Regular",
+            "USA",
+            3210.08
+          ],
+          [
+            "CUST-234",
+            "Premium",
+            "Canada",
+            2109.07
+          ],
+          [
+            "CUST-567",
+            "Regular",
+            "Mexico",
+            1098.06
+          ],
+          [
+            "CUST-890",
+            "Premium",
+            "USA",
+            987.05
+          ]
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "prompt": "Revenue and order count by customer segment.",
+      "tables_used": [
+        "sales.sales_business_view"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "SELECT customer_segment, SUM(total_order_value) AS revenue, COUNT(order_id) AS order_count FROM sales.sales_business_view GROUP BY customer_segment ORDER BY revenue DESC",
+      "sample_output": {
+        "columns": [
+          "customer_segment",
+          "revenue",
+          "order_count"
+        ],
+        "rows": [
+          [
+            "Enterprise",
+            1000000.0,
+            500
+          ],
+          [
+            "Small Business",
+            500000.0,
+            200
+          ],
+          [
+            "Individual",
+            200000.0,
+            100
+          ],
+          [
+            "Government",
+            150000.0,
+            50
+          ],
+          [
+            "Non-Profit",
+            100000.0,
+            20
+          ]
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "prompt": "Payment method breakdown: order count, total revenue, and average order value per method.",
+      "tables_used": [
+        "sales.fact_orders"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "WITH payment_method_breakdown AS ( SELECT payment_method, COUNT(order_id) AS order_count, SUM(total_order_value) AS total_revenue FROM sales.fact_orders GROUP BY payment_method ) SELECT payment_method, order_count, total_revenue, total_revenue / order_count AS average_order_value FROM payment_method_breakdown ORDER BY total_revenue DESC",
+      "sample_output": {
+        "columns": [
+          "payment_method",
+          "order_count",
+          "total_revenue",
+          "average_order_value"
+        ],
+        "rows": [
+          [
+            "Credit Card",
+            1500,
+            1000000.0,
+            66.67
+          ],
+          [
+            "PayPal",
+            800,
+            600000.0,
+            75.0
+          ],
+          [
+            "Bank Transfer",
+            300,
+            250000.0,
+            83.33
+          ],
+          [
+            "Cash",
+            100,
+            50000.0,
+            50.0
+          ],
+          [
+            "Other",
+            50,
+            20000.0,
+            40.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "prompt": "Order status distribution: count and percentage of total for each status.",
+      "tables_used": [
+        "sales.fact_orders"
+      ],
+      "rls_filters": [
+        {
+          "column": "country",
+          "operator": "IN",
+          "values": [
+            "United States",
+            "United Kingdom"
+          ]
+        }
+      ],
+      "excluded_columns": [],
+      "expected_sql": "\n    WITH order_status_distribution AS (\n      SELECT \n        order_status,\n        COUNT(*) AS count\n      FROM \n        sales.fact_orders\n      WHERE \n        domain IN ('United States', 'United Kingdom')\n      GROUP BY \n        order_status\n    )\n    SELECT \n      order_status,\n      count,\n      ROUND(count * 100.0 / SUM(count) OVER (), 2) AS percentage\n    FROM \n      order_status_distribution\n    ORDER BY \n      count DESC;\n  ",
+      "sample_output": {
+        "columns": [
+          "order_status",
+          "count",
+          "percentage"
+        ],
+        "rows": [
+          [
+            "Shipped",
+            1500,
+            60.0
+          ],
+          [
+            "Delivered",
+            800,
+            32.0
+          ],
+          [
+            "Cancelled",
+            100,
+            4.0
+          ],
+          [
+            "Pending",
+            50,
+            2.0
+          ],
+          [
+            "Returned",
+            25,
+            1.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "prompt": "Top 5 product categories by total revenue and profit.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_product"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "cost_usd",
+        "profit_usd"
+      ],
+      "expected_sql": "\n    WITH revenue AS (\n      SELECT \n        dp.category,\n        SUM(foi.total_price_usd) AS total_revenue,\n        SUM(foi.total_price_usd - (foi.total_price_usd * (1 - foi.profit_margin_percent / 100))) AS total_profit\n      FROM \n        sales.fact_order_items foi\n      JOIN \n        sales.dim_product dp ON foi.product_id = dp.product_id\n      GROUP BY \n        dp.category\n    )\n    SELECT \n      category,\n      total_revenue,\n      total_profit\n    FROM \n      revenue\n    ORDER BY \n      total_revenue DESC\n    LIMIT 5;\n  ",
+      "sample_output": {
+        "columns": [
+          "category",
+          "total_revenue",
+          "total_profit"
+        ],
+        "rows": [
+          [
+            "Electronics",
+            1000000.0,
+            150000.0
+          ],
+          [
+            "Home",
+            800000.0,
+            120000.0
+          ],
+          [
+            "Clothing",
+            700000.0,
+            100000.0
+          ],
+          [
+            "Sports",
+            600000.0,
+            90000.0
+          ],
+          [
+            "Toys",
+            500000.0,
+            75000.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "prompt": "Average discount percentage versus profit margin percentage by product category.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_product"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "cost_usd"
+      ],
+      "expected_sql": "\n    WITH product_discounts AS (\n      SELECT \n        dp.category,\n        AVG(foi.discount_percent) AS avg_discount_percent,\n        AVG(foi.profit_margin_percent) AS avg_profit_margin_percent\n      FROM \n        sales.fact_order_items foi\n      JOIN \n        sales.dim_product dp ON foi.product_id = dp.product_id\n      GROUP BY \n        dp.category\n    )\n    SELECT \n      category,\n      avg_discount_percent,\n      avg_profit_margin_percent\n    FROM \n      product_discounts\n    ORDER BY \n      category;\n  ",
+      "sample_output": {
+        "columns": [
+          "category",
+          "avg_discount_percent",
+          "avg_profit_margin_percent"
+        ],
+        "rows": [
+          [
+            "Electronics",
+            10.25,
+            23.15
+          ],
+          [
+            "Fashion",
+            8.56,
+            18.92
+          ],
+          [
+            "Home",
+            12.01,
+            20.58
+          ],
+          [
+            "Sports",
+            9.45,
+            22.11
+          ],
+          [
+            "Toys",
+            11.23,
+            19.67
+          ]
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "prompt": "Delivery status breakdown by shipping method: count and average delivery days.",
+      "tables_used": [
+        "sales.fact_order_items"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "WITH delivery_status AS ( SELECT delivery_status, delivery_days, CASE WHEN shipping_cost_usd > 0 THEN 'paid' WHEN shipping_cost_usd = 0 THEN 'free' END AS shipping_method FROM sales.fact_order_items ) SELECT shipping_method, delivery_status, COUNT(*) AS count, AVG(delivery_days) AS avg_delivery_days FROM delivery_status GROUP BY shipping_method, delivery_status ORDER BY shipping_method, delivery_status",
+      "sample_output": {
+        "columns": [
+          "shipping_method",
+          "delivery_status",
+          "count",
+          "avg_delivery_days"
+        ],
+        "rows": [
+          [
+            "free",
+            "delivered",
+            100,
+            3.5
+          ],
+          [
+            "free",
+            "pending",
+            20,
+            1.2
+          ],
+          [
+            "free",
+            "returned",
+            5,
+            2.0
+          ],
+          [
+            "paid",
+            "delivered",
+            500,
+            2.8
+          ],
+          [
+            "paid",
+            "pending",
+            100,
+            1.5
+          ]
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "prompt": "Weekend versus weekday order count and revenue comparison.",
+      "tables_used": [
+        "sales.fact_orders",
+        "sales.dim_date"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "\n    WITH weekend_orders AS (\n      SELECT \n        COUNT(*) AS order_count,\n        SUM(total_order_value) AS total_revenue\n      FROM \n        sales.fact_orders fo\n      JOIN \n        sales.dim_date dd ON fo.order_date::DATE = dd.order_date\n      WHERE \n        dd.is_weekend = 'Yes'\n    ),\n    weekday_orders AS (\n      SELECT \n        COUNT(*) AS order_count,\n        SUM(total_order_value) AS total_revenue\n      FROM \n        sales.fact_orders fo\n      JOIN \n        sales.dim_date dd ON fo.order_date::DATE = dd.order_date\n      WHERE \n        dd.is_weekend = 'No'\n    )\n    SELECT \n      'Weekend' AS order_type,\n      wo.order_count,\n      wo.total_revenue\n    FROM \n      weekend_orders wo\n    UNION ALL\n    SELECT \n      'Weekday' AS order_type,\n      wd.order_count,\n      wd.total_revenue\n    FROM \n      weekday_orders wd\n  ",
+      "sample_output": {
+        "columns": [
+          "order_type",
+          "order_count",
+          "total_revenue"
+        ],
+        "rows": [
+          [
+            "Weekend",
+            1500,
+            25000.0
+          ],
+          [
+            "Weekday",
+            3000,
+            50000.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "prompt": "Top 10 products by units sold and total revenue.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_product"
+      ],
+      "rls_filters": [
+        {
+          "column": "country",
+          "operator": "=",
+          "value": "United States"
+        }
+      ],
+      "excluded_columns": [
+        "cost_usd",
+        "profit_usd"
+      ],
+      "expected_sql": "\n    WITH product_sales AS (\n      SELECT \n        p.product_name, \n        SUM(foi.quantity) AS total_units_sold, \n        SUM(foi.total_price_usd) AS total_revenue\n      FROM \n        sales.fact_order_items foi\n      JOIN \n        sales.dim_product p ON foi.product_id = p.product_id\n      JOIN \n        sales.dim_customer c ON foi.customer_id = c.customer_id\n      WHERE \n        c.country = 'United States'\n      GROUP BY \n        p.product_name\n    )\n    SELECT \n      product_name, \n      total_units_sold, \n      total_revenue\n    FROM \n      product_sales\n    ORDER BY \n      total_units_sold DESC, \n      total_revenue DESC\n    LIMIT 10;\n  ",
+      "sample_output": {
+        "columns": [
+          "product_name",
+          "total_units_sold",
+          "total_revenue"
+        ],
+        "rows": [
+          [
+            "Apple Watch",
+            10000,
+            5000000.0
+          ],
+          [
+            "Samsung TV",
+            8000,
+            4000000.0
+          ],
+          [
+            "Nike Shoes",
+            7000,
+            3500000.0
+          ],
+          [
+            "Sony Headphones",
+            6000,
+            3000000.0
+          ],
+          [
+            "LG Refrigerator",
+            5000,
+            2500000.0
+          ],
+          [
+            "Microsoft Laptop",
+            4000,
+            2000000.0
+          ],
+          [
+            "Canon Camera",
+            3000,
+            1500000.0
+          ],
+          [
+            "Whirlpool Washing Machine",
+            2000,
+            1000000.0
+          ],
+          [
+            "HP Printer",
+            1000,
+            500000.0
+          ],
+          [
+            "Dell Monitor",
+            500,
+            250000.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "prompt": "Customer age group analysis: bucket ages into decades and show order count and average order value per group.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_customer"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "customer_loyalty_score"
+      ],
+      "expected_sql": "\n    WITH customer_age_groups AS (\n      SELECT \n        CASE \n          WHEN age BETWEEN 0 AND 9 THEN '0-9'\n          WHEN age BETWEEN 10 AND 19 THEN '10-19'\n          WHEN age BETWEEN 20 AND 29 THEN '20-29'\n          WHEN age BETWEEN 30 AND 39 THEN '30-39'\n          WHEN age BETWEEN 40 AND 49 THEN '40-49'\n          WHEN age BETWEEN 50 AND 59 THEN '50-59'\n          WHEN age BETWEEN 60 AND 69 THEN '60-69'\n          WHEN age BETWEEN 70 AND 79 THEN '70-79'\n          WHEN age BETWEEN 80 AND 89 THEN '80-89'\n          WHEN age BETWEEN 90 AND 99 THEN '90-99'\n          ELSE '100+'\n        END AS age_group,\n        c.customer_id\n      FROM sales.dim_customer c\n    ),\n    order_data AS (\n      SELECT \n        cag.age_group,\n        COUNT(foi.order_id) AS order_count,\n        AVG(foi.total_price_usd) AS average_order_value\n      FROM sales.fact_order_items foi\n      JOIN customer_age_groups cag ON foi.customer_id = cag.customer_id\n      GROUP BY cag.age_group\n    )\n    SELECT \n      age_group,\n      order_count,\n      average_order_value\n    FROM order_data\n    ORDER BY age_group;\n  ",
+      "sample_output": {
+        "columns": [
+          "age_group",
+          "order_count",
+          "average_order_value"
+        ],
+        "rows": [
+          [
+            "10-19",
+            50,
+            25.5
+          ],
+          [
+            "20-29",
+            150,
+            30.25
+          ],
+          [
+            "30-39",
+            300,
+            40.1
+          ],
+          [
+            "40-49",
+            250,
+            35.5
+          ],
+          [
+            "50-59",
+            100,
+            28.75
+          ]
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "prompt": "Revenue and order count by gender and product category.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_customer",
+        "sales.dim_product"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "cost_usd",
+        "profit_usd"
+      ],
+      "expected_sql": "WITH revenue AS (SELECT dc.gender, dp.category, SUM(foi.total_price_usd) AS revenue, COUNT(foi.order_item_id) AS order_count FROM sales.dim_customer dc JOIN sales.fact_order_items foi ON dc.customer_id = foi.customer_id JOIN sales.dim_product dp ON foi.product_id = dp.product_id GROUP BY dc.gender, dp.category) SELECT gender, category, revenue, order_count FROM revenue ORDER BY revenue DESC",
+      "sample_output": {
+        "columns": [
+          "gender",
+          "category",
+          "revenue",
+          "order_count"
+        ],
+        "rows": [
+          [
+            "Female",
+            "Electronics",
+            1000000.0,
+            5000
+          ],
+          [
+            "Male",
+            "Electronics",
+            800000.0,
+            4000
+          ],
+          [
+            "Female",
+            "Clothing",
+            600000.0,
+            3000
+          ],
+          [
+            "Male",
+            "Clothing",
+            500000.0,
+            2500
+          ],
+          [
+            "Female",
+            "Home",
+            400000.0,
+            2000
+          ]
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "prompt": "Average delivery days by shipping method and country, ordered by slowest first.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_location"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "WITH shipping_methods AS ( SELECT warehouse_location AS shipping_method, shipping_country AS country, delivery_days FROM sales.dim_location JOIN sales.fact_order_items ON sales.dim_location.warehouse_location = sales.fact_order_items.order_id ) SELECT shipping_method, country, AVG(delivery_days) AS avg_delivery_days FROM shipping_methods GROUP BY shipping_method, country ORDER BY avg_delivery_days DESC",
+      "sample_output": {
+        "columns": [
+          "shipping_method",
+          "country",
+          "avg_delivery_days"
+        ],
+        "rows": [
+          [
+            "Warehouse A",
+            "USA",
+            10.5
+          ],
+          [
+            "Warehouse B",
+            "Canada",
+            9.2
+          ],
+          [
+            "Warehouse C",
+            "Mexico",
+            8.8
+          ],
+          [
+            "Warehouse D",
+            "USA",
+            8.5
+          ],
+          [
+            "Warehouse E",
+            "Canada",
+            7.9
+          ]
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "prompt": "Campaign source performance: total revenue, order count, and average order value per campaign.",
+      "tables_used": [
+        "sales.sales_business_view"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "WITH campaign_performance AS ( SELECT campaign_source, SUM(total_order_value) AS total_revenue, COUNT(order_id) AS order_count, AVG(total_order_value) AS avg_order_value FROM sales.sales_business_view GROUP BY campaign_source ) SELECT campaign_source AS col1, total_revenue AS col2, order_count AS col3, avg_order_value AS col4 FROM campaign_performance",
+      "sample_output": {
+        "columns": [
+          "col1",
+          "col2",
+          "col3",
+          "col4"
+        ],
+        "rows": [
+          [
+            "Social Media",
+            10000.0,
+            50,
+            200.0
+          ],
+          [
+            "Email",
+            5000.0,
+            20,
+            250.0
+          ],
+          [
+            "Influencer",
+            8000.0,
+            30,
+            266.67
+          ],
+          [
+            "Organic Search",
+            12000.0,
+            60,
+            200.0
+          ],
+          [
+            "Paid Search",
+            15000.0,
+            75,
+            200.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "prompt": "Device type and traffic source revenue breakdown.",
+      "tables_used": [
+        "sales.sales_business_view"
+      ],
+      "rls_filters": [
+        {
+          "column": "customer_segment",
+          "operator": "=",
+          "value": "Premium"
+        }
+      ],
+      "excluded_columns": [],
+      "expected_sql": "WITH revenue_breakdown AS (SELECT device_type, traffic_source, SUM(total_order_value) AS revenue FROM sales.sales_business_view WHERE customer_segment = 'Premium' GROUP BY device_type, traffic_source) SELECT device_type, traffic_source, revenue FROM revenue_breakdown ORDER BY revenue DESC",
+      "sample_output": {
+        "columns": [
+          "device_type",
+          "traffic_source",
+          "revenue"
+        ],
+        "rows": [
+          [
+            "Mobile",
+            "Social Media",
+            100000.0
+          ],
+          [
+            "Desktop",
+            "Search Engine",
+            80000.0
+          ],
+          [
+            "Mobile",
+            "Search Engine",
+            70000.0
+          ],
+          [
+            "Desktop",
+            "Social Media",
+            60000.0
+          ],
+          [
+            "Tablet",
+            "Email",
+            30000.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "prompt": "Coupon usage analysis: compare average order value, revenue, and order count for orders with and without coupon.",
+      "tables_used": [
+        "sales.sales_business_view"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "\n    WITH coupon_orders AS (\n      SELECT \n        SUM(total_order_value) AS revenue,\n        AVG(total_order_value) AS avg_order_value,\n        COUNT(order_id) AS order_count\n      FROM \n        sales.sales_business_view \n      WHERE \n        coupon_used = 'Yes'\n    ),\n    non_coupon_orders AS (\n      SELECT \n        SUM(total_order_value) AS revenue,\n        AVG(total_order_value) AS avg_order_value,\n        COUNT(order_id) AS order_count\n      FROM \n        sales.sales_business_view \n      WHERE \n        coupon_used = 'No'\n    )\n    SELECT \n      'With Coupon' AS coupon_status,\n      (SELECT revenue FROM coupon_orders) AS revenue,\n      (SELECT avg_order_value FROM coupon_orders) AS avg_order_value,\n      (SELECT order_count FROM coupon_orders) AS order_count\n    UNION ALL\n    SELECT \n      'Without Coupon' AS coupon_status,\n      (SELECT revenue FROM non_coupon_orders) AS revenue,\n      (SELECT avg_order_value FROM non_coupon_orders) AS avg_order_value,\n      (SELECT order_count FROM non_coupon_orders) AS order_count\n  ",
+      "sample_output": {
+        "columns": [
+          "coupon_status",
+          "revenue",
+          "avg_order_value",
+          "order_count"
+        ],
+        "rows": [
+          [
+            "With Coupon",
+            1000000.0,
+            50.0,
+            20000
+          ],
+          [
+            "Without Coupon",
+            500000.0,
+            20.0,
+            10000
+          ]
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "prompt": "Customer loyalty score bands (0-2, 2-4, 4-6, 6-8, 8-10) versus average order value and total orders.",
+      "tables_used": [
+        "sales.fact_orders",
+        "sales.dim_customer"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "\n    WITH loyalty_bands AS (\n      SELECT \n        customer_id,\n        CASE \n          WHEN customer_loyalty_score BETWEEN 0 AND 2 THEN '0-2'\n          WHEN customer_loyalty_score BETWEEN 2 AND 4 THEN '2-4'\n          WHEN customer_loyalty_score BETWEEN 4 AND 6 THEN '4-6'\n          WHEN customer_loyalty_score BETWEEN 6 AND 8 THEN '6-8'\n          WHEN customer_loyalty_score BETWEEN 8 AND 10 THEN '8-10'\n        END AS loyalty_band\n      FROM sales.dim_customer\n    ),\n    order_values AS (\n      SELECT \n        customer_id,\n        AVG(total_order_value) AS avg_order_value,\n        COUNT(order_id) AS total_orders\n      FROM sales.fact_orders\n      GROUP BY customer_id\n    )\n    SELECT \n      lb.loyalty_band,\n      AVG(ov.avg_order_value) AS avg_order_value,\n      SUM(ov.total_orders) AS total_orders\n    FROM loyalty_bands lb\n    JOIN order_values ov ON lb.customer_id = ov.customer_id\n    GROUP BY lb.loyalty_band\n    ORDER BY lb.loyalty_band;\n  ",
+      "sample_output": {
+        "columns": [
+          "loyalty_band",
+          "avg_order_value",
+          "total_orders"
+        ],
+        "rows": [
+          [
+            "0-2",
+            50.23,
+            120
+          ],
+          [
+            "2-4",
+            75.11,
+            250
+          ],
+          [
+            "4-6",
+            100.56,
+            380
+          ],
+          [
+            "6-8",
+            125.78,
+            450
+          ],
+          [
+            "8-10",
+            150.9,
+            520
+          ]
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "prompt": "Brand performance: total revenue, units sold, average profit margin percentage, ranked by revenue.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_product"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "cost_usd"
+      ],
+      "expected_sql": "\n    WITH brand_performance AS (\n      SELECT \n        dp.brand,\n        SUM(foi.total_price_usd) AS total_revenue,\n        SUM(foi.quantity) AS units_sold,\n        AVG(foi.profit_margin_percent) AS avg_profit_margin_percent\n      FROM \n        sales.fact_order_items foi\n      JOIN \n        sales.dim_product dp ON foi.product_id = dp.product_id\n      GROUP BY \n        dp.brand\n    )\n    SELECT \n      brand,\n      total_revenue,\n      units_sold,\n      avg_profit_margin_percent\n    FROM \n      brand_performance\n    ORDER BY \n      total_revenue DESC;\n  ",
+      "sample_output": {
+        "columns": [
+          "brand",
+          "total_revenue",
+          "units_sold",
+          "avg_profit_margin_percent"
+        ],
+        "rows": [
+          [
+            "Nike",
+            1000000.0,
+            50000,
+            0.25
+          ],
+          [
+            "Adidas",
+            800000.0,
+            40000,
+            0.22
+          ],
+          [
+            "Reebok",
+            600000.0,
+            30000,
+            0.2
+          ],
+          [
+            "Puma",
+            400000.0,
+            20000,
+            0.18
+          ],
+          [
+            "New Balance",
+            200000.0,
+            10000,
+            0.15
+          ]
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "prompt": "Fraud risk score distribution: count of orders in low (0-0.3), medium (0.3-0.7), high (0.7-1.0) risk bands by country.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_customer"
+      ],
+      "rls_filters": [
+        {
+          "column": "country",
+          "operator": "IN",
+          "values": [
+            "United States",
+            "Germany",
+            "France"
+          ]
+        }
+      ],
+      "excluded_columns": [],
+      "expected_sql": "\n    WITH risk_bands AS (\n      SELECT \n        country,\n        CASE \n          WHEN fraud_risk_score BETWEEN 0 AND 0.3 THEN 'Low'\n          WHEN fraud_risk_score BETWEEN 0.3 AND 0.7 THEN 'Medium'\n          WHEN fraud_risk_score BETWEEN 0.7 AND 1.0 THEN 'High'\n        END AS risk_band\n      FROM sales.fact_order_items\n      WHERE country IN ('United States', 'Germany', 'France')\n    )\n    SELECT \n      country,\n      SUM(CASE WHEN risk_band = 'Low' THEN 1 ELSE 0 END) AS low_risk_count,\n      SUM(CASE WHEN risk_band = 'Medium' THEN 1 ELSE 0 END) AS medium_risk_count,\n      SUM(CASE WHEN risk_band = 'High' THEN 1 ELSE 0 END) AS high_risk_count\n    FROM risk_bands\n    GROUP BY country\n  ",
+      "sample_output": {
+        "columns": [
+          "country",
+          "low_risk_count",
+          "medium_risk_count",
+          "high_risk_count"
+        ],
+        "rows": [
+          [
+            "United States",
+            1000,
+            500,
+            200
+          ],
+          [
+            "Germany",
+            800,
+            300,
+            150
+          ],
+          [
+            "France",
+            1200,
+            600,
+            250
+          ]
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "prompt": "Year-over-year revenue comparison by month across all years in the data.",
+      "tables_used": [
+        "sales.fact_orders"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "\n    WITH monthly_revenue AS (\n      SELECT \n        EXTRACT(YEAR FROM order_date) AS order_year,\n        EXTRACT(MONTH FROM order_date) AS order_month,\n        SUM(total_order_value) AS total_revenue\n      FROM \n        sales.fact_orders\n      GROUP BY \n        EXTRACT(YEAR FROM order_date),\n        EXTRACT(MONTH FROM order_date)\n    )\n    SELECT \n      order_month,\n      order_year,\n      total_revenue,\n      LAG(total_revenue) OVER (PARTITION BY order_month ORDER BY order_year) AS prev_year_revenue,\n      total_revenue - LAG(total_revenue) OVER (PARTITION BY order_month ORDER BY order_year) AS revenue_diff\n    FROM \n      monthly_revenue\n    ORDER BY \n      order_month,\n      order_year\n  ",
+      "sample_output": {
+        "columns": [
+          "order_month",
+          "order_year",
+          "total_revenue",
+          "prev_year_revenue",
+          "revenue_diff"
+        ],
+        "rows": [
+          [
+            1,
+            2020,
+            10000.0,
+            null,
+            null
+          ],
+          [
+            1,
+            2021,
+            12000.0,
+            10000.0,
+            2000.0
+          ],
+          [
+            1,
+            2022,
+            15000.0,
+            12000.0,
+            3000.0
+          ],
+          [
+            2,
+            2020,
+            8000.0,
+            null,
+            null
+          ],
+          [
+            2,
+            2021,
+            10000.0,
+            8000.0,
+            2000.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "prompt": "Sub-category profitability: revenue, profit, and profit margin percentage ranked by margin descending.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_product"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "cost_usd"
+      ],
+      "expected_sql": "\n    WITH sub_category_profit AS (\n      SELECT \n        dp.sub_category,\n        SUM(foi.total_price_usd) AS revenue,\n        SUM(foi.profit_usd) AS profit,\n        SUM(foi.profit_usd) / SUM(foi.total_price_usd) * 100 AS profit_margin_percent\n      FROM \n        sales.fact_order_items foi\n      JOIN \n        sales.dim_product dp ON foi.product_id = dp.product_id\n      GROUP BY \n        dp.sub_category\n    )\n    SELECT \n      sub_category,\n      revenue,\n      profit,\n      profit_margin_percent\n    FROM \n      sub_category_profit\n    ORDER BY \n      profit_margin_percent DESC;\n  ",
+      "sample_output": {
+        "columns": [
+          "sub_category",
+          "revenue",
+          "profit",
+          "profit_margin_percent"
+        ],
+        "rows": [
+          [
+            "Electronics",
+            1000000.0,
+            200000.0,
+            20.0
+          ],
+          [
+            "Clothing",
+            500000.0,
+            100000.0,
+            20.0
+          ],
+          [
+            "Home Goods",
+            750000.0,
+            150000.0,
+            20.0
+          ],
+          [
+            "Toys",
+            250000.0,
+            50000.0,
+            20.0
+          ],
+          [
+            "Sports",
+            300000.0,
+            60000.0,
+            20.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 23,
+      "prompt": "Return reason frequency: count of returned orders per return reason from raw data.",
+      "tables_used": [
+        "sales.raw_ecommerce"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "cost_usd",
+        "profit_usd",
+        "customer_feedback",
+        "fraud_risk_score"
+      ],
+      "expected_sql": "SELECT return_reason, COUNT(*) AS return_reason_count FROM sales.raw_ecommerce GROUP BY return_reason ORDER BY return_reason_count DESC;",
+      "sample_output": {
+        "columns": [
+          "return_reason",
+          "return_reason_count"
+        ],
+        "rows": [
+          [
+            "No reason",
+            1500
+          ],
+          [
+            "Defective product",
+            800
+          ],
+          [
+            "Wrong item received",
+            600
+          ],
+          [
+            "Not as described",
+            400
+          ],
+          [
+            "Other",
+            200
+          ]
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "prompt": "Installment plan usage: order count and average order value for orders using installments versus not.",
+      "tables_used": [
+        "sales.fact_orders",
+        "sales.dim_payment"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [],
+      "expected_sql": "\n    WITH installment_orders AS (\n      SELECT \n        CASE \n          WHEN dp.installment_plan IS NOT NULL AND dp.installment_plan <> '' THEN 'With Installment'\n          ELSE 'Without Installment'\n        END AS installment_usage,\n        fo.order_id,\n        fo.total_order_value\n      FROM \n        sales.fact_orders fo\n      LEFT JOIN \n        sales.dim_payment dp ON fo.payment_method = dp.payment_method AND fo.payment_status = dp.payment_status\n    )\n    SELECT \n      installment_usage,\n      COUNT(order_id) AS order_count,\n      AVG(total_order_value) AS avg_order_value\n    FROM \n      installment_orders\n    GROUP BY \n      installment_usage\n  ",
+      "sample_output": {
+        "columns": [
+          "installment_usage",
+          "order_count",
+          "avg_order_value"
+        ],
+        "rows": [
+          [
+            "With Installment",
+            150,
+            120.5
+          ],
+          [
+            "Without Installment",
+            300,
+            80.25
+          ]
+        ]
+      }
+    },
+    {
+      "id": 25,
+      "prompt": "High value orders (above overall average order value): count and total revenue by customer segment and country.",
+      "tables_used": [
+        "sales.fact_orders",
+        "sales.dim_customer"
+      ],
+      "rls_filters": [
+        {
+          "column": "customer_segment",
+          "operator": "IN",
+          "values": [
+            "Premium",
+            "Regular"
+          ]
+        }
+      ],
+      "excluded_columns": [
+        "customer_loyalty_score"
+      ],
+      "expected_sql": "\n    WITH high_value_orders AS (\n      SELECT \n        c.customer_segment,\n        c.country,\n        fo.total_order_value\n      FROM \n        sales.dim_customer c\n      JOIN \n        sales.fact_orders fo ON c.customer_id = fo.customer_id\n      WHERE \n        c.customer_segment IN ('Premium', 'Regular')\n        AND fo.total_order_value > (SELECT AVG(total_order_value) FROM sales.fact_orders)\n    )\n    SELECT \n      customer_segment,\n      country,\n      COUNT(*) AS count,\n      SUM(total_order_value) AS total_revenue\n    FROM \n      high_value_orders\n    GROUP BY \n      customer_segment,\n      country\n    ORDER BY \n      customer_segment,\n      country;\n  ",
+      "sample_output": {
+        "columns": [
+          "customer_segment",
+          "country",
+          "count",
+          "total_revenue"
+        ],
+        "rows": [
+          [
+            "Premium",
+            "USA",
+            150,
+            75000.0
+          ],
+          [
+            "Premium",
+            "Canada",
+            50,
+            25000.0
+          ],
+          [
+            "Regular",
+            "USA",
+            200,
+            100000.0
+          ],
+          [
+            "Regular",
+            "Mexico",
+            100,
+            50000.0
+          ],
+          [
+            "Regular",
+            "Canada",
+            75,
+            37500.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 26,
+      "prompt": "Product rating versus sales volume: average rating and total units sold by category.",
+      "tables_used": [
+        "sales.fact_order_items",
+        "sales.dim_product"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "cost_usd",
+        "profit_usd"
+      ],
+      "expected_sql": "WITH product_sales AS (SELECT dp.category, dp.product_rating_avg, SUM(foi.quantity) AS total_units_sold FROM sales.dim_product dp JOIN sales.fact_order_items foi ON dp.product_id = foi.product_id GROUP BY dp.category, dp.product_rating_avg) SELECT category, AVG(product_rating_avg) AS average_rating, SUM(total_units_sold) AS total_units FROM product_sales GROUP BY category ORDER BY category",
+      "sample_output": {
+        "columns": [
+          "category",
+          "average_rating",
+          "total_units"
+        ],
+        "rows": [
+          [
+            "Books",
+            4.23,
+            12345
+          ],
+          [
+            "Electronics",
+            4.01,
+            54321
+          ],
+          [
+            "Home",
+            4.12,
+            9876
+          ],
+          [
+            "Sports",
+            4.05,
+            7654
+          ],
+          [
+            "Toys",
+            4.25,
+            4321
+          ]
+        ]
+      }
+    },
+    {
+      "id": 27,
+      "prompt": "Shipping cost as percentage of order value by shipping method.",
+      "tables_used": [
+        "sales.fact_order_items"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "cost_usd",
+        "profit_usd",
+        "profit_margin_percent"
+      ],
+      "expected_sql": "WITH orders AS (SELECT order_id, SUM(total_price_usd) AS order_value FROM sales.fact_order_items GROUP BY order_id), shipping_costs AS (SELECT order_id, shipping_cost_usd, delivery_status FROM sales.fact_order_items) SELECT delivery_status, AVG(shipping_cost_usd / order_value * 100) AS shipping_cost_percentage FROM shipping_costs JOIN orders USING (order_id) GROUP BY delivery_status",
+      "sample_output": {
+        "columns": [
+          "delivery_status",
+          "shipping_cost_percentage"
+        ],
+        "rows": [
+          [
+            "Delivered",
+            8.234
+          ],
+          [
+            "In Transit",
+            7.543
+          ],
+          [
+            "Out for Delivery",
+            8.912
+          ],
+          [
+            "Pending",
+            6.123
+          ],
+          [
+            "Returned",
+            9.876
+          ]
+        ]
+      }
+    },
+    {
+      "id": 28,
+      "prompt": "Repeat versus one-time buyer analysis: count, total revenue, and average order value for each group.",
+      "tables_used": [
+        "sales.fact_orders",
+        "sales.dim_customer"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "customer_loyalty_score"
+      ],
+      "expected_sql": "\n    WITH repeat_buyers AS (\n      SELECT customer_id\n      FROM sales.fact_orders\n      GROUP BY customer_id\n      HAVING COUNT(order_id) > 1\n    ),\n    one_time_buyers AS (\n      SELECT customer_id\n      FROM sales.fact_orders\n      GROUP BY customer_id\n      HAVING COUNT(order_id) = 1\n    )\n    SELECT \n      'Repeat' AS buyer_type,\n      COUNT(DISTINCT fo.customer_id) AS count,\n      SUM(fo.total_order_value) AS total_revenue,\n      AVG(fo.total_order_value) AS average_order_value\n    FROM sales.fact_orders fo\n    WHERE fo.customer_id IN (SELECT customer_id FROM repeat_buyers)\n    UNION ALL\n    SELECT \n      'One-time' AS buyer_type,\n      COUNT(DISTINCT fo.customer_id) AS count,\n      SUM(fo.total_order_value) AS total_revenue,\n      AVG(fo.total_order_value) AS average_order_value\n    FROM sales.fact_orders fo\n    WHERE fo.customer_id IN (SELECT customer_id FROM one_time_buyers)\n  ",
+      "sample_output": {
+        "columns": [
+          "buyer_type",
+          "count",
+          "total_revenue",
+          "average_order_value"
+        ],
+        "rows": [
+          [
+            "One-time",
+            1000,
+            50000.0,
+            50.0
+          ],
+          [
+            "Repeat",
+            500,
+            200000.0,
+            400.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 29,
+      "prompt": "Order priority distribution and average delivery days per priority level.",
+      "tables_used": [
+        "sales.raw_ecommerce"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "cost_usd",
+        "profit_usd",
+        "customer_feedback",
+        "fraud_risk_score"
+      ],
+      "expected_sql": "WITH priority_counts AS (SELECT order_priority, COUNT(*) as count FROM sales.raw_ecommerce GROUP BY order_priority) SELECT order_priority, COUNT(*) as count, AVG(delivery_days) as avg_delivery_days FROM sales.raw_ecommerce GROUP BY order_priority ORDER BY count DESC",
+      "sample_output": {
+        "columns": [
+          "order_priority",
+          "count",
+          "avg_delivery_days"
+        ],
+        "rows": [
+          [
+            "high",
+            1500,
+            3.2
+          ],
+          [
+            "medium",
+            1200,
+            4.5
+          ],
+          [
+            "low",
+            800,
+            6.1
+          ],
+          [
+            "critical",
+            500,
+            2.0
+          ],
+          [
+            null,
+            200,
+            5.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": 30,
+      "prompt": "Monthly unique active customers trend with month-over-month change.",
+      "tables_used": [
+        "sales.fact_orders",
+        "sales.dim_customer"
+      ],
+      "rls_filters": [],
+      "excluded_columns": [
+        "customer_loyalty_score"
+      ],
+      "expected_sql": "\n    WITH monthly_active_customers AS (\n      SELECT \n        EXTRACT(YEAR FROM fo.order_date) AS year,\n        EXTRACT(MONTH FROM fo.order_date) AS month,\n        COUNT(DISTINCT fo.customer_id) AS unique_active_customers\n      FROM \n        sales.fact_orders fo\n      GROUP BY \n        EXTRACT(YEAR FROM fo.order_date),\n        EXTRACT(MONTH FROM fo.order_date)\n    ),\n    monthly_change AS (\n      SELECT \n        year,\n        month,\n        unique_active_customers,\n        LAG(unique_active_customers) OVER (ORDER BY year, month) AS prev_month_customers\n      FROM \n        monthly_active_customers\n    )\n    SELECT \n      year,\n      month,\n      unique_active_customers,\n      unique_active_customers - prev_month_customers AS month_over_month_change\n    FROM \n      monthly_change\n    ORDER BY \n      year, month\n  ",
+      "sample_output": {
+        "columns": [
+          "year",
+          "month",
+          "unique_active_customers",
+          "month_over_month_change"
+        ],
+        "rows": [
+          [
+            2022,
+            1,
+            1000,
+            null
+          ],
+          [
+            2022,
+            2,
+            1050,
+            50
+          ],
+          [
+            2022,
+            3,
+            1100,
+            50
+          ],
+          [
+            2022,
+            4,
+            1150,
+            50
+          ],
+          [
+            2022,
+            5,
+            1200,
+            50
+          ]
+        ]
+      }
+    }
+  ]
+}

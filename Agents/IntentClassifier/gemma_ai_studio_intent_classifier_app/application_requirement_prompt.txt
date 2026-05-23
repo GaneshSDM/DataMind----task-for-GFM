@@ -1,0 +1,28 @@
+I need to test the GEMMA 4 (26B) for Intent Decomposition and Domain/Sub-domain classifier. It should also see if the response needs to be given from Structured Dataset or Unstructured Dataset. Structured means response from business layer views like "Sales_Booking_Business_View", "Sales_Cancellation_Business_View", "Sales_Shipment_Business_View", "Finance_Accounting_Business_View", "Finance_Asset_Management_Business_View". Or response from the Unstructured datasets like from the domain specific PDF Files saved in the Vector Database. Currently the application will not go anywhere and will not fetch any results. We just want to calibrate how good GEMMA 4 (26B) works in this case.
+
+That means, it needs to do following tasks:
+1) Intent Decomposition, means breaking the intent into multiple queries, if required. Means, if the user question in natural language contains multiple queries, and actions, then it needs to break them.
+2) Identify if the response will come from the structured data or unstructured data.
+3) Identify the correct domain/sub-domain for each intent. Like Sales, Marketing, Operations, Finance are domains, and Sub-domains are like Booking, Cancellation, Shipment, Order Change, etc.
+4) Identify the Data, Reasoning, Action part from the intent. Means, user is expecting to just fetch the results or asking to perform an action. Need segregation of this thing.
+
+Note: The unstructured dataset also contain the relevant columns required for classification of domain/sub-domain/category/sub-category the file's content belongs to.
+
+Now, You need to do 2 tasks:
+Task1) Generate a list of testing different scenarios based on enterprise level questions for different domain/sub-domains.
+Task2) Generate a local application in this forder, that will connect with GEMMA 4 API. Here the model needs to be an Agent with a persona, who is given a particular work, based on below given things. The Agent persona inside the application you can save in a different file under a folder called "agent_persona"
+
+Connection details:
+GEMINI_API_KEY=AIzaSyBBh8pX2aPm6DVOBDaQS_fA_0cUOS5fteo
+GEMINI_MODEL=gemma-4-26b-a4b-it
+
+Inside the application the user will enter or select the pre-defined testing scenarios in natural language like "Customer says the invoice amount for order ORD-4589 is incorrect; check the invoice and payment records, compare them with the contract terms, and create a correction request if the contract supports the discount."
+
+This natural language question contains below-given things:
+The LLM should break this into multiple intents: first, it identifies that the customer is raising an invoice dispute for order ORD-4589; second, it needs to fetch structured data such as invoice details and payment records from Finance systems; third, it needs to read unstructured data such as contract terms to verify whether a discount was promised; fourth, it must perform reasoning by comparing invoice/payment data with the contract terms; and finally, if the discount is valid, it should trigger an action to create an invoice correction request under the Finance/Invoicing domain.
+
+Based on the work done by GEMMA 4, it needs to generate an Excel Report that shows the final output.
+
+Please ensure that you don't generate unnecessary gloassary text/sentences/etc. and very careful about the usage of the tokens.
+
+Hope you understood. Before proceeding further, you need to ask me if anything is not clear.

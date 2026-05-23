@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(if \\(-not $?\\) { \"Directory is empty or new\" })",
+      "Skill(anthropic-skills:xlsx)",
+      "Skill(anthropic-skills:xlsx:*)",
+      "Read(//mnt/c/gemma_ai_studio_intent_classifier_app/**)",
+      "Bash(extract-text direct_testing_file.xlsx)",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

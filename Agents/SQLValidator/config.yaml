@@ -1,0 +1,214 @@
+# SQL Validator Agent Configuration
+# ====================================
+
+# --- Groq API ---
+groq:
+  api_key: "${GROQ_API_KEY}"
+  model: "deepseek-r1-distill-llama-70b"
+  temperature: 0.0  # deterministic validation
+  max_tokens: 4096
+
+# --- Row-Level Security Rules ---
+# Format: role -> rules
+# Each rule is a SQL predicate fragment applied as AND filter
+row_level_security:
+  admin:
+    - "1=1"  # sees everything
+
+  manager:
+    - "department_id = :user_department_id"
+    - "tenant_id = :user_tenant_id"
+
+  sales_rep:
+    - "assigned_to = :user_id"
+    - "tenant_id = :user_tenant_id"
+    - "deleted_at IS NULL"
+
+  analyst:
+    - "tenant_id = :user_tenant_id"
+    - "deleted_at IS NULL"
+    - "is_archived = false"
+
+  support_agent:
+    - "tenant_id = :user_tenant_id"
+    - "(assigned_to = :user_id OR assigned_to IS NULL)"
+
+  viewer:
+    - "tenant_id = :user_tenant_id"
+    - "deleted_at IS NULL"
+    - "is_archived = false"
+    - "is_published = true"
+
+# --- Column-Level Security Rules ---
+# Format: role -> { domain.subdomain: [allowed_columns] }
+# "*" means all columns in that domain
+column_level_security:
+  admin:
+    "*": "*"
+
+  manager:
+    "finance.*":
+      - "id"
+      - "department_id"
+      - "budget_allocated"
+      - "budget_spent"
+      - "fiscal_year"
+      # blocked: salary, bonus, ssn, bank_account
+    "hr.*":
+      - "id"
+      - "employee_name"
+      - "department_id"
+      - "title"
+      - "hire_date"
+      - "manager_id"
+      # blocked: salary, ssn, performance_rating, termination_reason
+    "sales.*": "*"
+    "inventory.*": "*"
+    "support.*": "*"
+    "engineering.*": "*"
+
+  sales_rep:
+    "sales.*":
+      - "id"
+      - "lead_name"
+      - "company"
+      - "deal_stage"
+      - "deal_value"
+      - "assigned_to"
+      - "created_at"
+      - "updated_at"
+      # blocked: commission_pct, competitor_notes, margin
+    "inventory.*":
+      - "id"
+      - "product_name"
+      - "sku"
+      - "stock_level"
+      - "unit_price"
+      # blocked: cost_price, supplier_id, margin
+    "support.*":
+      - "id"
+      - "ticket_subject"
+      - "customer_name"
+      - "status"
+      - "priority"
+      # blocked: internal_notes, sla_breach_log
+    "hr.*":
+      - "id"
+      - "employee_name"
+      - "title"
+      - "department_id"
+    "finance.*": []
+    "engineering.*": []
+
+  analyst:
+    "finance.*":
+      - "id"
+      - "department_id"
+      - "budget_allocated"
+      - "budget_spent"
+      - "fiscal_year"
+      # blocked: salary, bonus, ssn, bank_account (same as manager)
+    "sales.*":
+      - "id"
+      - "lead_name"
+      - "company"
+      - "deal_stage"
+      - "deal_value"
+      - "assigned_to"
+      - "created_at"
+      - "commission_pct"
+      # blocked: competitor_notes
+    "hr.*":
+      - "id"
+      - "department_id"
+      - "title"
+      - "hire_date"
+      - "salary"  # analysts can see aggregated salary
+      # blocked: ssn, employee_name, performance_rating
+    "inventory.*": "*"
+    "support.*": "*"
+    "engineering.*": "*"
+
+  support_agent:
+    "support.*":
+      - "id"
+      - "ticket_subject"
+      - "customer_name"
+      - "status"
+      - "priority"
+      - "assigned_to"
+      - "created_at"
+      - "first_response_at"
+      # blocked: internal_notes, sla_breach_log, customer_email, customer_phone
+    "sales.*":
+      - "id"
+      - "lead_name"
+      - "company"
+      # blocked: deal_stage, deal_value, commission_pct, competitor_notes
+    "hr.*": []
+    "finance.*": []
+    "inventory.*":
+      - "id"
+      - "product_name"
+      - "sku"
+    "engineering.*": []
+
+  viewer:
+    "sales.*":
+      - "id"
+      - "company"
+      - "deal_stage"
+      # blocked: lead_name, deal_value, assigned_to, commission_pct
+    "inventory.*":
+      - "id"
+      - "product_name"
+      - "stock_level"
+    "support.*":
+      - "id"
+      - "ticket_subject"
+      - "status"
+    "hr.*":
+      - "id"
+      - "employee_name"
+      - "title"
+      - "department_id"
+    "finance.*": []
+    "engineering.*": []
+
+# --- Date Column Constraints ---
+date_constraints:
+  global:
+    - rule: "no_future_birth"
+      description: "birth_date must not be in the future"
+      columns: ["birth_date", "date_of_birth", "dob"]
+      check: "value <= CURRENT_DATE"
+
+    - rule: "logical_range"
+      description: "start_date must precede end_date when both present"
+      columns: ["start_date", "end_date"]
+      check: "start_date <= end_date"
+
+    - rule: "no_future_create"
+      description: "created_at must not be in the future"
+      columns: ["created_at"]
+      check: "value <= CURRENT_TIMESTAMP"
+
+    - rule: "fiscal_year_range"
+      description: "fiscal_year must be between 2000 and current_year+1"
+      columns: ["fiscal_year"]
+      check: "2000 <= value <= EXTRACT(YEAR FROM CURRENT_DATE) + 1"
+
+    - rule: "hire_before_term"
+      description: "hire_date must precede termination_date"
+      columns: ["hire_date", "termination_date"]
+      check: "hire_date <= termination_date"
+
+    - rule: "valid_effective_date"
+      description: "effective_date cannot be more than 90 days in the future"
+      columns: ["effective_date", "go_live_date", "launch_date"]
+      check: "value <= CURRENT_DATE + INTERVAL '90 days'"
+
+    - rule: "reasonable_age"
+      description: "birth_date must indicate age between 18 and 120"
+      columns: ["birth_date", "date_of_birth", "dob"]
+      check: "age >= 18 AND age <= 120"

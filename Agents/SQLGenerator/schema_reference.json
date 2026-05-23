@@ -1,0 +1,1814 @@
+{
+  "version": "1.0",
+  "catalog": [
+    {
+      "domain": "Sales",
+      "sub_domains": [
+        {
+          "name": "Revenue Analytics",
+          "description": "Order revenue, channel performance, regional breakdowns, trend analysis.",
+          "keywords": [
+            "revenue",
+            "orders",
+            "bookings",
+            "sales",
+            "net amount",
+            "gross",
+            "channel",
+            "region"
+          ],
+          "tables": [
+            {
+              "table_name": "orders",
+              "schema_name": "sales",
+              "description": "[DEPRECATED \u2014 table removed from DB] Core transactional table. One row per sales order.",
+              "primary_key": "order_id",
+              "foreign_keys": [
+                {
+                  "column": "customer_id",
+                  "references": "sales.customers.customer_id"
+                },
+                {
+                  "column": "salesperson_id",
+                  "references": "sales.salespeople.salesperson_id"
+                }
+              ],
+              "row_count_estimate": 5000000,
+              "partition_key": "order_date",
+              "tags": [
+                "transactional",
+                "core",
+                "reportable",
+                "deprecated"
+              ],
+              "columns": [
+                {
+                  "name": "order_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "Unique order identifier"
+                },
+                {
+                  "name": "customer_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "FK to customers"
+                },
+                {
+                  "name": "salesperson_id",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": "FK to salespeople"
+                },
+                {
+                  "name": "order_date",
+                  "type": "DATE",
+                  "nullable": false,
+                  "description": "Date order was placed"
+                },
+                {
+                  "name": "ship_date",
+                  "type": "DATE",
+                  "nullable": true,
+                  "description": "Date order was shipped"
+                },
+                {
+                  "name": "status",
+                  "type": "VARCHAR(20)",
+                  "nullable": false,
+                  "description": "pending | shipped | delivered | cancelled | returned"
+                },
+                {
+                  "name": "region",
+                  "type": "VARCHAR(50)",
+                  "nullable": false,
+                  "description": "Sales region: APAC | EMEA | NA | LATAM"
+                },
+                {
+                  "name": "total_amount",
+                  "type": "NUMERIC(12,2)",
+                  "nullable": false,
+                  "description": "Gross order value before discount"
+                },
+                {
+                  "name": "discount_amount",
+                  "type": "NUMERIC(12,2)",
+                  "nullable": true,
+                  "description": "Total discount applied"
+                },
+                {
+                  "name": "tax_amount",
+                  "type": "NUMERIC(12,2)",
+                  "nullable": true,
+                  "description": "Tax amount"
+                },
+                {
+                  "name": "net_amount",
+                  "type": "NUMERIC(12,2)",
+                  "nullable": false,
+                  "description": "Revenue after discounts, before tax"
+                },
+                {
+                  "name": "currency",
+                  "type": "VARCHAR(3)",
+                  "nullable": false,
+                  "description": "ISO currency code e.g. USD"
+                },
+                {
+                  "name": "channel",
+                  "type": "VARCHAR(20)",
+                  "nullable": false,
+                  "description": "online | direct | partner"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Customer Analytics",
+          "description": "Customer profiles, segments, lifetime value, churn, acquisition.",
+          "keywords": [
+            "customer",
+            "account",
+            "segment",
+            "enterprise",
+            "SMB",
+            "churn",
+            "retention",
+            "CLV",
+            "acquisition"
+          ],
+          "tables": [
+            {
+              "table_name": "customers",
+              "schema_name": "sales",
+              "description": "[DEPRECATED \u2014 table removed from DB] Customer master record. One row per customer account.",
+              "primary_key": "customer_id",
+              "foreign_keys": [],
+              "row_count_estimate": 50000,
+              "tags": [
+                "pii",
+                "master-data",
+                "reportable",
+                "deprecated"
+              ],
+              "columns": [
+                {
+                  "name": "customer_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "Unique customer identifier",
+                  "pii": false
+                },
+                {
+                  "name": "customer_name",
+                  "type": "VARCHAR(200)",
+                  "nullable": false,
+                  "description": "Customer company or individual name",
+                  "pii": false
+                },
+                {
+                  "name": "email",
+                  "type": "VARCHAR(200)",
+                  "nullable": true,
+                  "description": "Primary contact email",
+                  "pii": true
+                },
+                {
+                  "name": "phone",
+                  "type": "VARCHAR(50)",
+                  "nullable": true,
+                  "description": "Primary contact phone number",
+                  "pii": true
+                },
+                {
+                  "name": "region",
+                  "type": "VARCHAR(50)",
+                  "nullable": false,
+                  "description": "Customer region: APAC | EMEA | NA | LATAM",
+                  "pii": false
+                },
+                {
+                  "name": "segment",
+                  "type": "VARCHAR(50)",
+                  "nullable": false,
+                  "description": "Enterprise | Mid-Market | SMB",
+                  "pii": false
+                },
+                {
+                  "name": "industry",
+                  "type": "VARCHAR(100)",
+                  "nullable": true,
+                  "description": "Customer industry vertical",
+                  "pii": false
+                },
+                {
+                  "name": "country",
+                  "type": "VARCHAR(100)",
+                  "nullable": false,
+                  "description": "Country of customer headquarters",
+                  "pii": false
+                },
+                {
+                  "name": "credit_limit",
+                  "type": "NUMERIC(12,2)",
+                  "nullable": true,
+                  "description": "Approved credit limit in USD",
+                  "pii": false,
+                  "sensitive": true
+                },
+                {
+                  "name": "created_at",
+                  "type": "TIMESTAMP",
+                  "nullable": false,
+                  "description": "Customer onboarding timestamp",
+                  "pii": false
+                },
+                {
+                  "name": "is_active",
+                  "type": "BOOLEAN",
+                  "nullable": false,
+                  "description": "Active account flag",
+                  "pii": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Product Analytics",
+          "description": "Product catalog, category performance, pricing, velocity.",
+          "keywords": [
+            "product",
+            "category",
+            "sku",
+            "price",
+            "units sold",
+            "inventory",
+            "catalog"
+          ],
+          "tables": [
+            {
+              "table_name": "order_items",
+              "schema_name": "sales",
+              "description": "[DEPRECATED \u2014 table removed from DB] Line items within an order. One row per product per order.",
+              "primary_key": "item_id",
+              "foreign_keys": [
+                {
+                  "column": "order_id",
+                  "references": "sales.orders.order_id"
+                },
+                {
+                  "column": "product_id",
+                  "references": "sales.products.product_id"
+                }
+              ],
+              "row_count_estimate": 25000000,
+              "tags": [
+                "transactional",
+                "core",
+                "deprecated"
+              ],
+              "columns": [
+                {
+                  "name": "item_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "Unique line item identifier"
+                },
+                {
+                  "name": "order_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "FK to orders"
+                },
+                {
+                  "name": "product_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "FK to products"
+                },
+                {
+                  "name": "quantity",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "Number of units ordered"
+                },
+                {
+                  "name": "unit_price",
+                  "type": "NUMERIC(10,2)",
+                  "nullable": false,
+                  "description": "Price per unit at time of order"
+                },
+                {
+                  "name": "discount_pct",
+                  "type": "NUMERIC(5,2)",
+                  "nullable": true,
+                  "description": "Discount percentage applied to line"
+                },
+                {
+                  "name": "line_total",
+                  "type": "NUMERIC(12,2)",
+                  "nullable": false,
+                  "description": "quantity * unit_price * (1 - discount_pct/100)"
+                }
+              ]
+            },
+            {
+              "table_name": "products",
+              "schema_name": "sales",
+              "description": "[DEPRECATED \u2014 table removed from DB] Product master catalog.",
+              "primary_key": "product_id",
+              "foreign_keys": [],
+              "row_count_estimate": 2000,
+              "tags": [
+                "catalog",
+                "master-data",
+                "deprecated"
+              ],
+              "columns": [
+                {
+                  "name": "product_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "Unique product identifier"
+                },
+                {
+                  "name": "product_name",
+                  "type": "VARCHAR(200)",
+                  "nullable": false,
+                  "description": "Product display name"
+                },
+                {
+                  "name": "category",
+                  "type": "VARCHAR(100)",
+                  "nullable": false,
+                  "description": "Top-level product category"
+                },
+                {
+                  "name": "sub_category",
+                  "type": "VARCHAR(100)",
+                  "nullable": true,
+                  "description": "Product sub-category"
+                },
+                {
+                  "name": "unit_price",
+                  "type": "NUMERIC(10,2)",
+                  "nullable": false,
+                  "description": "Current published list price"
+                },
+                {
+                  "name": "cost_price",
+                  "type": "NUMERIC(10,2)",
+                  "nullable": false,
+                  "description": "Product cost price (margin-sensitive)",
+                  "sensitive": true
+                },
+                {
+                  "name": "sku",
+                  "type": "VARCHAR(50)",
+                  "nullable": false,
+                  "description": "Stock keeping unit code"
+                },
+                {
+                  "name": "is_active",
+                  "type": "BOOLEAN",
+                  "nullable": false,
+                  "description": "Active product flag"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Sales Performance",
+          "description": "Salesperson KPIs, quota attainment, rankings, territory coverage.",
+          "keywords": [
+            "quota",
+            "target",
+            "attainment",
+            "salesperson",
+            "rep",
+            "territory",
+            "pipeline",
+            "performance",
+            "rank"
+          ],
+          "tables": [
+            {
+              "table_name": "salespeople",
+              "schema_name": "sales",
+              "description": "[DEPRECATED \u2014 table removed from DB] Sales team member records.",
+              "primary_key": "salesperson_id",
+              "foreign_keys": [
+                {
+                  "column": "manager_id",
+                  "references": "sales.salespeople.salesperson_id"
+                }
+              ],
+              "row_count_estimate": 500,
+              "tags": [
+                "pii",
+                "master-data",
+                "deprecated"
+              ],
+              "columns": [
+                {
+                  "name": "salesperson_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "Unique salesperson identifier"
+                },
+                {
+                  "name": "full_name",
+                  "type": "VARCHAR(200)",
+                  "nullable": false,
+                  "description": "Full name of salesperson"
+                },
+                {
+                  "name": "email",
+                  "type": "VARCHAR(200)",
+                  "nullable": true,
+                  "description": "Work email address",
+                  "pii": true
+                },
+                {
+                  "name": "region",
+                  "type": "VARCHAR(50)",
+                  "nullable": false,
+                  "description": "Assigned territory region"
+                },
+                {
+                  "name": "manager_id",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": "FK to salespeople (direct manager)"
+                },
+                {
+                  "name": "hire_date",
+                  "type": "DATE",
+                  "nullable": false,
+                  "description": "Employment start date"
+                },
+                {
+                  "name": "is_active",
+                  "type": "BOOLEAN",
+                  "nullable": false,
+                  "description": "Active employee flag"
+                }
+              ]
+            },
+            {
+              "table_name": "sales_targets",
+              "schema_name": "sales",
+              "description": "[DEPRECATED \u2014 table removed from DB] Annual and quarterly revenue quotas per salesperson.",
+              "primary_key": "target_id",
+              "foreign_keys": [
+                {
+                  "column": "salesperson_id",
+                  "references": "sales.salespeople.salesperson_id"
+                }
+              ],
+              "row_count_estimate": 10000,
+              "tags": [
+                "planning",
+                "reportable",
+                "deprecated"
+              ],
+              "columns": [
+                {
+                  "name": "target_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "Unique target record identifier"
+                },
+                {
+                  "name": "salesperson_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "FK to salespeople"
+                },
+                {
+                  "name": "year",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "Target fiscal year"
+                },
+                {
+                  "name": "quarter",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": "Target quarter 1-4. NULL = annual target"
+                },
+                {
+                  "name": "target_amount",
+                  "type": "NUMERIC(12,2)",
+                  "nullable": false,
+                  "description": "Quota amount in USD"
+                },
+                {
+                  "name": "product_category",
+                  "type": "VARCHAR(100)",
+                  "nullable": true,
+                  "description": "Category-scoped target. NULL = overall quota"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Returns & Refunds",
+          "description": "Order returns, refund processing, return reason analysis.",
+          "keywords": [
+            "return",
+            "refund",
+            "chargeback",
+            "cancellation",
+            "return rate",
+            "RMA"
+          ],
+          "tables": [
+            {
+              "table_name": "returns",
+              "schema_name": "sales",
+              "description": "[DEPRECATED \u2014 table removed from DB] Return requests linked to original orders.",
+              "primary_key": "return_id",
+              "foreign_keys": [
+                {
+                  "column": "order_id",
+                  "references": "sales.orders.order_id"
+                }
+              ],
+              "row_count_estimate": 150000,
+              "tags": [
+                "transactional",
+                "reportable",
+                "deprecated"
+              ],
+              "columns": [
+                {
+                  "name": "return_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "Unique return identifier"
+                },
+                {
+                  "name": "order_id",
+                  "type": "INTEGER",
+                  "nullable": false,
+                  "description": "FK to original order"
+                },
+                {
+                  "name": "return_date",
+                  "type": "DATE",
+                  "nullable": false,
+                  "description": "Date return was initiated"
+                },
+                {
+                  "name": "reason",
+                  "type": "VARCHAR(200)",
+                  "nullable": true,
+                  "description": "Free-text return reason"
+                },
+                {
+                  "name": "refund_amount",
+                  "type": "NUMERIC(12,2)",
+                  "nullable": false,
+                  "description": "Amount refunded to customer"
+                },
+                {
+                  "name": "status",
+                  "type": "VARCHAR(20)",
+                  "nullable": false,
+                  "description": "pending | approved | completed"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "New / Uncategorized",
+          "description": "Tables detected in DB but not yet classified.",
+          "keywords": [],
+          "tables": [
+            {
+              "table_name": "dim_customer",
+              "schema_name": "sales",
+              "object_type": "BASE TABLE",
+              "description": "Auto-detected BASE TABLE. Add description and classify.",
+              "primary_key": null,
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "table"
+              ],
+              "columns": [
+                {
+                  "name": "customer_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_name",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "gender",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "age",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_segment",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "country",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "city",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_loyalty_score",
+                  "type": "NUMERIC(10,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "total_orders_by_customer",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "account_creation_date",
+                  "type": "DATE",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "dim_date",
+              "schema_name": "sales",
+              "object_type": "BASE TABLE",
+              "description": "Auto-detected BASE TABLE. Add description and classify.",
+              "primary_key": null,
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "table"
+              ],
+              "columns": [
+                {
+                  "name": "order_date",
+                  "type": "DATE",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_year",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_month",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_day",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "is_weekend",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "dim_domain_metadata",
+              "schema_name": "sales",
+              "object_type": "BASE TABLE",
+              "description": "Auto-detected BASE TABLE. Add description and classify.",
+              "primary_key": "id",
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "table"
+              ],
+              "columns": [
+                {
+                  "name": "id",
+                  "type": "BIGINT",
+                  "nullable": false,
+                  "description": ""
+                },
+                {
+                  "name": "domain",
+                  "type": "TEXT",
+                  "nullable": false,
+                  "description": ""
+                },
+                {
+                  "name": "sub_domain",
+                  "type": "TEXT",
+                  "nullable": false,
+                  "description": ""
+                },
+                {
+                  "name": "keywords",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "table_view",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "table_type",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "table_description",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "llm_hint",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "created_at",
+                  "type": "TIMESTAMP WITHOUT TIME ZONE",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "dim_location",
+              "schema_name": "sales",
+              "object_type": "BASE TABLE",
+              "description": "Auto-detected BASE TABLE. Add description and classify.",
+              "primary_key": null,
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "table"
+              ],
+              "columns": [
+                {
+                  "name": "country",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "city",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "shipping_country",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "warehouse_location",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "dim_payment",
+              "schema_name": "sales",
+              "object_type": "BASE TABLE",
+              "description": "Auto-detected BASE TABLE. Add description and classify.",
+              "primary_key": null,
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "table"
+              ],
+              "columns": [
+                {
+                  "name": "payment_method",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "payment_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "installment_plan",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "dim_product",
+              "schema_name": "sales",
+              "object_type": "BASE TABLE",
+              "description": "Auto-detected BASE TABLE. Add description and classify.",
+              "primary_key": null,
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "table"
+              ],
+              "columns": [
+                {
+                  "name": "product_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "product_name",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "category",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "sub_category",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "brand",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "product_rating_avg",
+                  "type": "NUMERIC(3,2)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "product_reviews_count",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "fact_order_items",
+              "schema_name": "sales",
+              "object_type": "BASE TABLE",
+              "description": "Auto-detected BASE TABLE. Add description and classify.",
+              "primary_key": null,
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "table"
+              ],
+              "columns": [
+                {
+                  "name": "order_item_id",
+                  "type": "BIGINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "product_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_date",
+                  "type": "TIMESTAMP WITHOUT TIME ZONE",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "quantity",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "unit_price_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "discount_percent",
+                  "type": "NUMERIC(5,2)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "discount_amount_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "total_price_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "cost_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "profit_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "tax_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "shipping_cost_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "delivery_days",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "delivery_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "rating",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "fraud_risk_score",
+                  "type": "NUMERIC(10,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "profit_margin_percent",
+                  "type": "NUMERIC(10,4)",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "fact_orders",
+              "schema_name": "sales",
+              "object_type": "BASE TABLE",
+              "description": "Auto-detected BASE TABLE. Add description and classify.",
+              "primary_key": null,
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "table"
+              ],
+              "columns": [
+                {
+                  "name": "order_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_date",
+                  "type": "TIMESTAMP WITHOUT TIME ZONE",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "total_order_value",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "total_items",
+                  "type": "BIGINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "avg_discount",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "payment_method",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "payment_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "shipping_method",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "delivery_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "domain",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "sub_domain",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "order_item_agg_view",
+              "schema_name": "sales",
+              "object_type": "VIEW",
+              "description": "Auto-detected VIEW. Add description and classify.",
+              "primary_key": null,
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "view"
+              ],
+              "columns": [
+                {
+                  "name": "order_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "avg_fraud_risk_score",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "avg_profit_margin",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "main_category",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "main_sub_category",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "device_type",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "traffic_source",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "campaign_source",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "coupon_used",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "raw_ecommerce",
+              "schema_name": "sales",
+              "object_type": "BASE TABLE",
+              "description": "Auto-detected BASE TABLE. Add description and classify.",
+              "primary_key": "id",
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "table"
+              ],
+              "columns": [
+                {
+                  "name": "id",
+                  "type": "BIGINT",
+                  "nullable": false,
+                  "description": ""
+                },
+                {
+                  "name": "order_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_date",
+                  "type": "TIMESTAMP WITHOUT TIME ZONE",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_year",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_month",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_day",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_hour",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_minute",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_second",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "is_weekend",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "return_reason",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_name",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "gender",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "age",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_segment",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "country",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "city",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_loyalty_score",
+                  "type": "NUMERIC(10,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "total_orders_by_customer",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "account_creation_date",
+                  "type": "DATE",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "product_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "product_name",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "category",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "sub_category",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "brand",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "product_rating_avg",
+                  "type": "NUMERIC(3,2)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "product_reviews_count",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "stock_quantity",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "unit_price_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "quantity",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "discount_percent",
+                  "type": "NUMERIC(5,2)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "discount_amount_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "total_price_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "cost_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "profit_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "tax_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "currency",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "payment_method",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "payment_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "installment_plan",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "shipping_method",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "shipping_cost_usd",
+                  "type": "NUMERIC(18,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "delivery_days",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "shipping_country",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "warehouse_location",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "delivery_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "rating",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "review_sentiment",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_feedback",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "coupon_used",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "coupon_code",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "campaign_source",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "device_type",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "traffic_source",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "session_duration_minutes",
+                  "type": "NUMERIC(10,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "pages_visited",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "abandoned_cart_before",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "fraud_risk_score",
+                  "type": "NUMERIC(10,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "profit_margin_percent",
+                  "type": "NUMERIC(10,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_priority",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "support_ticket_created",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            },
+            {
+              "table_name": "sales_business_view",
+              "schema_name": "sales",
+              "object_type": "VIEW",
+              "description": "Auto-detected VIEW. Add description and classify.",
+              "primary_key": null,
+              "foreign_keys": [],
+              "row_count_estimate": 0,
+              "tags": [
+                "auto-detected",
+                "view"
+              ],
+              "columns": [
+                {
+                  "name": "order_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_date",
+                  "type": "TIMESTAMP WITHOUT TIME ZONE",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "domain",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "sub_domain",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "order_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_id",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_name",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "gender",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "age",
+                  "type": "SMALLINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_segment",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "country",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "city",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "customer_loyalty_score",
+                  "type": "NUMERIC(10,4)",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "total_order_value",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "total_items",
+                  "type": "BIGINT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "avg_discount",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "payment_method",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "payment_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "shipping_method",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "delivery_status",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "main_category",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "main_sub_category",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "device_type",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "traffic_source",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "campaign_source",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "coupon_used",
+                  "type": "TEXT",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "avg_fraud_risk_score",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "avg_profit_margin",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "is_booking",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "is_cancelled",
+                  "type": "INTEGER",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "year",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "month",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                },
+                {
+                  "name": "day",
+                  "type": "NUMERIC",
+                  "nullable": true,
+                  "description": ""
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

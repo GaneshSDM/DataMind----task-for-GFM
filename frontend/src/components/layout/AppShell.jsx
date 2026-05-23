@@ -4,13 +4,14 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   MessageSquare, Database, Globe, Layers, GitBranch,
   Lock, Shield, Users, LogOut,
-  Sliders, Server, Key, Moon, Sun, Menu, Cpu
+  Sliders, Server, Key, Moon, Sun, Menu, Cpu, UserCircle
 } from 'lucide-react'
 
 const NAV = [
   { section: 'Main', items: [
-    { path: '/chats', label: 'Chats', icon: MessageSquare },
-    { path: '/users', label: 'User Management', icon: Users },
+    { path: '/chats',   label: 'Chats',           icon: MessageSquare },
+    { path: '/profile', label: 'My Profile',       icon: UserCircle },
+    { path: '/users',   label: 'User Management',  icon: Users,       adminOnly: true },
   ]},
   { section: 'Data', items: [
     { path: '/db-connections', label: 'Database Connections', icon: Database, adminOnly: true },

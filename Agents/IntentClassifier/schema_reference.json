@@ -1,0 +1,1041 @@
+{
+  "generated_at": "2026-05-22T12:00:03.377696+00:00",
+  "target_schema": "sales",
+  "domains": [
+    {
+      "id": 5,
+      "name": "Compliance"
+    },
+    {
+      "id": 1,
+      "name": "Finance"
+    },
+    {
+      "id": 2,
+      "name": "HR"
+    },
+    {
+      "id": 4,
+      "name": "Operations"
+    },
+    {
+      "id": 3,
+      "name": "Sales"
+    }
+  ],
+  "subdomains": [
+    {
+      "id": 1,
+      "name": "Accounts",
+      "domain_id": 1
+    },
+    {
+      "id": 7,
+      "name": "Cancellation",
+      "domain_id": 3
+    },
+    {
+      "id": 4,
+      "name": "CustomerSales",
+      "domain_id": 3
+    },
+    {
+      "id": 3,
+      "name": "Recruitment",
+      "domain_id": 2
+    },
+    {
+      "id": 2,
+      "name": "Revenue",
+      "domain_id": 1
+    },
+    {
+      "id": 5,
+      "name": "RiskCompliance",
+      "domain_id": 5
+    },
+    {
+      "id": 6,
+      "name": "Shipment",
+      "domain_id": 3
+    }
+  ],
+  "tables": [
+    {
+      "table_name": "dim_customer",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "gender",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "age",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "customer_segment",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_loyalty_score",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_orders_by_customer",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "account_creation_date",
+          "type": "date",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "dim_date",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "order_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "order_year",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "order_month",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "order_day",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "is_weekend",
+          "type": "text",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "dim_domain_metadata",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "domain",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "sub_domain",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "keywords",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "table_view",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "table_type",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "table_description",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "llm_hint",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "dim_location",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "country",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "shipping_country",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "warehouse_location",
+          "type": "text",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "dim_payment",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "payment_method",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "payment_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "installment_plan",
+          "type": "text",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "dim_product",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "product_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "product_name",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "sub_category",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "brand",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "product_rating_avg",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "product_reviews_count",
+          "type": "integer",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "fact_order_items",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "order_item_id",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "order_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "product_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "order_date",
+          "type": "timestamp without time zone",
+          "nullable": true
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "unit_price_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "discount_percent",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "discount_amount_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_price_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "cost_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "profit_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "tax_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "shipping_cost_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "delivery_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "delivery_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "rating",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "fraud_risk_score",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "profit_margin_percent",
+          "type": "numeric",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "fact_orders",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "order_date",
+          "type": "timestamp without time zone",
+          "nullable": true
+        },
+        {
+          "name": "total_order_value",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_items",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "avg_discount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "payment_method",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "payment_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "shipping_method",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "delivery_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "order_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "text",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "order_item_agg_view",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "avg_fraud_risk_score",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "avg_profit_margin",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "main_category",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "main_sub_category",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "device_type",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "traffic_source",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "campaign_source",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "coupon_used",
+          "type": "text",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "raw_ecommerce",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "order_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "order_date",
+          "type": "timestamp without time zone",
+          "nullable": true
+        },
+        {
+          "name": "order_year",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "order_month",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "order_day",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "order_hour",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "order_minute",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "order_second",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "is_weekend",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "order_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "return_reason",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "gender",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "age",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "customer_segment",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_loyalty_score",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_orders_by_customer",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "account_creation_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "product_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "product_name",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "sub_category",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "brand",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "product_rating_avg",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "product_reviews_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "stock_quantity",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "unit_price_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "discount_percent",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "discount_amount_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_price_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "cost_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "profit_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "tax_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "payment_method",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "payment_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "installment_plan",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "shipping_method",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "shipping_cost_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "delivery_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "shipping_country",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "warehouse_location",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "delivery_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "rating",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "review_sentiment",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_feedback",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "coupon_used",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "coupon_code",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "campaign_source",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "device_type",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "traffic_source",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "session_duration_minutes",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "pages_visited",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "abandoned_cart_before",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "fraud_risk_score",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "profit_margin_percent",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "order_priority",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "support_ticket_created",
+          "type": "text",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "sales_business_view",
+      "schema": "sales",
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "order_date",
+          "type": "timestamp without time zone",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "order_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "gender",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "age",
+          "type": "smallint",
+          "nullable": true
+        },
+        {
+          "name": "customer_segment",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "customer_loyalty_score",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_order_value",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_items",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "avg_discount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "payment_method",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "payment_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "shipping_method",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "delivery_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "main_category",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "main_sub_category",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "device_type",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "traffic_source",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "campaign_source",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "coupon_used",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "avg_fraud_risk_score",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "avg_profit_margin",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "is_booking",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "is_cancelled",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "numeric",
+          "nullable": true
+        }
+      ]
+    }
+  ],
+  "rag_files": [
+    {
+      "file_id": "cbc67b2d-b6cc-492f-99b8-a850dd223c9d",
+      "filename": "migration-strategies-ebook.pdf",
+      "description": "",
+      "page_count": 18,
+      "file_type": "pdf",
+      "domain": "Finance",
+      "subdomain": "Accounts",
+      "category": "Bookings",
+      "sub_category": "SOP"
+    },
+    {
+      "file_id": "80d9fa7f-7274-4529-97a0-ec245282366e",
+      "filename": "Sales_Cancellation_KnowledgeBase.pdf",
+      "description": "",
+      "page_count": 7,
+      "file_type": "pdf",
+      "domain": "Sales",
+      "subdomain": "Cancellation",
+      "category": "Others",
+      "sub_category": "Others"
+    },
+    {
+      "file_id": "d9099cd3-99c2-40fe-bf31-9083da8064e0",
+      "filename": "Sales_Shipment_KnowledgeBase.pdf",
+      "description": "",
+      "page_count": 8,
+      "file_type": "pdf",
+      "domain": "Sales",
+      "subdomain": "Shipment",
+      "category": "Others",
+      "sub_category": "Others"
+    }
+  ]
+}

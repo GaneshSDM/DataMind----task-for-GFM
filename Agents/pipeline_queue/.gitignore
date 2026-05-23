@@ -1,0 +1,2 @@
+# Ignore queued pipeline JSON files — these are runtime artifacts
+*.json

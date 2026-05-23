@@ -11,6 +11,7 @@ import SecurityGroups from './pages/SecurityGroups'
 import Guardrails from './pages/Guardrails'
 import { UserManagement, RLSPage, CLSPage, SLMConfigPage, DBConnectionsPage } from './pages/AdminPages'
 import RAGPipelines from './pages/RAGPipelines'
+import UserProfile from './pages/UserProfile'
 import './styles/global.css'
 
 createRoot(document.getElementById('root')).render(
@@ -32,6 +33,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="users"          element={<UserManagement />} />
             <Route path="slm-config"     element={<SLMConfigPage />} />
             <Route path="db-connections" element={<DBConnectionsPage />} />
+            <Route path="profile"          element={<UserProfile />} />
             <Route path="rag-pipelines"    element={<RAGPipelines />} />
             <Route path="rag-categories"   element={<RagCategoryPage />} />
             <Route path="rag-sub-categories" element={<RagSubCategoryPage />} />
