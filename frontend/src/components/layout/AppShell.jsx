@@ -26,7 +26,7 @@ const NAV = [
     { path: '/guardrails', label: 'Guard Rails', icon: Sliders, adminOnly: true },
   ]},
   { section: 'Admin', items: [
-    { path: '/slm-config',         label: 'SLM API Config',       icon: Server,     adminOnly: true },
+    { path: '/slm-config',         label: 'LLM API Config',       icon: Server,     adminOnly: true },
     { path: '/rag-pipelines',      label: 'Manage RAG Pipelines', icon: Cpu,        adminOnly: true },
     { path: '/rag-categories',     label: 'RAG Categories',       icon: Layers,     adminOnly: true },
     { path: '/rag-sub-categories', label: 'RAG Sub-Categories',   icon: GitBranch,  adminOnly: true },
@@ -47,11 +47,11 @@ export default function AppShell() {
       <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
         {/* Logo / header row — always visible */}
         <div className="sidebar-logo">
-          {!collapsed && <div className="logo-mark">DM</div>}
+          {!collapsed && <div className="logo-mark">M</div>}
           {!collapsed && (
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="logo-text">DataMind</div>
-              <div className="logo-sub">Decision Minds</div>
+              <div className="logo-text">MANTHAN.AI</div>
+              <div className="logo-sub">Where data is churned into wisdom.</div>
             </div>
           )}
           <button

@@ -4,6 +4,163 @@ import { getChats, getChatMessages, sendPrompt, deleteChat, getSecurityGroups, g
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
+// ── SPYDER synthesis panel ────────────────────────────────────────────────────
+function SpyderPanel({ result }) {
+  const llm       = result.llm_response || {}
+  const sqlRes    = (result.sql_results || []).filter(r => r.status === 'success' && r.rows?.length > 0)
+  const answer    = llm.synthesized_answer
+  const recs      = Array.isArray(llm.recommendations) ? llm.recommendations : []
+
+  if (!answer && recs.length === 0 && sqlRes.length === 0) return null
+
+  return (
+    <div style={{
+      marginTop: 14,
+      border: '1px solid var(--border-default)',
+      borderRadius: 8,
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '6px 12px',
+        background: 'var(--bg-subtle)',
+        borderBottom: '1px solid var(--border-default)',
+        fontSize: 10.5, fontWeight: 700, color: 'var(--text-secondary)',
+        textTransform: 'uppercase', letterSpacing: '0.05em',
+      }}>
+        <span>🧠</span> SPYDER Synthesis
+        <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: 'var(--text-tertiary)' }}>
+          {result.domain || ''}
+        </span>
+      </div>
+
+      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+        {/* SQL result tables + bar charts */}
+        {sqlRes.map(sr => (
+          <SpyderTable key={sr.query_id} sr={sr} />
+        ))}
+
+        {/* Synthesized answer */}
+        {answer && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+              Synthesized Answer
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {answer}
+            </div>
+          </div>
+        )}
+
+        {/* Recommendations */}
+        {recs.length > 0 && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+              Recommendations
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {recs.map((r, i) => (
+                <li key={i} style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SpyderTable({ sr }) {
+  const [showChart, setShowChart] = useState(true)
+  const rows    = sr.rows || []
+  const columns = sr.columns || (rows[0] ? Object.keys(rows[0]) : [])
+  if (rows.length === 0) return null
+
+  // Auto-detect category col (first string) and value col (first number)
+  const catCol = columns.find(c => typeof rows[0][c] === 'string') || columns[0]
+  const numCol = columns.find(c => typeof rows[0][c] === 'number')
+  const maxVal = numCol ? Math.max(...rows.map(r => Number(r[numCol]) || 0)) : 0
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {sr.label || sr.query_id} <span style={{ fontWeight: 400 }}>({sr.row_count} rows)</span>
+        </div>
+        {numCol && (
+          <button
+            onClick={() => setShowChart(v => !v)}
+            style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-default)', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
+          >
+            {showChart ? 'Table' : 'Chart'}
+          </button>
+        )}
+      </div>
+
+      {/* Bar chart */}
+      {showChart && numCol && maxVal > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {rows.slice(0, 15).map((row, i) => {
+            const pct = maxVal > 0 ? (Number(row[numCol]) / maxVal) * 100 : 0
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+                <div style={{ width: 110, textAlign: 'right', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  {String(row[catCol] ?? '')}
+                </div>
+                <div style={{ flex: 1, background: 'var(--bg-subtle)', borderRadius: 3, height: 14, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${pct}%`, height: '100%',
+                    background: 'var(--brand-orange, #f97316)',
+                    borderRadius: 3,
+                    transition: 'width 0.4s ease',
+                    minWidth: pct > 0 ? 3 : 0,
+                  }} />
+                </div>
+                <div style={{ width: 64, color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right', flexShrink: 0 }}>
+                  {typeof row[numCol] === 'number' ? row[numCol].toLocaleString() : row[numCol]}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        /* Data table */
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+            <thead>
+              <tr>
+                {columns.map(c => (
+                  <th key={c} style={{ padding: '3px 8px', background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-default)', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, 20).map((row, ri) => (
+                <tr key={ri} style={{ borderBottom: '1px solid var(--border-default)' }}>
+                  {columns.map(c => (
+                    <td key={c} style={{ padding: '3px 8px', color: 'var(--text-primary)' }}>
+                      {row[c] === null || row[c] === undefined ? '—' : String(row[c])}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length > 20 && (
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', padding: '3px 8px' }}>
+              Showing 20 of {rows.length} rows
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Chats() {
   const [chats, setChats] = useState([])
   const [activeChatId, setActiveChatId] = useState(null)
@@ -16,6 +173,7 @@ export default function Chats() {
   const [recentOpen, setRecentOpen] = useState(true)
   const { user } = useAuth()
   const bottomRef = useRef()
+  const suppressNextLoadRef = useRef(false)
 
   useEffect(() => {
     loadChats()
@@ -45,6 +203,10 @@ export default function Chats() {
   }
 
   const loadMessages = async id => {
+    if (suppressNextLoadRef.current) {
+      suppressNextLoadRef.current = false
+      return
+    }
     try { setMessages(await getChatMessages(id)) } catch {}
   }
 
@@ -71,6 +233,7 @@ export default function Chats() {
         security_group_ids: selectedSGIds.length > 0 ? selectedSGIds : null,
       })
       if (!activeChatId) {
+        suppressNextLoadRef.current = true   // prevent useEffect loadMessages from wiping SpyderResult
         setActiveChatId(res.chat_id)
         await loadChats()
       }
@@ -87,6 +250,7 @@ export default function Chats() {
           IntentResult: res.intent_result,
           SqlResult: res.sql_result,
           ValkyrieResult: res.valkyrie_result,
+          SpyderResult: res.spyder_result,
         },
       ])
     } catch (err) {
@@ -175,7 +339,7 @@ export default function Chats() {
               <div className="empty-state" style={{ flex: 1, justifyContent: 'center' }}>
                 <MessageSquare size={40} />
                 <div className="empty-state-title">Start a new conversation</div>
-                <div className="empty-state-desc">Type a prompt below to interact with the SLM API. Your security profile and guardrails will be applied automatically.</div>
+                <div className="empty-state-desc">Type a prompt below to interact with MANTHAN.AI. Your security profile and guardrails will be applied automatically.</div>
               </div>
             )}
             {messages.map((m, i) => {
@@ -188,6 +352,7 @@ export default function Chats() {
                   : {}
               const intents       = m.IntentResult?.intents || []
               const sqlResults    = m.SqlResult?.sql_results || []
+              const spyderResult  = m.SpyderResult
               // Build validation lookup: intent_id → validated_result
               const valMap = {}
               ;(m.ValkyrieResult?.validated_results || []).forEach(v => { valMap[v.intent_id] = v })
@@ -406,6 +571,10 @@ export default function Chats() {
                           </div>
                         ))}
                       </div>
+                    )}
+                    {/* ── SPYDER Synthesis ── */}
+                    {spyderResult && (
+                      <SpyderPanel result={spyderResult} />
                     )}
                   </div>
                 </div>

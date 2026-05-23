@@ -577,14 +577,14 @@ export function SLMConfigPage() {
   return (
     <>
       <PageHeader
-        title="SLM API Configuration"
+        title="LLM API Configuration"
         subtitle="Only one connection can be active at a time"
         actions={<button className="btn btn-primary btn-sm" type="button" onClick={openCreate}><Plus size={12} /> Add Config</button>}
       />
       <div className="page-content">
         {configs.length === 0 ? (
           <div className="empty-state card" style={{ padding: 40 }}>
-            <div className="empty-state-title">No SLM API configured</div>
+            <div className="empty-state-title">No LLM API configured</div>
             <div className="empty-state-desc">Add an endpoint to connect to Groq, OpenAI, or any OpenAI-compatible API.</div>
           </div>
         ) : (
@@ -626,7 +626,7 @@ export function SLMConfigPage() {
       </div>
 
       {modal && (
-        <Modal title={modal === 'create' ? 'New SLM API Config' : 'Edit Config'} onClose={() => setModal(null)}
+        <Modal title={modal === 'create' ? 'New LLM API Config' : 'Edit Config'} onClose={() => setModal(null)}
           footer={<>
             <button className="btn btn-secondary btn-sm" type="button" onClick={handleTest} disabled={testing}>{testing ? 'Testing…' : 'Test Connection'}</button>
             <button className="btn btn-secondary btn-sm" type="button" onClick={() => setModal(null)}>Cancel</button>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Universal Synthesizer Agent</title>
+
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- CodeMirror 5 — JSON editor -->
+  <link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/custom.css" />
+</head>
+<body class="h-screen flex flex-col overflow-hidden bg-slate-100">
+
+  <!-- ══════════════════════════════════════════════════════ HEADER ══ -->
+  <header class="bg-white border-b border-slate-200 px-5 py-3 flex items-center gap-4 shadow-sm flex-shrink-0 z-10">
+
+    <!-- Logo + Title -->
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-md"
+           style="background: linear-gradient(135deg,#6366f1,#8b5cf6)">⚡</div>
+      <div>
+        <h1 class="text-base font-bold text-slate-900 leading-tight">Universal Synthesizer Agent</h1>
+        <p class="text-xs text-slate-400">Domain-Agnostic AI Synthesis Platform</p>
+      </div>
+    </div>
+
+    <!-- Domain badge -->
+    <span id="domain-badge" class="px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 ml-2">💼 Sales</span>
+
+    <div class="flex-1"></div>
+
+    <!-- Action buttons (header) -->
+    <button onclick="copyFinalAnswer()"
+            class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copy Answer
+    </button>
+    <button onclick="downloadOutput()"
+            class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download
+    </button>
+
+    <!-- Health status -->
+    <div class="flex items-center gap-1.5 pl-3 border-l border-slate-200">
+      <div id="health-dot" class="w-2 h-2 rounded-full bg-slate-300"></div>
+      <span id="health-text" class="text-xs text-slate-500">Checking…</span>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════ PROGRESS TRACKER ══ -->
+  <div class="bg-white border-b border-slate-200 px-6 py-3 flex-shrink-0">
+    <div class="flex items-center max-w-3xl mx-auto" id="progress-tracker"></div>
+    <p id="progress-message" class="text-xs text-slate-400 text-center mt-1 h-4"></p>
+  </div>
+
+  <!-- ════════════════════════════════════════════════ MAIN CONTENT ══ -->
+  <main class="flex-1 flex overflow-hidden">
+
+    <!-- ─────────────────────────────────── LEFT PANEL: JSON Editor ── -->
+    <div class="w-2/5 min-w-[360px] flex flex-col bg-white border-r border-slate-200 overflow-hidden">
+
+      <!-- Editor header -->
+      <div class="flex items-center gap-2 px-4 py-2 border-b border-slate-100 bg-slate-50 flex-shrink-0">
+        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Input JSON</span>
+        <span id="editor-status" class="text-xs text-slate-400 ml-1"></span>
+        <div class="flex-1"></div>
+        <!-- Utility buttons -->
+        <button onclick="loadSampleJSON()" title="Load sample"
+                class="px-2 py-1 text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition">Sample</button>
+        <button id="btn-generate" onclick="generateSampleJSON()" title="Generate a new random JSON using the LLM"
+                class="px-2 py-1 text-xs font-medium text-violet-600 hover:text-white hover:bg-violet-600 border border-violet-300 hover:border-violet-600 rounded transition flex items-center gap-1">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="inline flex-shrink-0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Generate
+        </button>
+        <button onclick="formatJSON()" title="Format JSON"
+                class="px-2 py-1 text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          Format
+        </button>
+        <button onclick="clearEditor()" title="Clear"
+                class="px-2 py-1 text-xs text-slate-500 hover:text-red-500 hover:bg-red-50 rounded transition">Clear</button>
+      </div>
+
+      <!-- CodeMirror editor fills remaining space -->
+      <div class="flex-1 overflow-hidden relative">
+        <textarea id="json-textarea"></textarea>
+      </div>
+
+      <!-- Validation panel (shown after validate click) -->
+      <div id="validation-panel" class="hidden px-4 py-2 border-t border-slate-100 max-h-36 overflow-y-auto flex-shrink-0"></div>
+
+      <!-- Action buttons -->
+      <div class="px-4 py-3 border-t border-slate-200 flex gap-2 flex-shrink-0 bg-slate-50">
+        <button id="btn-validate" onclick="validateJSON()"
+                class="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-400 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1 mb-0.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Validate JSON
+        </button>
+        <button id="btn-run" onclick="runSynthesis()"
+                class="flex-1 px-4 py-2 rounded-lg text-sm font-semibold text-white transition"
+                style="background: linear-gradient(135deg,#6366f1,#8b5cf6)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" class="inline-block mr-1"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run Synthesis
+        </button>
+      </div>
+    </div>
+
+    <!-- ───────────────────────────────── RIGHT PANEL: Results Dash ── -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- Tab bar -->
+      <div class="flex items-center gap-0 bg-white border-b border-slate-200 px-4 flex-shrink-0">
+        <button class="tab-btn active" data-main-tab="dashboard">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </button>
+        <button class="tab-btn" data-main-tab="raw">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Raw Data
+        </button>
+        <button class="tab-btn" data-main-tab="logs">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline mr-1"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Logs
+        </button>
+        <div class="flex-1"></div>
+        <!-- Compact action icons on right -->
+        <button onclick="copyFinalAnswer()" title="Copy answer"
+                class="p-1.5 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <button onclick="downloadOutput()" title="Download JSON"
+                class="p-1.5 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+      </div>
+
+      <!-- Error panel (shown on step failure) -->
+      <div id="error-panel" class="hidden px-4 pt-3 flex-shrink-0"></div>
+
+      <!-- Dashboard tab -->
+      <div id="dashboard-panel" class="flex-1 overflow-y-auto px-4 py-4">
+        <div id="dashboard-content"></div>
+      </div>
+
+      <!-- Raw data tab -->
+      <div id="raw-panel" class="hidden flex-1 overflow-y-auto px-4 py-4">
+        <div id="raw-content">
+          <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <p class="text-sm">Raw data will appear here after synthesis</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs tab -->
+      <div id="logs-panel" class="hidden flex-1 overflow-y-auto px-4 py-4">
+        <div id="logs-content" class="bg-slate-900 rounded-xl p-4 min-h-full font-mono space-y-1">
+          <p class="text-slate-500 text-xs italic">Execution logs will appear here…</p>
+        </div>
+      </div>
+
+    </div><!-- /right panel -->
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════ TOAST ══ -->
+  <div id="toast"></div>
+
+  <!-- App JS -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

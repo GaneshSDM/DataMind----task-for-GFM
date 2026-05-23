@@ -248,6 +248,9 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
     synthesizer_context = pipeline_result.get("synthesizer_context")
     correction_attempt  = pipeline_result.get("correction_attempt", 0)
     correction_history  = pipeline_result.get("correction_history", [])
+    spyder_status       = pipeline_result.get("spyder_status")
+    spyder_result       = pipeline_result.get("spyder_result")
+    spyder_error        = pipeline_result.get("spyder_error")
 
     # Get or create chat
     if payload.chat_id:
@@ -337,6 +340,11 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
                 sql_note += f"\n⚠️ **VALKYRIE validation failed**{corr_note} — queries may not satisfy security policies"
             elif valkyrie_status == "error":
                 sql_note += f"\n⚠️ **VALKYRIE unavailable** — {valkyrie_error or 'validation skipped'}"
+            # SPYDER synthesis note
+            if spyder_status == "success":
+                sql_note += "\n✅ **SPYDER synthesis complete**"
+            elif spyder_status == "error":
+                sql_note += f"\n⚠️ **SPYDER synthesis failed** — {spyder_error or 'unknown error'}"
         elif sql_status == "error":
             sql_note = f"\n\n⚠️ **SQL generation failed** — {sql_error or 'unknown error'}"
         else:
@@ -363,9 +371,12 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
         "valkyrie_status":    valkyrie_status,
         "valkyrie_result":    valkyrie_result,
         "synthesizer_context": synthesizer_context,
-        "correction_attempt": correction_attempt,
-        "correction_history": correction_history,
-        "response":           assistant_content,
+        "correction_attempt":  correction_attempt,
+        "correction_history":  correction_history,
+        "spyder_status":       spyder_status,
+        "spyder_result":       spyder_result,
+        "spyder_error":        spyder_error,
+        "response":            assistant_content,
     }
 
 

@@ -35,11 +35,11 @@ export default function SignIn() {
       <div className="signin-left">
         <div className="signin-brand">
           <div className="signin-logo">
-            <span>DM</span>
+            <span>M</span>
           </div>
           <div>
-            <div className="signin-appname">DataMind</div>
-            <div className="signin-powered">Powered by <strong>Decision Minds</strong></div>
+            <div className="signin-appname">MANTHAN.AI</div>
+            <div className="signin-powered">Where data is churned into wisdom.</div>
           </div>
         </div>
 
@@ -65,9 +65,9 @@ export default function SignIn() {
       <div className="signin-right">
         <div className="signin-card">
           <div className="signin-card-header">
-            <div className="signin-card-logo">DM</div>
+            <div className="signin-card-logo">M</div>
             <h1>Welcome back</h1>
-            <p>Sign in to your DataMind account</p>
+            <p>Sign in to your MANTHAN.AI account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="signin-form">
@@ -117,7 +117,7 @@ export default function SignIn() {
 
           <div className="signin-footer">
             <Lock size={11} />
-            Secured by DataMind · Decision Minds © 2026
+            MANTHAN.AI © 2026
           </div>
         </div>
       </div>

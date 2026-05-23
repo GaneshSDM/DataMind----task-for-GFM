@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(anthropic-skills:docx)",
+      "Skill(anthropic-skills:docx:*)",
+      "Bash(pandoc \"C:\\\\Synthesizer_Agent\\\\Domain_Agnostic_Synthesizer_Agent_App_Requirements.docx\" -t plain)",
+      "Bash(python -c ' *)",
+      "Bash(node -e ' *)",
+      "Skill(anthropic-skills:xlsx)",
+      "Skill(anthropic-skills:xlsx:*)",
+      "Bash(del \"C:/Synthesizer_Agent/tmp_emb.txt\")",
+      "Skill(anthropic-skills:pdf)",
+      "Skill(anthropic-skills:pdf:*)",
+      "Bash(venvScriptspython.exe -c ' *)",
+      "Bash(\"C:/Synthesizer_Agent/backend/venv/Scripts/pip.exe\" list *)",
+      "Bash(\"C:/Synthesizer_Agent/backend/venv/Scripts/pip.exe\" install *)",
+      "Bash(del \"C:\\\\Synthesizer_Agent\\\\read_pdfs.py\" \"C:\\\\Synthesizer_Agent\\\\inspect_db.py\" \"C:\\\\Synthesizer_Agent\\\\list_models.py\")"
+    ]
+  }
+}

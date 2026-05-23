@@ -4,7 +4,7 @@
   "description": "30 SQL correction examples. Each entry is a validation feedback packet from the SQL Validator Agent: contains flawed generated SQL, structured validation errors, and suggested fixes. Used by the SQL Correction tab in the test harness.",
   "error_type_distribution": {
     "SCHEMA": 6,
-    "SYNTAX": 6,
+    "SYNTAX": 8,
     "RLS":    6,
     "CLS":    6,
     "FILTER": 6
@@ -682,6 +682,52 @@
       "cls_applied": { "enabled": true, "policy_name": "pii_protection", "columns_excluded": ["customer_loyalty_score"] },
       "metadata": { "domain": "Sales", "sub_domain": "Sales Analytics", "tables_in_scope": ["sales.fact_orders", "sales.dim_customer"], "model_used": "gemma-4-26b-a4b-it", "generated_at": "2026-05-21T06:29:00+00:00" },
       "validation_hints": { "original_prompt": "Monthly unique active customers trend with month-over-month change.", "expected_tables": ["fact_orders", "dim_customer"] }
+    },
+    {
+      "id": 31,
+      "request_id": "corr-031",
+      "status": "validation_failed",
+      "validation_status": "failed",
+      "error_type": "SYNTAX",
+      "generated_sql": "SELECT d.department, COUNT(e.employee_id) AS total_employee_count FROM hr_semantic_layer.hr_payroll e GROUP BY d.department",
+      "validation_errors": [
+        {
+          "type": "SYNTAX",
+          "detail": "Undefined table alias or reference: 'd'. The FROM clause defines alias 'e' for hr_payroll, but the SELECT and GROUP BY reference 'd.department' — alias 'd' does not exist.",
+          "fix": "Replace all occurrences of 'd.' with 'e.' to match the defined alias, or remove the alias prefix if department is unambiguous"
+        }
+      ],
+      "suggested_corrections": [
+        "Replace 'd.department' with 'e.department' in SELECT clause",
+        "Replace 'd.department' with 'e.department' in GROUP BY clause"
+      ],
+      "rls_applied": { "enabled": false, "policy_name": null, "where_clause_injected": null, "filters_applied": [] },
+      "cls_applied": { "enabled": false, "policy_name": null, "columns_excluded": [] },
+      "metadata": { "domain": "HR", "sub_domain": "Recruitment", "tables_in_scope": ["hr_semantic_layer.hr_payroll"], "model_used": "llama-3.3-70b-versatile", "generated_at": "2026-05-23T06:00:00+00:00" },
+      "validation_hints": { "original_prompt": "Fetch department wise total employee count", "expected_tables": ["hr_payroll"] }
+    },
+    {
+      "id": 32,
+      "request_id": "corr-032",
+      "status": "validation_failed",
+      "validation_status": "failed",
+      "error_type": "SYNTAX",
+      "generated_sql": "WITH department_wise_count AS (SELECT d.department, COUNT(e.employee_id) AS total_employee_count FROM hr_semantic_layer.hr_payroll e GROUP BY d.department) SELECT department, total_employee_count FROM department_wise_count ORDER BY total_employee_count DESC",
+      "validation_errors": [
+        {
+          "type": "SYNTAX",
+          "detail": "Undefined table alias or reference: 'd'. Inside the CTE 'department_wise_count', the FROM clause defines alias 'e' for hr_payroll. The references 'd.department' in SELECT and GROUP BY use an undefined alias 'd'.",
+          "fix": "Replace 'd.department' with 'e.department' inside the CTE definition — the table hr_payroll is aliased as 'e', not 'd'"
+        }
+      ],
+      "suggested_corrections": [
+        "Inside CTE 'department_wise_count', replace 'd.department' with 'e.department' in the SELECT list",
+        "Inside CTE 'department_wise_count', replace 'd.department' with 'e.department' in the GROUP BY clause"
+      ],
+      "rls_applied": { "enabled": false, "policy_name": null, "where_clause_injected": null, "filters_applied": [] },
+      "cls_applied": { "enabled": false, "policy_name": null, "columns_excluded": [] },
+      "metadata": { "domain": "HR", "sub_domain": "Recruitment", "tables_in_scope": ["hr_semantic_layer.hr_payroll"], "model_used": "llama-3.3-70b-versatile", "generated_at": "2026-05-23T06:01:00+00:00" },
+      "validation_hints": { "original_prompt": "Show chart analysis of department wise total employee count", "expected_tables": ["hr_payroll"] }
     }
   ]
 }

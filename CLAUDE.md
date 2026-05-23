@@ -79,10 +79,13 @@ cd Agents/SQLGenerator && python sage.py                   # :8003
 # Terminal 4 — VALKYRIE (SQL validator microservice)
 cd Agents/SQLValidator && python valkyrie.py             # :8004
 
-# Terminal 5 — Main backend
+# Terminal 5 — SPYDER (synthesizer microservice)
+cd Agents/Synthesizer/backend && uvicorn main:app --host 0.0.0.0 --port 8005 --reload  # :8005
+
+# Terminal 6 — Main backend
 cd backend && uvicorn app.main:app --reload --port 8000    # :8000
 
-# Terminal 6 — Frontend
+# Terminal 7 — Frontend
 cd frontend && npm run dev                                  # :5173
 ```
 
@@ -268,7 +271,7 @@ PostgreSQL, `tracopp` schema:
 | `DATABASE_URL` | Backend, ARIA, SAGE |
 | `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` | Backend |
 | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Backend chat route |
-| `GROQ_API_KEY`, `GROQ_MODEL` | ARIA, SAGE, VALKYRIE |
+| `GROQ_API_KEY`, `GROQ_MODEL` | ARIA, SAGE, VALKYRIE, SPYDER |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE` | Heimdall |
 | `TARGET_SCHEMA` | ARIA bootstrap, SAGE |
 

@@ -84,6 +84,65 @@ def _check_syntax(sql: str) -> list[dict]:
     if not s.rstrip().endswith(";"):
         pass  # acceptable, just noting
 
+    # ── Undefined table alias / qualifier check ──────────────────────────────
+    # Collect all aliases and schema prefixes defined in FROM / JOIN / CTEs.
+    # Flag any  x.y  reference where x is neither a known alias nor a schema prefix.
+    _defined: set[str] = set()
+    _schemas: set[str] = set()
+
+    # FROM [schema.]table[ [AS] alias]
+    for _m in re.finditer(
+        r'\bFROM\b\s+((?:\w+\.)*\w+)(?:\s+(?:AS\s+)?(\w+))?',
+        s, re.IGNORECASE,
+    ):
+        _parts = _m.group(1).split('.')
+        _defined.add(_parts[-1].lower())
+        if len(_parts) > 1:
+            _schemas.add(_parts[0].lower())
+        _alias = _m.group(2)
+        if _alias and _alias.upper() not in (
+            'WHERE', 'GROUP', 'ORDER', 'HAVING', 'LIMIT',
+            'UNION', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER',
+            'CROSS', 'ON', 'SET', 'WITH',
+        ):
+            _defined.add(_alias.lower())
+
+    # JOIN [schema.]table[ [AS] alias]
+    for _m in re.finditer(
+        r'\bJOIN\b\s+((?:\w+\.)*\w+)(?:\s+(?:AS\s+)?(\w+))?',
+        s, re.IGNORECASE,
+    ):
+        _parts = _m.group(1).split('.')
+        _defined.add(_parts[-1].lower())
+        if len(_parts) > 1:
+            _schemas.add(_parts[0].lower())
+        _alias = _m.group(2)
+        if _alias and _alias.upper() not in ('ON', 'WHERE', 'GROUP', 'ORDER', 'HAVING'):
+            _defined.add(_alias.lower())
+
+    # WITH cte_name AS (...)  and  , cte_name AS (...)
+    for _m in re.finditer(r'(?:\bWITH\b|,)\s*(\w+)\s+AS\s*\(', s, re.IGNORECASE):
+        _defined.add(_m.group(1).lower())
+
+    # Flag any qualifier.column reference whose qualifier is unknown
+    _seen_undef: set[str] = set()
+    for _m in re.finditer(r'\b(\w+)\.(\w+)\b', s, re.IGNORECASE):
+        _ref = _m.group(1).lower()
+        if _ref not in _defined and _ref not in _schemas and _ref not in _seen_undef:
+            _seen_undef.add(_ref)
+            errors.append({
+                "type": "SYNTAX",
+                "detail": (
+                    f"Undefined table alias or reference: '{_m.group(1)}'. "
+                    f"All qualifier.column references must use an alias or table name "
+                    f"declared in the FROM or JOIN clause."
+                ),
+                "fix": (
+                    f"Replace '{_m.group(1)}.' with the correct alias defined in FROM/JOIN, "
+                    f"or add a JOIN for '{_m.group(1)}' if a new table is intended."
+                ),
+            })
+
     return errors
 
 

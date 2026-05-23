@@ -1,0 +1,178 @@
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #f1f5f9;
+}
+
+/* ── CodeMirror overrides ────────────────────────────────────────────────────── */
+.CodeMirror {
+  height: 100% !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.CodeMirror-scroll { min-height: 200px; }
+
+/* ── Progress steps ──────────────────────────────────────────────────────────── */
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 4px;
+  transition: background 0.4s ease;
+}
+.step-connector.done { background: #22c55e; }
+
+.step-circle {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600;
+  border: 2px solid #e2e8f0;
+  background: #fff;
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+.step-circle.pending  { border-color: #e2e8f0; color: #94a3b8; }
+.step-circle.active   { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
+.step-circle.done     { border-color: #22c55e; color: #fff;    background: #22c55e; }
+.step-circle.error    { border-color: #ef4444; color: #fff;    background: #ef4444; }
+
+/* Spinner for active step */
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Result cards ────────────────────────────────────────────────────────────── */
+.result-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.result-card-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 600; font-size: 14px;
+}
+
+.result-card-body { padding: 16px; }
+
+/* ── Data tables ─────────────────────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table th {
+  background: #f8fafc;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.data-table tr:hover td { background: #f8fafc; }
+.data-table tr:last-child td { border-bottom: none; }
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────────── */
+.tab-btn {
+  padding: 8px 16px;
+  font-size: 13px; font-weight: 500;
+  color: #64748b;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tab-btn:hover  { color: #6366f1; }
+.tab-btn.active { color: #6366f1; border-bottom-color: #6366f1; }
+
+/* ── Notification toast ──────────────────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px; font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+  z-index: 9999;
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.success { background: #22c55e; color: #fff; }
+#toast.error   { background: #ef4444; color: #fff; }
+#toast.info    { background: #6366f1; color: #fff; }
+#toast.warning { background: #f59e0b; color: #fff; }
+
+/* ── Log entries ─────────────────────────────────────────────────────────────── */
+.log-entry { font-family: monospace; font-size: 12px; padding: 2px 0; }
+.log-info  { color: #64748b; }
+.log-warn  { color: #f59e0b; }
+.log-error { color: #ef4444; }
+
+/* ── Chunk card ──────────────────────────────────────────────────────────────── */
+.chunk-card {
+  background: #fafafa;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────────── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 20px;
+  color: #94a3b8; text-align: center;
+}
+.empty-state svg { margin-bottom: 16px; opacity: 0.4; }
+
+/* ── Validation panel ────────────────────────────────────────────────────────── */
+.validation-error { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; }
+.validation-warn  { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; }
+.validation-ok    { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; }
+
+/* ── Chart container ─────────────────────────────────────────────────────────── */
+.chart-container { position: relative; height: 220px; }
+
+/* ── Fade-in animation ───────────────────────────────────────────────────────── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.3s ease forwards; }
+
+/* ── Prose for LLM text ──────────────────────────────────────────────────────── */
+.llm-prose { line-height: 1.75; color: #334155; font-size: 14px; }
+.llm-prose p  { margin-bottom: 10px; }
+.llm-prose ul { list-style: disc; padding-left: 20px; margin-bottom: 10px; }
+.llm-prose li { margin-bottom: 4px; }

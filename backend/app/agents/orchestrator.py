@@ -3,14 +3,14 @@ orchestrator.py
 ---------------
 LangGraph StateGraph for the prompt pipeline.
 
-Current flow (Phase 4):
+Current flow (Phase 5):
   guardrail_check → [blocked/error → END]
                   → intent_classify → [error → END]
                   → save_to_queue → sql_generate → [no SQL → END]
                                                  → validate_sql
-                                                     PASS/WARN        → END
-                                                     FAIL + attempt<2 → sql_correct → validate_sql
-                                                     FAIL + attempt≥2 → END
+                                                     PASS/PARTIAL/WARN → spyder_synthesize → END
+                                                     FAIL + attempt<2  → sql_correct → validate_sql
+                                                     FAIL + attempt≥2  → END
 
 State keys:
   prompt, guardrails, security_profile, metadata          — inputs
@@ -22,6 +22,7 @@ State keys:
   synthesizer_context                                     — set by valkyrie_node
   correction_attempt                                      — incremented by sql_correct_node
   correction_history                                      — audit list, appended by sql_correct_node
+  spyder_status, spyder_result, spyder_error              — set by spyder_node
 """
 import logging
 from typing import Optional, List
@@ -35,6 +36,7 @@ from app.agents.queue_writer import queue_writer_node
 from app.agents.sql_node import sql_node
 from app.agents.valkyrie_node import valkyrie_node
 from app.agents.sql_correct_node import sql_correct_node
+from app.agents.spyder_node import spyder_node
 
 logger = logging.getLogger("orchestrator")
 
@@ -72,6 +74,10 @@ class OrchestratorState(TypedDict):
     # correction loop
     correction_attempt: int
     correction_history: List[dict]
+    # spyder outputs
+    spyder_status: Optional[str]
+    spyder_result: Optional[dict]
+    spyder_error: Optional[str]
 
 
 # ── routers ──────────────────────────────────────────────────
@@ -108,19 +114,24 @@ def _after_sql(state: OrchestratorState) -> str:
 
 def _after_validate(state: OrchestratorState) -> str:
     """
-    PASS / WARN / error / skipped → END
-    FAIL + correction_attempt < MAX_CORRECTIONS → sql_correct (loop back)
-    FAIL + correction_attempt >= MAX_CORRECTIONS → END
+    PASS / WARN         → spyder_synthesize
+    PARTIAL + attempt<2 → sql_correct (attempt to fix failed intents)
+    PARTIAL + attempt≥2 → spyder_synthesize (best-effort with passing intents)
+    FAIL    + attempt<2 → sql_correct (loop back)
+    FAIL    + attempt≥2 → END
+    error / skipped     → END
     """
     status  = state.get("valkyrie_status", "")
     attempt = state.get("correction_attempt", 0)
 
-    if status == "fail" and attempt < MAX_CORRECTIONS:
+    if status in ("fail", "partial") and attempt < MAX_CORRECTIONS:
         logger.info(
-            "VALKYRIE fail — routing to sql_correct (attempt %d/%d)",
-            attempt + 1, MAX_CORRECTIONS,
+            "VALKYRIE %s — routing to sql_correct (attempt %d/%d)",
+            status, attempt + 1, MAX_CORRECTIONS,
         )
         return "sql_correct"
+    if status in ("pass", "partial", "warn"):
+        return "spyder_synthesize"
     return END
 
 
@@ -129,12 +140,13 @@ def _after_validate(state: OrchestratorState) -> str:
 def _build_graph():
     g = StateGraph(OrchestratorState)
 
-    g.add_node("guardrail_check", guardrail_node)
-    g.add_node("intent_classify", intent_node)
-    g.add_node("save_to_queue",   queue_writer_node)
-    g.add_node("sql_generate",    sql_node)
-    g.add_node("validate_sql",    valkyrie_node)
-    g.add_node("sql_correct",     sql_correct_node)
+    g.add_node("guardrail_check",   guardrail_node)
+    g.add_node("intent_classify",   intent_node)
+    g.add_node("save_to_queue",     queue_writer_node)
+    g.add_node("sql_generate",      sql_node)
+    g.add_node("validate_sql",      valkyrie_node)
+    g.add_node("sql_correct",       sql_correct_node)
+    g.add_node("spyder_synthesize", spyder_node)
 
     g.set_entry_point("guardrail_check")
     g.add_conditional_edges(
@@ -160,10 +172,12 @@ def _build_graph():
     g.add_conditional_edges(
         "validate_sql",
         _after_validate,
-        {"sql_correct": "sql_correct", END: END},
+        {"sql_correct": "sql_correct", "spyder_synthesize": "spyder_synthesize", END: END},
     )
     # After correction always re-validate
     g.add_edge("sql_correct", "validate_sql")
+    # After synthesis always end
+    g.add_edge("spyder_synthesize", END)
 
     return g.compile()
 
@@ -201,6 +215,9 @@ async def run_pipeline(
         "synthesizer_context": None,
         "correction_attempt": 0,
         "correction_history": [],
+        "spyder_status":      None,
+        "spyder_result":      None,
+        "spyder_error":       None,
     }
     result = await _pipeline_graph.ainvoke(initial)
     return result
