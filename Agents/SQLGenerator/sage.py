@@ -85,14 +85,41 @@ def _normalize_schema(schema: dict) -> dict:
             "description": t.get("description", ""),
         })
 
-    # One catalog entry per domain, all tables in a single sub_domain bucket
-    catalog = [
-        {
-            "domain": d["name"],
-            "sub_domains": [{"name": "default", "tables": norm_tables}],
-        }
-        for d in domains
-    ]
+    # Group tables by domain (new multi-domain schema_reference format).
+    # Tables without a domain field fall back to all-domains behaviour (legacy).
+    has_domain_tagged = any(t.get("domain") for t in norm_tables)
+
+    if has_domain_tagged:
+        from collections import defaultdict as _defaultdict
+        domain_tables_map: dict = _defaultdict(list)
+        for t in norm_tables:
+            d_name = t.get("domain") or target_schema
+            domain_tables_map[d_name].append(t)
+
+        catalog = [
+            {
+                "domain": d["name"],
+                "sub_domains": [{"name": "default", "tables": domain_tables_map.get(d["name"], [])}],
+            }
+            for d in domains
+        ]
+        # Fallback entry for untagged tables bucket
+        if domain_tables_map.get(target_schema) and not any(
+            d["name"] == target_schema for d in domains
+        ):
+            catalog.append({
+                "domain": target_schema,
+                "sub_domains": [{"name": "default", "tables": domain_tables_map[target_schema]}],
+            })
+    else:
+        # Legacy: all tables visible under every domain
+        catalog = [
+            {
+                "domain": d["name"],
+                "sub_domains": [{"name": "default", "tables": norm_tables}],
+            }
+            for d in domains
+        ]
 
     # If no domains defined, create a fallback entry so tables are still reachable
     if not catalog and norm_tables:
@@ -428,6 +455,26 @@ def _generate_one(agent_payload: dict) -> dict:
         _provider, _client, _model, agent_payload, resolved, _examples
     )
     return build_output(agent_payload, resolved, sql, excluded_cols, rls_where, rls_cfg, cls_cfg, _model)
+
+
+# ── schema reload ──────────────────────────────────────────────────────────────
+
+@app.post("/schema/reload")
+async def reload_schema():
+    """Hot-reload schema_reference.json without restart. Call after bootstrap_schema.py runs."""
+    global _schema
+    try:
+        _schema = _normalize_schema(load_schema_reference())
+        table_count = sum(
+            len(sd["tables"])
+            for cat in _schema.get("catalog", [])
+            for sd in cat.get("sub_domains", [])
+        )
+        logger.info("SAGE schema reloaded — %d tables", table_count)
+        return {"status": "reloaded", "tables": table_count}
+    except Exception as e:
+        logger.error("SAGE schema reload failed: %s", e)
+        return {"status": "error", "detail": str(e)}
 
 
 # ── health ─────────────────────────────────────────────────────────────────────

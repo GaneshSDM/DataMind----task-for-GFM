@@ -164,9 +164,21 @@ class IntentProcessor:
             for dname, subs in sub_by_domain.items()
         ) or "|".join(d["name"] for d in filtered_domains)
 
+        # ── filter tables to allowed domains ──────────────────
+        # Tables tagged with domain field (new multi-domain schema) → filter.
+        # Legacy tables without domain field → always include (backward compat).
+        if allowed_domains:
+            allowed_lower = {d.lower() for d in allowed_domains}
+            filtered_tables = [
+                t for t in all_tables
+                if not t.get("domain") or t["domain"].lower() in allowed_lower
+            ]
+        else:
+            filtered_tables = all_tables
+
         # ── build tables block (compact: table(col:type,...)) ──
         table_lines = []
-        for t in all_tables:
+        for t in filtered_tables:
             cols = ", ".join(f"{c['name']}:{c['type']}" for c in t["columns"])
             table_lines.append(f"  {t['table_name']}({cols})")
         tables_block = "\n".join(table_lines) if table_lines else "  (no tables available)"

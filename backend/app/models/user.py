@@ -137,6 +137,7 @@ class Domain(Base):
     domain_id = Column(Integer, primary_key=True)
     domain_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    db_schema   = Column(String(100), nullable=True)   # PG schema backing this domain (e.g. 'sales')
     is_active = Column(Boolean, nullable=False)
     created_by = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), server_default=func.now())

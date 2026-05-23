@@ -75,12 +75,14 @@ class GeoOut(BaseModel):
 # ── Domain ────────────────────────────────────────────────────────────────────
 class DomainCreate(BaseModel):
     DomainName: str
-    IsActive: Optional[bool] = None
+    DbSchema:   Optional[str] = None   # PG schema name, e.g. 'sales'
+    IsActive:   Optional[bool] = None
 
 class DomainOut(BaseModel):
-    DomainID: int
-    DomainName: str
-    IsActive: bool
+    DomainID:    int
+    DomainName:  str
+    DbSchema:    Optional[str] = None
+    IsActive:    bool
     CreatedDate: Optional[datetime] = None
 
     class Config:

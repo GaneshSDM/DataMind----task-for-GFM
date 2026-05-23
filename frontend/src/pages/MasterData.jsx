@@ -6,6 +6,7 @@ import {
   getSubDomains, createSubDomain, updateSubDomain, deleteSubDomain,
   getRagCategories, createRagCategory, updateRagCategory,
   getRagSubCategories, createRagSubCategory, updateRagSubCategory,
+  getPgSchemas,
 } from '../api/client'
 
 export function GeographyPage() {
@@ -37,6 +38,14 @@ export function GeographyPage() {
 }
 
 export function DomainPage() {
+  const [schemaOptions, setSchemaOptions] = useState([])
+
+  useEffect(() => {
+    getPgSchemas()
+      .then(rows => setSchemaOptions(rows))
+      .catch(() => setSchemaOptions([]))
+  }, [])
+
   return (
     <CRUDPage
       title="Domains"
@@ -51,6 +60,10 @@ export function DomainPage() {
       columns={[
         { key: 'DomainID', label: '#' },
         { key: 'DomainName', label: 'Name' },
+        { key: 'DbSchema', label: 'DB Schema', render: v => v
+            ? <code style={{ fontSize: 11, background: 'var(--bg-subtle)', padding: '1px 5px', borderRadius: 4 }}>{v}</code>
+            : <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>—</span>
+        },
         { key: 'IsActive', label: 'Status', render: v => (
           <span className={`badge badge-${v ? 'success' : 'neutral'}`}>{v ? 'Active' : 'Inactive'}</span>
         )},
@@ -58,6 +71,7 @@ export function DomainPage() {
       ]}
       formFields={[
         { key: 'DomainName', label: 'Domain Name', required: true, placeholder: 'e.g. Sales' },
+        { key: 'DbSchema', label: 'DB Schema', type: 'select', options: schemaOptions },
         { key: 'IsActive', label: 'Active', type: 'checkbox', editOnly: true },
       ]}
     />

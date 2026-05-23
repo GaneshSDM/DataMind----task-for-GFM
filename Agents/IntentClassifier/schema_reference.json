@@ -1,26 +1,31 @@
 {
-  "generated_at": "2026-05-23T06:49:24.247646+00:00",
+  "generated_at": "2026-05-23T08:49:18.027430+00:00",
   "target_schema": "sales",
   "domains": [
     {
       "id": 5,
-      "name": "Compliance"
+      "name": "Compliance",
+      "db_schema": "legal_semantic_layer"
     },
     {
       "id": 1,
-      "name": "Finance"
+      "name": "Finance",
+      "db_schema": "finance_semantic_layer"
     },
     {
       "id": 2,
-      "name": "HR"
+      "name": "HR",
+      "db_schema": "hr_semantic_layer"
     },
     {
       "id": 4,
-      "name": "Operations"
+      "name": "Operations",
+      "db_schema": "operations_semantic_layer"
     },
     {
       "id": 3,
-      "name": "Sales"
+      "name": "Sales",
+      "db_schema": "sales_semantic_layer"
     }
   ],
   "subdomains": [
@@ -62,837 +67,2062 @@
   ],
   "tables": [
     {
-      "table_name": "dim_customer",
-      "schema": "sales",
+      "table_name": "legal_compliance",
+      "schema": "legal_semantic_layer",
+      "domain": "Compliance",
+      "domain_id": 5,
+      "object_type": "BASE TABLE",
       "columns": [
         {
-          "name": "customer_id",
-          "type": "text",
+          "name": "compliance_id",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "customer_name",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "gender",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "age",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "customer_segment",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "country",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "city",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "customer_loyalty_score",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "total_orders_by_customer",
-          "type": "integer",
-          "nullable": true
-        },
-        {
-          "name": "account_creation_date",
-          "type": "date",
-          "nullable": true
-        }
-      ]
-    },
-    {
-      "table_name": "dim_date",
-      "schema": "sales",
-      "columns": [
-        {
-          "name": "order_date",
+          "name": "assessment_date",
           "type": "date",
           "nullable": true
         },
         {
-          "name": "order_year",
-          "type": "smallint",
+          "name": "due_date",
+          "type": "date",
           "nullable": true
         },
         {
-          "name": "order_month",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "order_day",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "is_weekend",
-          "type": "text",
-          "nullable": true
-        }
-      ]
-    },
-    {
-      "table_name": "dim_domain_metadata",
-      "schema": "sales",
-      "columns": [
-        {
-          "name": "id",
-          "type": "bigint",
-          "nullable": false
-        },
-        {
-          "name": "domain",
-          "type": "text",
-          "nullable": false
-        },
-        {
-          "name": "sub_domain",
-          "type": "text",
-          "nullable": false
-        },
-        {
-          "name": "keywords",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "table_view",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "table_type",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "table_description",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "llm_hint",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "created_at",
-          "type": "timestamp without time zone",
-          "nullable": true
-        }
-      ]
-    },
-    {
-      "table_name": "dim_location",
-      "schema": "sales",
-      "columns": [
-        {
-          "name": "country",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "city",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "shipping_country",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "warehouse_location",
-          "type": "text",
-          "nullable": true
-        }
-      ]
-    },
-    {
-      "table_name": "dim_payment",
-      "schema": "sales",
-      "columns": [
-        {
-          "name": "payment_method",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "payment_status",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "installment_plan",
-          "type": "text",
-          "nullable": true
-        }
-      ]
-    },
-    {
-      "table_name": "dim_product",
-      "schema": "sales",
-      "columns": [
-        {
-          "name": "product_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "product_name",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "category",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "sub_category",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "brand",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "product_rating_avg",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "product_reviews_count",
-          "type": "integer",
-          "nullable": true
-        }
-      ]
-    },
-    {
-      "table_name": "fact_order_items",
-      "schema": "sales",
-      "columns": [
-        {
-          "name": "order_item_id",
-          "type": "bigint",
-          "nullable": true
-        },
-        {
-          "name": "order_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "customer_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "product_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "order_date",
-          "type": "timestamp without time zone",
-          "nullable": true
-        },
-        {
-          "name": "quantity",
-          "type": "integer",
-          "nullable": true
-        },
-        {
-          "name": "unit_price_usd",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "discount_percent",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "discount_amount_usd",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "total_price_usd",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "cost_usd",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "profit_usd",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "tax_usd",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "shipping_cost_usd",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "delivery_days",
-          "type": "integer",
-          "nullable": true
-        },
-        {
-          "name": "delivery_status",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "rating",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "fraud_risk_score",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "profit_margin_percent",
-          "type": "numeric",
-          "nullable": true
-        }
-      ]
-    },
-    {
-      "table_name": "fact_orders",
-      "schema": "sales",
-      "columns": [
-        {
-          "name": "order_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "customer_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "order_date",
-          "type": "timestamp without time zone",
-          "nullable": true
-        },
-        {
-          "name": "total_order_value",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "total_items",
-          "type": "bigint",
-          "nullable": true
-        },
-        {
-          "name": "avg_discount",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "payment_method",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "payment_status",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "shipping_method",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "delivery_status",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "order_status",
-          "type": "text",
+          "name": "completion_date",
+          "type": "date",
           "nullable": true
         },
         {
           "name": "domain",
-          "type": "text",
+          "type": "character varying",
           "nullable": true
         },
         {
           "name": "sub_domain",
-          "type": "text",
-          "nullable": true
-        }
-      ]
-    },
-    {
-      "table_name": "order_item_agg_view",
-      "schema": "sales",
-      "columns": [
-        {
-          "name": "order_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "avg_fraud_risk_score",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "avg_profit_margin",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "main_category",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "main_sub_category",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "device_type",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "traffic_source",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "campaign_source",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "coupon_used",
-          "type": "text",
-          "nullable": true
-        }
-      ]
-    },
-    {
-      "table_name": "raw_ecommerce",
-      "schema": "sales",
-      "columns": [
-        {
-          "name": "id",
-          "type": "bigint",
-          "nullable": false
-        },
-        {
-          "name": "order_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "order_date",
-          "type": "timestamp without time zone",
-          "nullable": true
-        },
-        {
-          "name": "order_year",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "order_month",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "order_day",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "order_hour",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "order_minute",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "order_second",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "is_weekend",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "order_status",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "return_reason",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "customer_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "customer_name",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "gender",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "age",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "customer_segment",
-          "type": "text",
+          "type": "character varying",
           "nullable": true
         },
         {
           "name": "country",
-          "type": "text",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
           "nullable": true
         },
         {
           "name": "city",
-          "type": "text",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "customer_loyalty_score",
-          "type": "numeric",
+          "name": "area",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "total_orders_by_customer",
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
           "type": "integer",
           "nullable": true
         },
         {
-          "name": "account_creation_date",
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "regulation_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "regulation_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "compliance_area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "compliance_owner_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "compliance_owner_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "compliance_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "risk_level",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "total_finding_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "critical_finding_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "open_finding_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "closed_finding_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "remediation_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "remediation_due_date",
           "type": "date",
           "nullable": true
         },
         {
-          "name": "product_id",
-          "type": "text",
+          "name": "audit_type",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "product_name",
-          "type": "text",
+          "name": "auditor_name",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "category",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "sub_category",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "brand",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "product_rating_avg",
+          "name": "penalty_amount_paid",
           "type": "numeric",
           "nullable": true
         },
         {
-          "name": "product_reviews_count",
+          "name": "estimated_fine_risk",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "training_completion_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "policy_updated",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "last_review_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "next_review_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "regulatory_body",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "certification_status",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "legal_contracts",
+      "schema": "legal_semantic_layer",
+      "domain": "Compliance",
+      "domain_id": 5,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "contract_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "effective_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "expiry_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
           "type": "integer",
           "nullable": true
         },
         {
-          "name": "stock_quantity",
+          "name": "month",
           "type": "integer",
           "nullable": true
         },
         {
-          "name": "unit_price_usd",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "quantity",
+          "name": "day",
           "type": "integer",
           "nullable": true
         },
         {
-          "name": "discount_percent",
-          "type": "numeric",
+          "name": "contract_type",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "discount_amount_usd",
-          "type": "numeric",
+          "name": "contract_status",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "total_price_usd",
-          "type": "numeric",
+          "name": "counterparty_id",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "cost_usd",
-          "type": "numeric",
+          "name": "counterparty_name",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "profit_usd",
-          "type": "numeric",
+          "name": "counterparty_type",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "tax_usd",
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_owner_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_owner_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "legal_counsel_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "legal_counsel_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_value",
           "type": "numeric",
           "nullable": true
         },
         {
           "name": "currency",
-          "type": "text",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "payment_method",
-          "type": "text",
+          "name": "payment_terms",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "payment_status",
-          "type": "text",
+          "name": "payment_frequency",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "installment_plan",
-          "type": "text",
+          "name": "auto_renewal",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "shipping_method",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "shipping_cost_usd",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "delivery_days",
+          "name": "renewal_notice_days",
           "type": "integer",
           "nullable": true
         },
         {
-          "name": "shipping_country",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "warehouse_location",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "delivery_status",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "rating",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "review_sentiment",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "customer_feedback",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "coupon_used",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "coupon_code",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "campaign_source",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "device_type",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "traffic_source",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "session_duration_minutes",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "pages_visited",
+          "name": "contract_term_years",
           "type": "integer",
           "nullable": true
         },
         {
-          "name": "abandoned_cart_before",
+          "name": "governing_law",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "jurisdiction",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "risk_rating",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "risk_flags",
           "type": "text",
           "nullable": true
         },
         {
-          "name": "fraud_risk_score",
+          "name": "key_clause_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "amendment_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "approval_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "approver_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "termination_notice_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "liability_cap",
           "type": "numeric",
           "nullable": true
         },
         {
-          "name": "profit_margin_percent",
-          "type": "numeric",
+          "name": "is_regulated",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "order_priority",
-          "type": "text",
+          "name": "dispute_resolution",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "support_ticket_created",
-          "type": "text",
+          "name": "signatory_name",
+          "type": "character varying",
           "nullable": true
         }
       ]
     },
     {
-      "table_name": "sales_business_view",
-      "schema": "sales",
+      "table_name": "finance_accounting",
+      "schema": "finance_semantic_layer",
+      "domain": "Finance",
+      "domain_id": 1,
+      "object_type": "BASE TABLE",
       "columns": [
         {
-          "name": "order_id",
-          "type": "text",
+          "name": "transaction_id",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "order_date",
-          "type": "timestamp without time zone",
+          "name": "transaction_date",
+          "type": "date",
           "nullable": true
         },
         {
           "name": "domain",
-          "type": "text",
+          "type": "character varying",
           "nullable": true
         },
         {
           "name": "sub_domain",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "order_status",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "customer_id",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "customer_name",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "gender",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "age",
-          "type": "smallint",
-          "nullable": true
-        },
-        {
-          "name": "customer_segment",
-          "type": "text",
+          "type": "character varying",
           "nullable": true
         },
         {
           "name": "country",
-          "type": "text",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
           "nullable": true
         },
         {
           "name": "city",
-          "type": "text",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "fiscal_year",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "fiscal_quarter",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "fiscal_month",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "account_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "account_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "account_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "account_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "account_sub_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "cost_center",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "cost_center_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "journal_entry_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "journal_entry_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "debit_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "credit_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "net_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "exchange_rate",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "amount_in_base_currency",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "tax_code",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "tax_rate_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "tax_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "invoice_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "vendor_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "vendor_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "payment_terms",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "payment_due_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "payment_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "payment_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "reconciliation_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "audit_flag",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "budget_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "actual_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "budget_variance",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "approval_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "approver_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "posted_date",
+          "type": "date",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "finance_asset_management",
+      "schema": "finance_semantic_layer",
+      "domain": "Finance",
+      "domain_id": 1,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "asset_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "asset_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "acquisition_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "fiscal_year",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "fiscal_quarter",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "asset_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "asset_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "asset_sub_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "cost_center",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "acquisition_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "book_value",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "market_value",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "salvage_value",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "depreciation_method",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "depreciation_rate_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "annual_depreciation",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "accumulated_depreciation",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "asset_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "asset_condition",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "vendor_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "vendor_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "purchase_order_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "warranty_start_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "warranty_end_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "warranty_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "insurance_policy_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "insurance_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "insurance_expiry_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "last_maintenance_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "maintenance_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "next_maintenance_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "asset_location",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "assigned_to",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "useful_life_years",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "remaining_life_years",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "fully_depreciated",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "hr_payroll",
+      "schema": "hr_semantic_layer",
+      "domain": "HR",
+      "domain_id": 2,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "payroll_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "pay_period_start",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "pay_period_end",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "pay_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "employee_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "employee_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "gender",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "age",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "employment_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "cost_center",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "job_title",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "job_level",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "job_family",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "pay_frequency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "basic_salary",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "hourly_rate",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "overtime_hours",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "overtime_pay",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "bonus_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "commission_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "allowances",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "gross_salary",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "tax_deduction",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "social_security_deduction",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "pension_deduction",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "health_insurance_deduction",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_deductions",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "net_salary",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "working_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "leave_days_taken",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "sick_days_taken",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "payroll_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "payment_method",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "hr_recruitment",
+      "schema": "hr_semantic_layer",
+      "domain": "HR",
+      "domain_id": 2,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "requisition_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "posting_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "job_title",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "job_level",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "job_family",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "job_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "experience_level",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "hiring_manager_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "hiring_manager_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "recruiter_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "recruiter_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "candidate_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "candidate_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "gender",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "age",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "source_of_hire",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "application_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "interview_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "offer_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "joining_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "application_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "salary_offered",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "salary_band_min",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "salary_band_max",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "time_to_hire_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "cost_per_hire",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "requisition_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "number_of_applicants",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "number_of_interviews",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "number_of_offers",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "acceptance_rate_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "rejection_reason",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "diversity_hire",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "relocation_required",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "operations_logistics",
+      "schema": "operations_semantic_layer",
+      "domain": "Operations",
+      "domain_id": 4,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "shipment_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "shipment_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "estimated_delivery_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "actual_delivery_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "origin_country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "origin_state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "origin_city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "destination_country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "destination_state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "destination_city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "carrier_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "carrier_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "carrier_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "mode_of_transport",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "service_level",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "tracking_number",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "shipment_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "weight_kg",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "volume_cbm",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "package_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "freight_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "customs_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "insurance_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_logistics_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "delivery_variance_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "on_time_delivery",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "damage_reported",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "damage_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "damage_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "warehouse_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "warehouse_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "order_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "customer_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "customer_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "route",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "distance_km",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "incoterms",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "customs_cleared",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "carbon_footprint_kg_co2",
+          "type": "numeric",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "operations_procurement",
+      "schema": "operations_semantic_layer",
+      "domain": "Operations",
+      "domain_id": 4,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "po_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "po_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "expected_delivery_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "vendor_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "vendor_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "vendor_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "vendor_rating",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "item_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "item_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "item_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "item_sub_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "cost_center",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "quantity_ordered",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "quantity_received",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "unit_price",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_value",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "discount_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "tax_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "po_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "payment_terms",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "payment_due_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "payment_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "payment_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "lead_time_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "on_time_delivery",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "quality_rejection_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "buyer_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "buyer_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "approver_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "approver_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "budget_amount",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "actual_spend",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "savings_achieved",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "sourcing_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "blanket_order",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "emergency_purchase",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "sales_cancellation",
+      "schema": "sales_semantic_layer",
+      "domain": "Sales",
+      "domain_id": 3,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "cancellation_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "order_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "order_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "cancellation_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "customer_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "customer_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "gender",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "age",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "customer_segment",
+          "type": "character varying",
           "nullable": true
         },
         {
@@ -901,103 +2131,307 @@
           "nullable": true
         },
         {
-          "name": "total_order_value",
+          "name": "order_value",
           "type": "numeric",
           "nullable": true
         },
         {
-          "name": "total_items",
-          "type": "bigint",
+          "name": "items_count",
+          "type": "integer",
           "nullable": true
         },
         {
-          "name": "avg_discount",
+          "name": "cancellation_reason",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "cancellation_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "refund_amount",
           "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "cancellation_fee",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "refund_method",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "refund_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "refund_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "days_to_cancel",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "product_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "product_sub_category",
+          "type": "character varying",
           "nullable": true
         },
         {
           "name": "payment_method",
-          "type": "text",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "payment_status",
+          "name": "channel",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "agent_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "agent_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "churn_risk",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "retention_offer_made",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "sales_shipment",
+      "schema": "sales_semantic_layer",
+      "domain": "Sales",
+      "domain_id": 3,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "shipment_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "order_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "order_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "ship_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "estimated_delivery_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "actual_delivery_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "customer_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "customer_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "customer_segment",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "shipping_address",
           "type": "text",
           "nullable": true
         },
         {
           "name": "shipping_method",
-          "type": "text",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "carrier_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "tracking_number",
+          "type": "character varying",
           "nullable": true
         },
         {
           "name": "delivery_status",
-          "type": "text",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "main_category",
-          "type": "text",
+          "name": "on_time_delivery",
+          "type": "character varying",
           "nullable": true
         },
         {
-          "name": "main_sub_category",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "device_type",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "traffic_source",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "campaign_source",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "coupon_used",
-          "type": "text",
-          "nullable": true
-        },
-        {
-          "name": "avg_fraud_risk_score",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "avg_profit_margin",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "is_booking",
+          "name": "delivery_variance_days",
           "type": "integer",
           "nullable": true
         },
         {
-          "name": "is_cancelled",
+          "name": "order_value",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "shipping_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "weight_kg",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "package_count",
           "type": "integer",
           "nullable": true
         },
         {
-          "name": "year",
+          "name": "product_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "product_sub_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "payment_method",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "is_returned",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "return_reason",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "return_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "warehouse_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "fulfillment_center",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "customer_rating",
           "type": "numeric",
           "nullable": true
         },
         {
-          "name": "month",
-          "type": "numeric",
-          "nullable": true
-        },
-        {
-          "name": "day",
-          "type": "numeric",
+          "name": "currency",
+          "type": "character varying",
           "nullable": true
         }
       ]

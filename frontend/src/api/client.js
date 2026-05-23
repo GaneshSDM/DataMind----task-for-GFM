@@ -52,6 +52,7 @@ export const updateGeography = (id, d) => api.put(`/geographies/${id}`, d).then(
 export const deleteGeography = id => api.delete(`/geographies/${id}`).then(r => r.data)
 
 // ── Domain ────────────────────────────────────────────────
+export const getPgSchemas = () => api.get('/domains/schemas').then(r => r.data)
 export const getDomains = () => api.get('/domains/').then(r => r.data)
 export const createDomain = d => api.post('/domains/', d).then(r => r.data)
 export const updateDomain = (id, d) => api.put(`/domains/${id}`, d).then(r => r.data)
