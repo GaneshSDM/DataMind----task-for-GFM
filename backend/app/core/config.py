@@ -11,5 +11,6 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra   = "ignore"   # allow DB_HOST/GROQ_API_KEY/etc. in .env without failing
 
 settings = Settings()

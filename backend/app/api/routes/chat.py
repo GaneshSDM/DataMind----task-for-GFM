@@ -232,16 +232,20 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
         metadata=metadata,
     )
 
-    guardrail_status = pipeline_result.get("guardrail_status", "error")
-    blocked_by       = pipeline_result.get("blocked_by")
+    guardrail_status  = pipeline_result.get("guardrail_status", "error")
+    blocked_by        = pipeline_result.get("blocked_by")
     guardrail_message = pipeline_result.get("guardrail_message", "")
-    intent_status    = pipeline_result.get("intent_status")
-    intent_result    = pipeline_result.get("intent_result")
-    intent_error     = pipeline_result.get("intent_error")
-    queue_path       = pipeline_result.get("queue_path")
-    sql_status       = pipeline_result.get("sql_status")
-    sql_result       = pipeline_result.get("sql_result")
-    sql_error        = pipeline_result.get("sql_error")
+    intent_status     = pipeline_result.get("intent_status")
+    intent_result     = pipeline_result.get("intent_result")
+    intent_error      = pipeline_result.get("intent_error")
+    queue_path        = pipeline_result.get("queue_path")
+    sql_status        = pipeline_result.get("sql_status")
+    sql_result        = pipeline_result.get("sql_result")
+    sql_error         = pipeline_result.get("sql_error")
+    valkyrie_status   = pipeline_result.get("valkyrie_status")
+    valkyrie_result   = pipeline_result.get("valkyrie_result")
+    valkyrie_error    = pipeline_result.get("valkyrie_error")
+    synthesizer_context = pipeline_result.get("synthesizer_context")
 
     # Get or create chat
     if payload.chat_id:
@@ -309,7 +313,7 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
 
         intent_block = "\n".join(intent_lines) if intent_lines else "  No intents detected."
 
-        # SQL status note
+        # SQL + validation note
         if sql_status == "skipped":
             sql_note = "\n\n*No structured intents — SQL generation skipped.*"
         elif sql_status in ("success", "partial"):
@@ -319,6 +323,17 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
             sql_note = f"\n\n✅ **SAGE generated SQL** — {n_ok} query(ies)"
             if n_err:
                 sql_note += f", {n_err} failed"
+            # Append VALKYRIE validation outcome
+            if valkyrie_status == "pass":
+                sql_note += "\n✅ **VALKYRIE validation passed**"
+            elif valkyrie_status == "partial":
+                val_results = (valkyrie_result or {}).get("validated_results", [])
+                n_fail = sum(1 for r in val_results if r.get("status") == "fail")
+                sql_note += f"\n⚠️ **VALKYRIE: {n_fail} query(ies) have violations** — corrections applied"
+            elif valkyrie_status == "fail":
+                sql_note += "\n⚠️ **VALKYRIE validation failed** — queries may not satisfy security policies"
+            elif valkyrie_status == "error":
+                sql_note += f"\n⚠️ **VALKYRIE unavailable** — {valkyrie_error or 'validation skipped'}"
         elif sql_status == "error":
             sql_note = f"\n\n⚠️ **SQL generation failed** — {sql_error or 'unknown error'}"
         else:
@@ -334,15 +349,18 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
     db.commit()
 
     return {
-        "chat_id":          chat.chat_id,
-        "request_id":       request_id,
-        "guardrail_status": guardrail_status,
-        "blocked_by":       blocked_by,
-        "intent_status":    intent_status,
-        "intent_result":    intent_result,
-        "sql_status":       sql_status,
-        "sql_result":       sql_result,
-        "response":         assistant_content,
+        "chat_id":             chat.chat_id,
+        "request_id":         request_id,
+        "guardrail_status":   guardrail_status,
+        "blocked_by":         blocked_by,
+        "intent_status":      intent_status,
+        "intent_result":      intent_result,
+        "sql_status":         sql_status,
+        "sql_result":         sql_result,
+        "valkyrie_status":    valkyrie_status,
+        "valkyrie_result":    valkyrie_result,
+        "synthesizer_context": synthesizer_context,
+        "response":           assistant_content,
     }
 
 

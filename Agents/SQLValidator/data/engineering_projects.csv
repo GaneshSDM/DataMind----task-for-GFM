@@ -1,0 +1,21 @@
+id,project_name,tech_lead_id,status,start_date,end_date,created_at,updated_at
+1,Auth Service v2,17,In Progress,2024-02-21,,2025-10-15,2024-08-26
+2,Data Pipeline Redesign,16,Planning,2024-02-23,2025-12-30,2025-11-28,2026-02-28
+3,Mobile App Refresh,6,Completed,2024-05-20,2025-12-04,2025-10-30,2025-05-02
+4,API Gateway Migration,10,Review,2025-05-03,,2024-10-19,2025-10-23
+5,Dashboard 2.0,3,On Hold,2024-03-01,,2024-08-25,2025-07-01
+6,Search Engine Upgrade,6,Completed,2024-02-08,,2024-06-29,2024-02-07
+7,Notification Service,6,Review,2025-02-10,,2024-02-08,2024-01-10
+8,CI/CD Overhaul,11,Review,2024-11-01,2025-02-18,2025-04-10,2025-10-18
+9,Payment Integration,17,Completed,2025-07-10,2025-11-24,2024-10-06,2024-07-16
+10,User Onboarding Flow,15,Review,2024-04-25,2026-05-13,2026-01-05,2024-07-09
+11,Infra Monitoring,10,On Hold,2024-01-15,,2025-11-21,2026-02-14
+12,Security Audit Tool,13,Completed,2024-07-16,2026-12-09,2025-06-11,2024-12-01
+13,Feature Flags System,6,In Progress,2024-03-29,2024-07-04,2025-05-03,2024-11-27
+14,Rate Limiter,8,Completed,2024-09-11,2025-10-08,2026-02-10,2024-09-30
+15,Event Bus v2,19,Planning,2024-12-03,2026-12-13,2024-09-24,2025-10-31
+16,Config Manager,2,Planning,2025-01-03,,2025-04-21,2024-11-10
+17,Log Aggregation,10,Planning,2024-06-12,2025-11-08,2025-10-16,2024-10-29
+18,Metrics Platform,8,In Progress,2025-01-11,,2025-05-04,2024-06-05
+19,Compliance Checker,20,Review,2025-04-10,,2025-03-01,2025-12-19
+20,Release Automation,18,In Progress,2025-07-16,,2026-02-19,2024-09-10

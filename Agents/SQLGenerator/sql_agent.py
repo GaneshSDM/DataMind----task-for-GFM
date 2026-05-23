@@ -307,6 +307,7 @@ def build_correction_prompt(correction_input, resolved_tables, examples):
     rls_cfg = {
         "enabled":     rls_applied.get("enabled", False),
         "filters":     rls_applied.get("filters_applied", []),
+        "expression":  rls_applied.get("where_clause_injected") or rls_applied.get("expression"),
         "policy_name": rls_applied.get("policy_name"),
     }
     rls_where, _ = build_rls_where(rls_cfg)

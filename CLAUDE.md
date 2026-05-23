@@ -76,10 +76,13 @@ cd Agents/IntentClassifier && python aria.py               # :8002
 # Terminal 3 — SAGE (SQL generator microservice)
 cd Agents/SQLGenerator && python sage.py                   # :8003
 
-# Terminal 4 — Main backend
+# Terminal 4 — VALKYRIE (SQL validator microservice)
+cd Agents/SQLValidator && python valkyrie.py             # :8004
+
+# Terminal 5 — Main backend
 cd backend && uvicorn app.main:app --reload --port 8000    # :8000
 
-# Terminal 5 — Frontend
+# Terminal 6 — Frontend
 cd frontend && npm run dev                                  # :5173
 ```
 
@@ -107,18 +110,20 @@ All protected routes use `current_user = Depends(get_current_user)`. Admin-only 
 
 LangGraph pipeline invoked from `chat.py` on every prompt send.
 
-**Current flow (Phase 3):**
+**Current flow (Phase 4):**
 ```
 guardrail_check → [blocked/error → END]
                → intent_classify → [error → END]
-               → save_to_queue → sql_generate → END
+               → save_to_queue → sql_generate → [no SQL → END]
+                                              → validate_sql → END
 ```
 
 - `orchestrator.py` — `StateGraph` wiring; `run_pipeline()` public entry point
 - `guardrail_node.py` — HTTP POST → Heimdall `:8001`; returns `guardrail_status`, `blocked_by`, `guardrail_message`
 - `intent_node.py` — HTTP POST → ARIA `:8002`; returns `intent_status`, `intent_result`, `intent_error`
 - `queue_writer.py` — writes `Agents/pipeline_queue/{request_id}.json`; `stage: "intent_classified"`, `next_agent: "sql_generator"`
-- `sql_node.py` — HTTP POST → SAGE `:8003`; returns `sql_status`, `sql_result`, `sql_error`
+- `sql_node.py` — HTTP POST → SAGE `:8003`; returns `sql_status`, `sql_result`, `sql_error`; routes to `validate_sql` if any SQL results succeeded, else END
+- `valkyrie_node.py` — HTTP POST → VALKYRIE `:8004`; correction loop max 2 (calls SAGE `/sql/correct` per failed intent); returns `valkyrie_status`, `valkyrie_result`, `synthesizer_context`
 
 **Chat response by outcome:**
 - `blocked` → red bubble, policy name pill, block reason
@@ -195,6 +200,27 @@ Port **8003**. Groq LLM (`llama-3.3-70b-versatile`). Converts ARIA structured in
 
 **Production embedding:** Set `HF_HOME=/models` + mount persistent volume. Model cached on first run.
 
+### VALKYRIE SQL Validator Microservice (`Agents/SQLValidator/`)
+
+Port **8004**. Validates SAGE-generated SQL against security policy before surfacing to frontend.
+
+**Key files:**
+- `valkyrie.py` — FastAPI app; loads `backend/.env`; imports utility functions from `sql_validator.py`
+
+**Validation approach:**
+- Rule-based: syntax check, CLS (restricted cols from pipeline `security_profile`), RLS (filter expression presence in WHERE)
+- Groq LLM: semantic analysis via `validate_permissions()` using `GROQ_API_KEY`/`GROQ_MODEL` from `backend/.env`
+- Correction loop: `valkyrie_node.py` calls SAGE `/sql/correct` per failed intent, re-validates (max 2 rounds)
+- Synthesizer context: packages `{request_id, prompt, security_profile, intents, validated_sql_results, retrieved_context}` on pass
+
+### VALKYRIE — SQL Validator Microservice
+```bash
+# VALKYRIE — SQL Validator
+cd Agents/SQLValidator
+pip install fastapi uvicorn python-dotenv pyyaml
+python valkyrie.py               # :8004
+```
+
 ### Pipeline Queue (`Agents/pipeline_queue/`)
 
 `{request_id}.json` per passed + classified prompt. Git-ignored (`*.json`). Contains full pipeline state: guardrails, security_profile, intent_result with retrieved_context. `next_agent: "sql_generator"`.
@@ -242,7 +268,7 @@ PostgreSQL, `tracopp` schema:
 | `DATABASE_URL` | Backend, ARIA, SAGE |
 | `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` | Backend |
 | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Backend chat route |
-| `GROQ_API_KEY`, `GROQ_MODEL` | ARIA, SAGE |
+| `GROQ_API_KEY`, `GROQ_MODEL` | ARIA, SAGE, VALKYRIE |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE` | Heimdall |
 | `TARGET_SCHEMA` | ARIA bootstrap, SAGE |
 
@@ -253,3 +279,8 @@ Agent `.env` files (`Agents/*/env`) are empty stubs — all config comes from `b
 **Frontend** (`frontend/.env`): `VITE_BACKEND_URL`
 
 Default admin: `admin@slm.local` / `Admin@1234` (created by `seed.py`).
+
+## Known Issues
+
+- **Pydantic Settings `extra='forbid'` (v2 default)** — `backend/app/core/config.py` uses `extra = "ignore"` so agent-only `.env` keys (`DB_HOST`, `GROQ_API_KEY`, `DB_SSLMODE`, etc.) don't crash backend startup. Do not remove this setting after single-`.env` consolidation.
+- **`bootstrap_schema.py` must load from `backend/.env`** — uses absolute `_BACKEND_ENV` path (same pattern as `aria.py`). Plain `load_dotenv()` with no path reads the local empty stub and fails with `DATABASE_URL not set`.

@@ -47,6 +47,7 @@ from sql_agent import (
     resolve_tables,
     generate_sql,
     build_output,
+    run_correction,
 )
 
 
@@ -174,6 +175,30 @@ class SAGEResponse(BaseModel):
     request_id: str
     status: str                             # success | partial | error
     sql_results: list[SQLResult]
+    error: Optional[str] = None
+
+
+class CorrectionRequest(BaseModel):
+    """Request to re-generate SQL for a single failed intent."""
+    request_id: str
+    intent_id: int
+    generated_sql: str
+    validation_errors: list[dict] = []
+    corrections_suggested: list[str] = []
+    original_prompt: str
+    domain: str
+    sub_domain: Optional[str] = None
+    tables: list[str] = []
+    rls_applied: Optional[dict] = None
+    cls_applied: Optional[dict] = None
+    model_used: Optional[str] = None
+
+
+class CorrectionResponse(BaseModel):
+    request_id: str
+    intent_id: int
+    status: str                             # corrected | error
+    corrected_sql: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -313,6 +338,82 @@ async def generate(request: SAGERequest):
         status=overall,
         sql_results=sql_results,
     )
+
+
+@app.post("/sql/correct", response_model=CorrectionResponse)
+async def correct(request: CorrectionRequest):
+    """
+    Re-generate SQL for a single failed intent using VALKYRIE violation feedback.
+    Called by valkyrie_node during the correction loop (max 2 attempts).
+    """
+    import asyncio
+
+    # Assemble correction_input in the format run_correction() expects
+    rls_applied = request.rls_applied or {}
+    cls_applied = request.cls_applied or {}
+
+    correction_input = {
+        "request_id":    request.request_id,
+        "generated_sql": request.generated_sql,
+        "validation_errors": [
+            {"type": e.get("type", ""), "detail": e.get("detail", ""), "fix": e.get("fix", "")}
+            for e in request.validation_errors
+        ],
+        "suggested_corrections": request.corrections_suggested,
+        "validation_hints": {
+            "original_prompt": request.original_prompt,
+            "expected_tables": request.tables,
+        },
+        "metadata": {
+            "domain":     request.domain,
+            "sub_domain": request.sub_domain or "",
+            "model_used": request.model_used or _model or "",
+        },
+        # Preserve RLS — include expression so build_rls_where uses it in correction prompt
+        "rls_applied": {
+            "enabled":             rls_applied.get("enabled", False),
+            "policy_name":         rls_applied.get("policy_name"),
+            "expression":          rls_applied.get("where_clause_injected") or rls_applied.get("expression"),
+            "where_clause_injected": rls_applied.get("where_clause_injected"),
+            "filters_applied":     rls_applied.get("filters_applied", []),
+        },
+        "cls_applied": {
+            "enabled":          cls_applied.get("enabled", False),
+            "policy_name":      cls_applied.get("policy_name"),
+            "columns_excluded": cls_applied.get("columns_excluded", []),
+        },
+    }
+
+    logger.info(
+        "SAGE correction request_id=%s intent_id=%d errors=%d",
+        request.request_id, request.intent_id, len(request.validation_errors),
+    )
+
+    try:
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda ci=correction_input: run_correction(ci, _schema, _examples),
+        )
+        corrected_sql = result.get("corrected_sql")
+        logger.info(
+            "SAGE corrected intent_id=%d → %d chars",
+            request.intent_id, len(corrected_sql) if corrected_sql else 0,
+        )
+        return CorrectionResponse(
+            request_id=request.request_id,
+            intent_id=request.intent_id,
+            status="corrected",
+            corrected_sql=corrected_sql,
+        )
+    except Exception as e:
+        logger.error("SAGE correction failed intent_id=%d: %s", request.intent_id, e)
+        return CorrectionResponse(
+            request_id=request.request_id,
+            intent_id=request.intent_id,
+            status="error",
+            error=str(e),
+        )
 
 
 def _generate_one(agent_payload: dict) -> dict:

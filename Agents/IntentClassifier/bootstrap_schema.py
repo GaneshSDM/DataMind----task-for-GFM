@@ -21,7 +21,10 @@ import psycopg2
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
-load_dotenv()
+_BACKEND_ENV = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../backend/.env")
+)
+load_dotenv(dotenv_path=_BACKEND_ENV)
 
 DATABASE_URL  = os.getenv("DATABASE_URL", "")
 TARGET_SCHEMA = os.getenv("TARGET_SCHEMA", "sales")

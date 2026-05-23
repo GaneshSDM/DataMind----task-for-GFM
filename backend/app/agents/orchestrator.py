@@ -3,10 +3,10 @@ orchestrator.py
 ---------------
 LangGraph StateGraph for the prompt pipeline.
 
-Current flow (Phase 3):
+Current flow (Phase 4):
   guardrail_check → [blocked/error → END]
                   → intent_classify → [error → END]
-                  → save_to_queue → sql_generate → END
+                  → save_to_queue → sql_generate → validate_sql → END
 
 State keys:
   prompt, guardrails, security_profile, metadata          — inputs
@@ -14,6 +14,8 @@ State keys:
   intent_status, intent_result, intent_error              — set by intent_node
   queue_path, queue_error                                 — set by queue_writer_node
   sql_status, sql_result, sql_error                       — set by sql_node
+  valkyrie_status, valkyrie_result, valkyrie_error        — set by valkyrie_node
+  synthesizer_context                                     — set by valkyrie_node
 """
 import logging
 from typing import Optional
@@ -25,6 +27,7 @@ from app.agents.guardrail_node import guardrail_node
 from app.agents.intent_node import intent_node
 from app.agents.queue_writer import queue_writer_node
 from app.agents.sql_node import sql_node
+from app.agents.valkyrie_node import valkyrie_node
 
 logger = logging.getLogger("orchestrator")
 
@@ -52,6 +55,11 @@ class OrchestratorState(TypedDict):
     sql_status: Optional[str]
     sql_result: Optional[dict]
     sql_error: Optional[str]
+    # valkyrie outputs
+    valkyrie_status: Optional[str]
+    valkyrie_result: Optional[dict]
+    valkyrie_error: Optional[str]
+    synthesizer_context: Optional[dict]
 
 
 # ── routers ──────────────────────────────────────────────────
@@ -75,6 +83,17 @@ def _after_queue(state: OrchestratorState) -> str:
     return END
 
 
+def _after_sql(state: OrchestratorState) -> str:
+    # Validate SQL if SAGE produced at least one successful result
+    sql_result = state.get("sql_result")
+    if sql_result and any(
+        r.get("status") == "success"
+        for r in sql_result.get("sql_results", [])
+    ):
+        return "validate_sql"
+    return END
+
+
 # ── graph ────────────────────────────────────────────────────
 
 def _build_graph():
@@ -84,6 +103,7 @@ def _build_graph():
     g.add_node("intent_classify", intent_node)
     g.add_node("save_to_queue",   queue_writer_node)
     g.add_node("sql_generate",    sql_node)
+    g.add_node("validate_sql",    valkyrie_node)
 
     g.set_entry_point("guardrail_check")
     g.add_conditional_edges(
@@ -101,7 +121,12 @@ def _build_graph():
         _after_queue,
         {"sql_generate": "sql_generate", END: END},
     )
-    g.add_edge("sql_generate", END)
+    g.add_conditional_edges(
+        "sql_generate",
+        _after_sql,
+        {"validate_sql": "validate_sql", END: END},
+    )
+    g.add_edge("validate_sql", END)
 
     return g.compile()
 
@@ -133,6 +158,10 @@ async def run_pipeline(
         "sql_status":  None,
         "sql_result":  None,
         "sql_error":   None,
+        "valkyrie_status":    None,
+        "valkyrie_result":    None,
+        "valkyrie_error":     None,
+        "synthesizer_context": None,
     }
     result = await _pipeline_graph.ainvoke(initial)
     return result

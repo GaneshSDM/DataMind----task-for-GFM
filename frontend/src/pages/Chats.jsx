@@ -86,6 +86,7 @@ export default function Chats() {
           BlockedBy: res.blocked_by,
           IntentResult: res.intent_result,
           SqlResult: res.sql_result,
+          ValkyrieResult: res.valkyrie_result,
         },
       ])
     } catch (err) {
@@ -185,8 +186,11 @@ export default function Chats() {
                 : isError
                   ? { borderLeft: '3px solid var(--color-warning, #f59e0b)', background: 'var(--bg-warning-subtle, #fffbeb)' }
                   : {}
-              const intents    = m.IntentResult?.intents || []
-              const sqlResults = m.SqlResult?.sql_results || []
+              const intents       = m.IntentResult?.intents || []
+              const sqlResults    = m.SqlResult?.sql_results || []
+              // Build validation lookup: intent_id → validated_result
+              const valMap = {}
+              ;(m.ValkyrieResult?.validated_results || []).forEach(v => { valMap[v.intent_id] = v })
               return (
                 <div key={m.MessageID || i} className={`message ${m.Role}`}>
                   <div className="message-bubble" style={bubbleStyle}>
@@ -257,37 +261,67 @@ export default function Chats() {
                               }}>
                                 {sr.generated_sql}
                               </pre>
-                              {/* RLS / CLS badges */}
-                              {(sr.rls_applied?.enabled || sr.cls_applied?.enabled) && (
-                                <div style={{
-                                  display: 'flex', gap: 6, padding: '4px 10px',
-                                  borderTop: '1px solid var(--border-default)',
-                                  background: 'var(--bg-subtle)',
-                                }}>
-                                  {sr.rls_applied?.enabled && (
-                                    <span style={{
-                                      fontSize: 10, fontWeight: 600, padding: '1px 6px',
-                                      borderRadius: 'var(--radius-pill)',
-                                      background: 'var(--color-warning-bg, #fffbeb)',
-                                      color: 'var(--color-warning, #f59e0b)',
-                                      border: '1px solid var(--color-warning, #f59e0b)',
-                                    }}>
-                                      🔒 RLS: {sr.rls_applied.policy_name || 'applied'}
-                                    </span>
-                                  )}
-                                  {sr.cls_applied?.enabled && (
-                                    <span style={{
-                                      fontSize: 10, fontWeight: 600, padding: '1px 6px',
-                                      borderRadius: 'var(--radius-pill)',
-                                      background: 'var(--color-info-bg, #eff6ff)',
-                                      color: 'var(--color-info, #3b82f6)',
-                                      border: '1px solid var(--color-info, #3b82f6)',
-                                    }}>
-                                      🔑 CLS: {sr.cls_applied.columns_excluded?.join(', ') || 'applied'}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
+                              {/* RLS / CLS / VALKYRIE badges */}
+                              {(() => {
+                                const vr = valMap[sr.intent_id]
+                                const showBadges = sr.rls_applied?.enabled || sr.cls_applied?.enabled || vr
+                                if (!showBadges) return null
+                                return (
+                                  <div style={{
+                                    display: 'flex', flexWrap: 'wrap', gap: 6, padding: '4px 10px',
+                                    borderTop: '1px solid var(--border-default)',
+                                    background: 'var(--bg-subtle)',
+                                  }}>
+                                    {sr.rls_applied?.enabled && (
+                                      <span style={{
+                                        fontSize: 10, fontWeight: 600, padding: '1px 6px',
+                                        borderRadius: 'var(--radius-pill)',
+                                        background: 'var(--color-warning-bg, #fffbeb)',
+                                        color: 'var(--color-warning, #f59e0b)',
+                                        border: '1px solid var(--color-warning, #f59e0b)',
+                                      }}>
+                                        🔒 RLS: {sr.rls_applied.policy_name || 'applied'}
+                                      </span>
+                                    )}
+                                    {sr.cls_applied?.enabled && (
+                                      <span style={{
+                                        fontSize: 10, fontWeight: 600, padding: '1px 6px',
+                                        borderRadius: 'var(--radius-pill)',
+                                        background: 'var(--color-info-bg, #eff6ff)',
+                                        color: 'var(--color-info, #3b82f6)',
+                                        border: '1px solid var(--color-info, #3b82f6)',
+                                      }}>
+                                        🔑 CLS: {sr.cls_applied.columns_excluded?.join(', ') || 'applied'}
+                                      </span>
+                                    )}
+                                    {vr && (
+                                      <span style={{
+                                        fontSize: 10, fontWeight: 600, padding: '1px 6px',
+                                        borderRadius: 'var(--radius-pill)',
+                                        background: vr.status === 'pass'
+                                          ? 'var(--color-success-bg, #f0fdf4)'
+                                          : vr.status === 'warn'
+                                            ? 'var(--color-warning-bg, #fffbeb)'
+                                            : 'var(--color-error-bg, #fef2f2)',
+                                        color: vr.status === 'pass'
+                                          ? 'var(--color-success, #16a34a)'
+                                          : vr.status === 'warn'
+                                            ? 'var(--color-warning, #f59e0b)'
+                                            : 'var(--color-error, #ef4444)',
+                                        border: `1px solid ${vr.status === 'pass' ? 'var(--color-success, #16a34a)' : vr.status === 'warn' ? 'var(--color-warning, #f59e0b)' : 'var(--color-error, #ef4444)'}`,
+                                        cursor: vr.violations?.length ? 'help' : 'default',
+                                      }}
+                                      title={vr.violations?.length
+                                        ? vr.violations.map(v => `[${v.type}] ${v.detail}`).join('\n')
+                                        : 'VALKYRIE: all checks passed'
+                                      }>
+                                        {vr.status === 'pass' ? '✅' : vr.status === 'warn' ? '⚠️' : '❌'} VALKYRIE: {vr.status}
+                                        {vr.violations?.length > 0 && ` (${vr.violations.length} issue${vr.violations.length > 1 ? 's' : ''})`}
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })()}
                             </div>
                           )
                         })}

@@ -79,6 +79,8 @@ DB_SSLMODE=require
 
 Agent `.env` files are empty stubs — all agents load from `backend/.env`.
 
+> **Note:** The backend Pydantic Settings model uses `extra = "ignore"`, so agent-only keys in the same file (`DB_HOST`, `GROQ_API_KEY`, `DB_SSLMODE`, etc.) are safe and will not cause backend startup errors.
+
 ### 2. Backend
 
 ```bash
