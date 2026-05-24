@@ -53,16 +53,31 @@ async def sql_correct_node(state: dict) -> dict:
             intent    = intent_map.get(intent_id, {})
             original  = sql_map.get(intent_id, {})
 
+            # For Both intents: override original_prompt to prevent JOIN hallucination on retry
+            data_source     = intent.get("data_source", "Structured")
+            relevant_cols   = intent.get("relevant_columns", [])
+            table_name      = intent.get("structured_table", "")
+            if data_source == "Both":
+                cols_hint = ", ".join(relevant_cols) if relevant_cols else "all columns"
+                original_prompt = (
+                    f"Fetch raw data from {table_name}: select {cols_hint}. "
+                    "Return all rows without filtering, aggregation, or derived columns."
+                )
+            else:
+                original_prompt = intent.get("description", "")
+
             payload = {
                 "request_id":            f"{request_id}_corr{attempt}_i{intent_id}",
                 "intent_id":             intent_id,
                 "generated_sql":         failed_result.get("sql", ""),
                 "validation_errors":     failed_result.get("violations", []),
                 "corrections_suggested": failed_result.get("corrections_suggested", []),
-                "original_prompt":       intent.get("description", ""),
+                "original_prompt":       original_prompt,
                 "domain":                intent.get("domain", ""),
                 "sub_domain":            intent.get("sub_domain"),
-                "tables":                [intent["structured_table"]] if intent.get("structured_table") else [],
+                "tables":                [table_name] if table_name else [],
+                "data_source":           data_source,
+                "relevant_columns":      relevant_cols,
                 "rls_applied":           original.get("rls_applied"),
                 "cls_applied":           original.get("cls_applied"),
                 "model_used":            original.get("model_used"),

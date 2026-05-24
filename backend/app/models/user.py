@@ -419,3 +419,19 @@ class DBConnection(Base):
     created_date = Column(DateTime(timezone=True), nullable=True, server_default=func.now())
     updated_by = Column(Integer, nullable=True)
     updated_date = Column(DateTime(timezone=True), nullable=True)
+
+
+class AgentConfig(Base):
+    __tablename__ = "agent_config"
+    __table_args__ = {'schema': SCHEMA}
+    agent_id     = Column(Integer, primary_key=True)
+    agent_name   = Column(String(50),  nullable=False, unique=True)   # heimdall, aria, …
+    display_name = Column(String(100), nullable=False)
+    description  = Column(Text, nullable=True)
+    port         = Column(Integer, nullable=True)
+    config       = Column(JSONB, nullable=False, default=dict)         # persona / llm / behavior
+    is_active    = Column(Boolean, nullable=False, default=True)
+    created_by   = Column(Integer, nullable=True)
+    created_date = Column(DateTime(timezone=True), server_default=func.now())
+    updated_by   = Column(Integer, ForeignKey(f"{SCHEMA}.users.user_id"), nullable=True)
+    updated_date = Column(DateTime(timezone=True), nullable=True)

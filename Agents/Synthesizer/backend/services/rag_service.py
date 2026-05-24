@@ -119,7 +119,23 @@ def run_similarity_search(search_inputs: list) -> list:
                         cur.execute(sql, (top_k,))
 
                     raw_chunks = cur.fetchall()
-                    chunks = [_serialise_row(dict(c)) for c in raw_chunks]
+                    all_chunks = [_serialise_row(dict(c)) for c in raw_chunks]
+
+                    # Quality gate — filter chunks below similarity threshold
+                    from config import get_settings as _get_settings
+                    _min_sim = _get_settings().rag_min_similarity
+                    chunks = [
+                        c for c in all_chunks
+                        if float(c.get("similarity_score") or 0) >= _min_sim
+                    ]
+
+                    if len(chunks) < len(all_chunks):
+                        import logging as _logging
+                        _logging.getLogger("spyder.rag").debug(
+                            "RAG quality gate: kept %d/%d chunks (min_similarity=%.2f) "
+                            "for embedding_id=%s",
+                            len(chunks), len(all_chunks), _min_sim, eid,
+                        )
 
                     results.append({
                         "embedding_id": eid,

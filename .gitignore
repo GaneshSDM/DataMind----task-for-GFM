@@ -1,28 +1,67 @@
-# Python
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
-.env
+*.pyd
 *.egg-info/
 dist/
 build/
 .venv/
 venv/
 env/
+*.egg
 
-# Node
+# ── Environment / Secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+backend/.env
+Agents/**/.env
+
+# ── Node ──────────────────────────────────────────────────────────────────────
 node_modules/
 frontend/dist/
 frontend/.env
+frontend/.env.*
 
-# Alembic
-*.pyc
+# ── ML Models & Embeddings ────────────────────────────────────────────────────
+# HuggingFace model cache — large binary files, rebuild from HF_HOME on deploy
+models/
+*.bin
+*.safetensors
+*.ot
+sentence_transformers/
+huggingface/
 
-# OS
+# ── Pipeline Queue ────────────────────────────────────────────────────────────
+# Per-request audit JSON files — not source-controlled
+Agents/pipeline_queue/*.json
+
+# ── RAG / Schema ──────────────────────────────────────────────────────────────
+# Generated at runtime — rebuild via bootstrap_schema.py
+Agents/IntentClassifier/schema_reference.json
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# IDE
+# ── IDE ───────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
+*.swo
+*.orig
+
+# ── Alembic ───────────────────────────────────────────────────────────────────
+*.pyc
+
+# ── Uploads / Temp ────────────────────────────────────────────────────────────
+uploads/
+tmp/
+temp/
+*.tmp

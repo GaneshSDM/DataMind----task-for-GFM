@@ -12,7 +12,8 @@ from urllib.error import URLError
 
 logger = logging.getLogger(__name__)
 
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+_CHAT_URL = LLM_BASE_URL.rstrip("/") + "/chat/completions"
 
 
 class GroqClient:
@@ -21,11 +22,11 @@ class GroqClient:
     def __init__(
         self,
         api_key: str = "",
-        model: str = "deepseek-r1-distill-llama-70b",
+        model: str = os.getenv("LLM_MODEL", os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")),
         temperature: float = 0.0,
         max_tokens: int = 4096,
     ):
-        self.api_key = api_key or os.getenv("GROQ_API_KEY", "")
+        self.api_key = api_key or os.getenv("LLM_API_KEY") or os.getenv("GROQ_API_KEY", "")
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -49,7 +50,7 @@ class GroqClient:
         }
 
         data = json.dumps(payload).encode("utf-8")
-        req = Request(GROQ_API_URL, data=data, headers=self._headers(), method="POST")
+        req = Request(_CHAT_URL, data=data, headers=self._headers(), method="POST")
 
         try:
             with urlopen(req, timeout=60) as resp:

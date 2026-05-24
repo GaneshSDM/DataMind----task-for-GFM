@@ -57,6 +57,25 @@ class RoleOut(BaseModel):
         from_attributes = True
 
 
+# ── Agent Config ──────────────────────────────────────────────────────────────
+class AgentConfigUpdate(BaseModel):
+    config: Dict[str, Any]
+
+class AgentConfigResponse(BaseModel):
+    agent_id:     int
+    agent_name:   str
+    display_name: str
+    description:  Optional[str] = None
+    port:         Optional[int] = None
+    config:       Dict[str, Any]
+    is_active:    bool
+    updated_date: Optional[datetime] = None
+    updated_by:   Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ── Geography ─────────────────────────────────────────────────────────────────
 class GeoCreate(BaseModel):
     GeoName: str

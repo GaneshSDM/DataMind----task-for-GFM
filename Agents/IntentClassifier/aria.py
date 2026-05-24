@@ -58,6 +58,7 @@ class ARIARequest(BaseModel):
     prompt: str
     security_profile: SecurityProfile
     metadata: dict = {}
+    llm_config: Optional[dict] = None   # per-request overrides: model/temperature/max_tokens
 
 
 class ARIAResponse(BaseModel):
@@ -103,9 +104,16 @@ async def classify(request: ARIARequest):
     try:
         import asyncio
         loop = asyncio.get_running_loop()
+        # Use per-request llm_config if provided; else fall back to startup processor
+        if request.llm_config:
+            from core.intent_processor import IntentProcessor
+            proc = IntentProcessor(llm_config=request.llm_config)
+            proc._schema = _processor._schema   # reuse loaded schema
+        else:
+            proc = _processor
         result = await loop.run_in_executor(
             None,
-            lambda: _processor.process(
+            lambda: proc.process(
                 request.prompt,
                 allowed_domains=allowed_domains or None,
                 allowed_subdomains=allowed_subdomains or None,

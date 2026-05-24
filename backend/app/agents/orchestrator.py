@@ -3,14 +3,16 @@ orchestrator.py
 ---------------
 LangGraph StateGraph for the prompt pipeline.
 
-Current flow (Phase 5):
+Current flow (Phase 6):
   guardrail_check → [blocked/error → END]
                   → intent_classify → [error → END]
-                  → save_to_queue → sql_generate → [no SQL → END]
-                                                 → validate_sql
-                                                     PASS/PARTIAL/WARN → spyder_synthesize → END
-                                                     FAIL + attempt<2  → sql_correct → validate_sql
-                                                     FAIL + attempt≥2  → END
+                  → save_to_queue → sql_generate → [SQL ok  → validate_sql]
+                                                 → [no SQL + unstructured → raven_query]
+                                                 → [no SQL + no unstructured → END]
+                                                     validate_sql:
+                                                       PASS/PARTIAL/WARN → raven_query → spyder_synthesize → END
+                                                       FAIL + attempt<2  → sql_correct → validate_sql
+                                                       FAIL + attempt≥2  → END
 
 State keys:
   prompt, guardrails, security_profile, metadata          — inputs
@@ -23,6 +25,7 @@ State keys:
   correction_attempt                                      — incremented by sql_correct_node
   correction_history                                      — audit list, appended by sql_correct_node
   spyder_status, spyder_result, spyder_error              — set by spyder_node
+  raven_status, raven_result, raven_error                 — set by raven_node
 """
 import logging
 from typing import Optional, List
@@ -37,6 +40,7 @@ from app.agents.sql_node import sql_node
 from app.agents.valkyrie_node import valkyrie_node
 from app.agents.sql_correct_node import sql_correct_node
 from app.agents.spyder_node import spyder_node
+from app.agents.raven_node import raven_node
 
 logger = logging.getLogger("orchestrator")
 
@@ -78,6 +82,10 @@ class OrchestratorState(TypedDict):
     spyder_status: Optional[str]
     spyder_result: Optional[dict]
     spyder_error: Optional[str]
+    # raven outputs
+    raven_status: Optional[str]
+    raven_result: Optional[dict]
+    raven_error: Optional[str]
 
 
 # ── routers ──────────────────────────────────────────────────
@@ -102,13 +110,23 @@ def _after_queue(state: OrchestratorState) -> str:
 
 
 def _after_sql(state: OrchestratorState) -> str:
-    # Validate SQL if SAGE produced at least one successful result
-    sql_result = state.get("sql_result")
-    if sql_result and any(
+    sql_result    = state.get("sql_result")
+    intent_result = state.get("intent_result")
+
+    has_sql = sql_result and any(
         r.get("status") == "success"
         for r in sql_result.get("sql_results", [])
-    ):
+    )
+    has_unstructured = intent_result and any(
+        i.get("data_source") in ("Unstructured", "Both")
+        for i in intent_result.get("intents", [])
+    )
+
+    if has_sql:
         return "validate_sql"
+    if has_unstructured:
+        # No SQL results but unstructured intents exist — skip SQL path, go to RAVEN
+        return "raven_query"
     return END
 
 
@@ -131,7 +149,7 @@ def _after_validate(state: OrchestratorState) -> str:
         )
         return "sql_correct"
     if status in ("pass", "partial", "warn"):
-        return "spyder_synthesize"
+        return "raven_query"
     return END
 
 
@@ -147,6 +165,7 @@ def _build_graph():
     g.add_node("validate_sql",      valkyrie_node)
     g.add_node("sql_correct",       sql_correct_node)
     g.add_node("spyder_synthesize", spyder_node)
+    g.add_node("raven_query",       raven_node)
 
     g.set_entry_point("guardrail_check")
     g.add_conditional_edges(
@@ -167,15 +186,17 @@ def _build_graph():
     g.add_conditional_edges(
         "sql_generate",
         _after_sql,
-        {"validate_sql": "validate_sql", END: END},
+        {"validate_sql": "validate_sql", "raven_query": "raven_query", END: END},
     )
     g.add_conditional_edges(
         "validate_sql",
         _after_validate,
-        {"sql_correct": "sql_correct", "spyder_synthesize": "spyder_synthesize", END: END},
+        {"sql_correct": "sql_correct", "raven_query": "raven_query", END: END},
     )
     # After correction always re-validate
     g.add_edge("sql_correct", "validate_sql")
+    # RAVEN always feeds into SPYDER
+    g.add_edge("raven_query", "spyder_synthesize")
     # After synthesis always end
     g.add_edge("spyder_synthesize", END)
 
@@ -218,6 +239,9 @@ async def run_pipeline(
         "spyder_status":      None,
         "spyder_result":      None,
         "spyder_error":       None,
+        "raven_status":       None,
+        "raven_result":       None,
+        "raven_error":        None,
     }
     result = await _pipeline_graph.ainvoke(initial)
     return result

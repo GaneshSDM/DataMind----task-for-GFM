@@ -14,9 +14,13 @@ class Settings(BaseSettings):
     db_password: str = ""
     db_sslmode: str = "require"
 
-    # LLM — Groq (shared with ARIA / SAGE / VALKYRIE)
-    groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    # LLM — provider-agnostic (OpenAI-compatible)
+    llm_api_key: str = ""
+    llm_model: str = "llama-3.3-70b-versatile"
+    llm_base_url: str = "https://api.groq.com/openai/v1"
+
+    # RAG quality gate
+    rag_min_similarity: float = 0.55
 
     # App
     app_env: str = "development"

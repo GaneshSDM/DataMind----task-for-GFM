@@ -82,10 +82,13 @@ cd Agents/SQLValidator && python valkyrie.py             # :8004
 # Terminal 5 — SPYDER (synthesizer microservice)
 cd Agents/Synthesizer/backend && uvicorn main:app --host 0.0.0.0 --port 8005 --reload  # :8005
 
-# Terminal 6 — Main backend
+# Terminal 6 — RAVEN (RAG query agent)
+cd Agents/VectorDBagent && uvicorn raven:app --host 0.0.0.0 --port 8006 --reload       # :8006
+
+# Terminal 7 — Main backend
 cd backend && uvicorn app.main:app --reload --port 8000    # :8000
 
-# Terminal 7 — Frontend
+# Terminal 8 — Frontend
 cd frontend && npm run dev                                  # :5173
 ```
 
@@ -224,6 +227,19 @@ pip install fastapi uvicorn python-dotenv pyyaml
 python valkyrie.py               # :8004
 ```
 
+### RAVEN — RAG Query Agent
+```bash
+# RAVEN — Retrieval and Vector Exploration Network
+cd Agents/VectorDBagent
+pip install -r requirements.txt
+uvicorn raven:app --host 0.0.0.0 --port 8006 --reload   # :8006
+# → POST /rag/query
+# → GET  /health
+# Embeds unstructured intents (BAAI/bge-large-en-v1.5, 1024-dim)
+# Validates domain access against security_profile
+# Returns similarity_search_inputs[] for SPYDER
+```
+
 ### Pipeline Queue (`Agents/pipeline_queue/`)
 
 `{request_id}.json` per passed + classified prompt. Git-ignored (`*.json`). Contains full pipeline state: guardrails, security_profile, intent_result with retrieved_context. `next_agent: "sql_generator"`.
@@ -270,10 +286,16 @@ PostgreSQL, `tracopp` schema:
 |-----|---------|
 | `DATABASE_URL` | Backend, ARIA, SAGE |
 | `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` | Backend |
-| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Backend chat route |
-| `GROQ_API_KEY`, `GROQ_MODEL` | ARIA, SAGE, VALKYRIE, SPYDER |
+| `LLM_API_KEY` | All LLM agents (ARIA, SAGE, VALKYRIE, SPYDER) + Backend |
+| `LLM_BASE_URL` | All LLM agents — default `https://api.groq.com/openai/v1`; swap to any OpenAI-compat endpoint |
+| `LLM_MODEL` | All LLM agents — default `llama-3.3-70b-versatile` |
+| `GROQ_API_KEY`, `GROQ_MODEL` | Fallback if `LLM_API_KEY`/`LLM_MODEL` not set (backward compat) |
+| `EMBEDDER_BASE_URL` | ARIA, RAVEN, Heimdall — if set, calls remote `/v1/embeddings` instead of local model |
+| `EMBEDDER_MODEL` | Remote embedder model name (default `BAAI/bge-large-en-v1.5`) |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE` | Heimdall |
 | `TARGET_SCHEMA` | ARIA bootstrap, SAGE |
+
+All agents use `LLM_*` env vars with `GROQ_*` as fallback — switching LLM provider only requires updating `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` in `backend/.env`.
 
 Agent `.env` files (`Agents/*/env`) are empty stubs — all config comes from `backend/.env`.
 

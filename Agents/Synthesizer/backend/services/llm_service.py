@@ -1,10 +1,10 @@
 """
 LLM synthesis service.
-Uses Groq (llama-3.3-70b-versatile) — same provider as ARIA / SAGE / VALKYRIE.
+Uses OpenAI-compatible SDK — provider configured via LLM_API_KEY / LLM_BASE_URL.
 """
 import json
 import re
-from groq import Groq
+from openai import OpenAI
 
 from config import get_settings
 
@@ -40,10 +40,10 @@ def _format_rag_results(rag_results: list) -> str:
         content = r.get("content", "")
         parts.append(f"▶ QUESTION [{label}]: {content}")
         if r["status"] == "success":
-            for i, chunk in enumerate(r.get("chunks", [])[:3], 1):
+            for i, chunk in enumerate(r.get("chunks", [])[:8], 1):
                 score = chunk.get("similarity_score")
                 score_str = f"{float(score):.4f}" if score is not None else "n/a"
-                text = str(chunk.get("chunk_text", ""))[:800]
+                text = str(chunk.get("chunk_text", ""))[:1200]
                 parts.append(f"\n  [Chunk {i} | sim={score_str}]")
                 parts.append(f"  {text}")
         else:
@@ -142,20 +142,21 @@ def _extract_json(raw: str) -> dict:
 
 
 def synthesize_with_llm(payload: dict, sql_results: list, rag_results: list) -> dict:
-    """Call Groq and return parsed synthesis sections."""
+    """Call LLM via OpenAI-compatible SDK and return parsed synthesis sections."""
     s = get_settings()
+    llm_cfg = payload.get("llm_config") or {}
 
-    if not s.groq_api_key:
-        return {"synthesized_answer": "LLM not configured — GROQ_API_KEY is missing."}
+    if not s.llm_api_key:
+        return {"synthesized_answer": "LLM not configured — LLM_API_KEY is missing."}
 
-    client = Groq(api_key=s.groq_api_key)
+    client = OpenAI(api_key=s.llm_api_key, base_url=s.llm_base_url)
     prompt = _build_prompt(payload, sql_results, rag_results)
 
     response = client.chat.completions.create(
-        model=s.groq_model,
+        model=llm_cfg.get("model") or s.llm_model,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
-        max_tokens=4096,
+        temperature=llm_cfg.get("temperature", 0.2),
+        max_tokens=llm_cfg.get("max_tokens", 4096),
     )
 
     raw_text = response.choices[0].message.content
@@ -163,17 +164,17 @@ def synthesize_with_llm(payload: dict, sql_results: list, rag_results: list) -> 
 
 
 def test_llm() -> dict:
-    """Health-check: verify Groq API key and model are reachable."""
+    """Health-check: verify LLM API key and model are reachable."""
     s = get_settings()
-    if not s.groq_api_key:
-        return {"status": "error", "error": "GROQ_API_KEY not configured"}
+    if not s.llm_api_key:
+        return {"status": "error", "error": "LLM_API_KEY not configured"}
     try:
-        client = Groq(api_key=s.groq_api_key)
+        client = OpenAI(api_key=s.llm_api_key, base_url=s.llm_base_url)
         response = client.chat.completions.create(
-            model=s.groq_model,
+            model=s.llm_model,
             messages=[{"role": "user", "content": "ping"}],
             max_tokens=5,
         )
-        return {"status": "ok", "model": s.groq_model}
+        return {"status": "ok", "model": s.llm_model}
     except Exception as e:
         return {"status": "error", "error": str(e)}

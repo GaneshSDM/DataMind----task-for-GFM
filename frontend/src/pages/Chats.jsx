@@ -4,14 +4,90 @@ import { getChats, getChatMessages, sendPrompt, deleteChat, getSecurityGroups, g
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
-// ── SPYDER synthesis panel ────────────────────────────────────────────────────
-function SpyderPanel({ result }) {
-  const llm       = result.llm_response || {}
-  const sqlRes    = (result.sql_results || []).filter(r => r.status === 'success' && r.rows?.length > 0)
-  const answer    = llm.synthesized_answer
-  const recs      = Array.isArray(llm.recommendations) ? llm.recommendations : []
+// ── Simple inline markdown renderer (no dependency) ──────────────────────────
+function InlineBold({ text }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g)
+  return <>{parts.map((p, i) => i % 2 === 1 ? <strong key={i}>{p}</strong> : p)}</>
+}
 
-  if (!answer && recs.length === 0 && sqlRes.length === 0) return null
+function MarkdownText({ text }) {
+  if (!text) return null
+  return (
+    <div style={{ fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.7 }}>
+      {text.split('\n').map((line, i) => {
+        if (line.startsWith('### '))
+          return <div key={i} style={{ fontWeight: 700, fontSize: 12.5, marginTop: 10, marginBottom: 2, color: 'var(--text-primary)' }}><InlineBold text={line.slice(4)} /></div>
+        if (line.startsWith('## '))
+          return <div key={i} style={{ fontWeight: 700, fontSize: 13.5, marginTop: 12, marginBottom: 3, color: 'var(--text-primary)' }}><InlineBold text={line.slice(3)} /></div>
+        if (line.startsWith('# '))
+          return <div key={i} style={{ fontWeight: 700, fontSize: 14, marginTop: 14, marginBottom: 4, color: 'var(--text-primary)' }}><InlineBold text={line.slice(2)} /></div>
+        if (line.match(/^[-*•] /))
+          return <div key={i} style={{ paddingLeft: 14, marginTop: 2 }}>• <InlineBold text={line.slice(2)} /></div>
+        if (line.match(/^\d+\. /))
+          return <div key={i} style={{ paddingLeft: 14, marginTop: 2 }}><InlineBold text={line} /></div>
+        if (line.trim() === '')
+          return <div key={i} style={{ height: 6 }} />
+        return <div key={i} style={{ marginTop: 1 }}><InlineBold text={line} /></div>
+      })}
+    </div>
+  )
+}
+
+// ── SPYDER synthesis panel ────────────────────────────────────────────────────
+function SpyderSection({ section, value, isFirst }) {
+  if (!value) return null
+  const labelStyle = {
+    fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)',
+    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4,
+  }
+  const wrapStyle = {
+    paddingTop: isFirst ? 0 : 10,
+    borderTop: isFirst ? 'none' : '1px solid var(--border-subtle)',
+  }
+
+  if (section.display_type === 'list' && Array.isArray(value) && value.length > 0) {
+    return (
+      <div style={wrapStyle}>
+        <div style={labelStyle}>{section.title}</div>
+        <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {value.map((r, i) => (
+            <li key={i} style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{r}</li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    return (
+      <div style={wrapStyle}>
+        <div style={labelStyle}>{section.title}</div>
+        <MarkdownText text={value} />
+      </div>
+    )
+  }
+
+  return null
+}
+
+function SpyderPanel({ result }) {
+  const llm    = result.llm_response || {}
+  const sqlRes = (result.sql_results || []).filter(r => r.status === 'success' && r.rows?.length > 0)
+
+  // Action 3: use dynamic sections from schema; fall back to legacy keys if absent
+  const schemaSections = (result.expected_output_schema?.sections || [])
+    .filter(s => s.source === 'llm')
+
+  const legacyAnswer = llm.synthesized_answer
+  const legacyRecs   = Array.isArray(llm.recommendations) ? llm.recommendations : []
+
+  const hasDynamicContent = schemaSections.some(s => {
+    const v = llm[s.section_id]
+    return v && (typeof v === 'string' ? v.trim() : Array.isArray(v) ? v.length > 0 : false)
+  })
+  const hasLegacyContent = !!(legacyAnswer || legacyRecs.length > 0)
+
+  if (sqlRes.length === 0 && !hasDynamicContent && !hasLegacyContent) return null
 
   return (
     <div style={{
@@ -42,31 +118,40 @@ function SpyderPanel({ result }) {
           <SpyderTable key={sr.query_id} sr={sr} />
         ))}
 
-        {/* Synthesized answer */}
-        {answer && (
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-              Synthesized Answer
-            </div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {answer}
-            </div>
-          </div>
-        )}
-
-        {/* Recommendations */}
-        {recs.length > 0 && (
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-              Recommendations
-            </div>
-            <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {recs.map((r, i) => (
-                <li key={i} style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{r}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* Dynamic LLM sections (Action 3) */}
+        {schemaSections.length > 0
+          ? schemaSections.map((section, idx) => (
+              <SpyderSection
+                key={section.section_id}
+                section={section}
+                value={llm[section.section_id]}
+                isFirst={idx === 0 && sqlRes.length === 0}
+              />
+            ))
+          : /* Legacy fallback for old messages / SQL-only responses */
+            <>
+              {legacyAnswer && (
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                    Synthesized Answer
+                  </div>
+                  <MarkdownText text={legacyAnswer} />
+                </div>
+              )}
+              {legacyRecs.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                    Recommendations
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {legacyRecs.map((r, i) => (
+                      <li key={i} style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+        }
       </div>
     </div>
   )
@@ -207,7 +292,13 @@ export default function Chats() {
       suppressNextLoadRef.current = false
       return
     }
-    try { setMessages(await getChatMessages(id)) } catch {}
+    try {
+      const raw = await getChatMessages(id)
+      setMessages(raw.map(m => ({
+        ...m,
+        SpyderResult: m.SpyderResult ?? m.Payload?.spyder_result ?? null,
+      })))
+    } catch {}
   }
 
   const toggleSG = id => {
@@ -350,12 +441,7 @@ export default function Chats() {
                 : isError
                   ? { borderLeft: '3px solid var(--color-warning, #f59e0b)', background: 'var(--bg-warning-subtle, #fffbeb)' }
                   : {}
-              const intents       = m.IntentResult?.intents || []
-              const sqlResults    = m.SqlResult?.sql_results || []
               const spyderResult  = m.SpyderResult
-              // Build validation lookup: intent_id → validated_result
-              const valMap = {}
-              ;(m.ValkyrieResult?.validated_results || []).forEach(v => { valMap[v.intent_id] = v })
               return (
                 <div key={m.MessageID || i} className={`message ${m.Role}`}>
                   <div className="message-bubble" style={bubbleStyle}>
@@ -372,210 +458,12 @@ export default function Chats() {
                         </span>
                       </div>
                     )}
-                    {m.Content}
-                    {/* ── SQL Results ── */}
-                    {sqlResults.filter(r => r.status === 'success').length > 0 && (
-                      <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                          Generated SQL ({sqlResults.filter(r => r.status === 'success').length})
-                        </div>
-                        {sqlResults.map(sr => {
-                          if (sr.status !== 'success') return null
-                          // Find matching intent for context
-                          const matchIntent = intents.find(i => i.intent_id === sr.intent_id)
-                          return (
-                            <div key={sr.intent_id} style={{
-                              background: 'var(--bg-inset, #f9fafb)',
-                              border: '1px solid var(--border-default)',
-                              borderRadius: 6,
-                              overflow: 'hidden',
-                            }}>
-                              {/* SQL card header */}
-                              <div style={{
-                                display: 'flex', alignItems: 'center', gap: 8,
-                                padding: '5px 10px',
-                                background: 'var(--bg-subtle)',
-                                borderBottom: '1px solid var(--border-default)',
-                                fontSize: 10.5,
-                              }}>
-                                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                                  Intent {sr.intent_id}
-                                </span>
-                                {matchIntent && (
-                                  <span style={{ color: 'var(--text-tertiary)' }}>
-                                    {matchIntent.domain}{matchIntent.sub_domain ? ` › ${matchIntent.sub_domain}` : ''}
-                                  </span>
-                                )}
-                                {sr.tables_in_scope?.length > 0 && (
-                                  <span style={{ fontFamily: 'monospace', color: 'var(--text-tertiary)', fontSize: 10 }}>
-                                    {sr.tables_in_scope.join(', ')}
-                                  </span>
-                                )}
-                                <span style={{ marginLeft: 'auto', color: 'var(--text-quaternary, #9ca3af)', fontSize: 10 }}>
-                                  {sr.model_used}
-                                </span>
-                              </div>
-                              {/* SQL code block */}
-                              <pre style={{
-                                margin: 0, padding: '8px 10px',
-                                fontSize: 11, lineHeight: 1.5,
-                                fontFamily: 'monospace',
-                                color: 'var(--text-primary)',
-                                overflowX: 'auto',
-                                whiteSpace: 'pre',
-                              }}>
-                                {sr.generated_sql}
-                              </pre>
-                              {/* RLS / CLS / VALKYRIE badges */}
-                              {(() => {
-                                const vr = valMap[sr.intent_id]
-                                const showBadges = sr.rls_applied?.enabled || sr.cls_applied?.enabled || vr
-                                if (!showBadges) return null
-                                return (
-                                  <div style={{
-                                    display: 'flex', flexWrap: 'wrap', gap: 6, padding: '4px 10px',
-                                    borderTop: '1px solid var(--border-default)',
-                                    background: 'var(--bg-subtle)',
-                                  }}>
-                                    {sr.rls_applied?.enabled && (
-                                      <span style={{
-                                        fontSize: 10, fontWeight: 600, padding: '1px 6px',
-                                        borderRadius: 'var(--radius-pill)',
-                                        background: 'var(--color-warning-bg, #fffbeb)',
-                                        color: 'var(--color-warning, #f59e0b)',
-                                        border: '1px solid var(--color-warning, #f59e0b)',
-                                      }}>
-                                        🔒 RLS: {sr.rls_applied.policy_name || 'applied'}
-                                      </span>
-                                    )}
-                                    {sr.cls_applied?.enabled && (
-                                      <span style={{
-                                        fontSize: 10, fontWeight: 600, padding: '1px 6px',
-                                        borderRadius: 'var(--radius-pill)',
-                                        background: 'var(--color-info-bg, #eff6ff)',
-                                        color: 'var(--color-info, #3b82f6)',
-                                        border: '1px solid var(--color-info, #3b82f6)',
-                                      }}>
-                                        🔑 CLS: {sr.cls_applied.columns_excluded?.join(', ') || 'applied'}
-                                      </span>
-                                    )}
-                                    {vr && (
-                                      <span style={{
-                                        fontSize: 10, fontWeight: 600, padding: '1px 6px',
-                                        borderRadius: 'var(--radius-pill)',
-                                        background: vr.status === 'pass'
-                                          ? 'var(--color-success-bg, #f0fdf4)'
-                                          : vr.status === 'warn'
-                                            ? 'var(--color-warning-bg, #fffbeb)'
-                                            : 'var(--color-error-bg, #fef2f2)',
-                                        color: vr.status === 'pass'
-                                          ? 'var(--color-success, #16a34a)'
-                                          : vr.status === 'warn'
-                                            ? 'var(--color-warning, #f59e0b)'
-                                            : 'var(--color-error, #ef4444)',
-                                        border: `1px solid ${vr.status === 'pass' ? 'var(--color-success, #16a34a)' : vr.status === 'warn' ? 'var(--color-warning, #f59e0b)' : 'var(--color-error, #ef4444)'}`,
-                                        cursor: vr.violations?.length ? 'help' : 'default',
-                                      }}
-                                      title={vr.violations?.length
-                                        ? vr.violations.map(v => `[${v.type}] ${v.detail}`).join('\n')
-                                        : 'VALKYRIE: all checks passed'
-                                      }>
-                                        {vr.status === 'pass' ? '✅' : vr.status === 'warn' ? '⚠️' : '❌'} VALKYRIE: {vr.status}
-                                        {vr.violations?.length > 0 && ` (${vr.violations.length} issue${vr.violations.length > 1 ? 's' : ''})`}
-                                      </span>
-                                    )}
-                                  </div>
-                                )
-                              })()}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {intents.length > 0 && (
-                      <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        {intents.map(intent => (
-                          <div key={intent.intent_id} style={{
-                            background: 'var(--bg-surface)',
-                            border: '1px solid var(--border-default)',
-                            borderRadius: 6,
-                            padding: '6px 10px',
-                            fontSize: 12,
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                              <span style={{
-                                fontSize: 10, fontWeight: 700, padding: '1px 6px',
-                                borderRadius: 'var(--radius-pill)',
-                                background: 'var(--brand-orange-subtle)',
-                                color: 'var(--brand-orange)',
-                              }}>
-                                {intent.intent_types?.join(' · ') || 'Data'}
-                              </span>
-                              <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>
-                                {intent.domain}{intent.sub_domain ? ` › ${intent.sub_domain}` : ''}
-                              </span>
-                              <span style={{
-                                fontSize: 10, fontWeight: 600,
-                                color: intent.data_source === 'Structured' ? 'var(--color-success, #22c55e)'
-                                  : intent.data_source === 'Unstructured' ? 'var(--color-info, #3b82f6)'
-                                  : 'var(--color-warning, #f59e0b)',
-                              }}>
-                                {intent.data_source}
-                              </span>
-                            </div>
-                            <div style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                              {intent.description}
-                            </div>
-                            {(intent.structured_table || intent.structured_view) && (
-                              <div style={{ marginTop: 2, fontSize: 10, color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
-                                {intent.structured_table || intent.structured_view}
-                                {intent.relevant_columns?.length > 0 && (
-                                  <span style={{ color: 'var(--text-quaternary, #9ca3af)' }}>
-                                    {' '}· {intent.relevant_columns.join(', ')}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {intent.unstructured_source && (
-                              <div style={{ marginTop: 2, fontSize: 10, color: 'var(--color-info, #3b82f6)', fontStyle: 'italic' }}>
-                                📄 {intent.unstructured_source}
-                              </div>
-                            )}
-                            {intent.retrieved_context?.length > 0 && (
-                              <div style={{ marginTop: 6, borderTop: '1px solid var(--border-default)', paddingTop: 5 }}>
-                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                  Retrieved Context ({intent.retrieved_context.length})
-                                </div>
-                                {intent.retrieved_context.map((chunk, ci) => (
-                                  <div key={ci} style={{
-                                    fontSize: 11, color: 'var(--text-secondary)',
-                                    padding: '4px 6px', marginBottom: 3,
-                                    background: 'var(--bg-inset, #f9fafb)',
-                                    borderRadius: 4,
-                                    borderLeft: '2px solid var(--color-info, #3b82f6)',
-                                  }}>
-                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                      {chunk.filename}
-                                    </span>
-                                    <span style={{ color: 'var(--text-tertiary)', fontSize: 10, marginLeft: 6 }}>
-                                      sim {(chunk.similarity * 100).toFixed(0)}%
-                                    </span>
-                                    <div style={{ marginTop: 2, lineHeight: 1.4 }}>
-                                      {chunk.chunk_text?.slice(0, 200)}{chunk.chunk_text?.length > 200 ? '…' : ''}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {/* ── SPYDER Synthesis ── */}
-                    {spyderResult && (
-                      <SpyderPanel result={spyderResult} />
-                    )}
+                    {spyderResult
+                      ? <SpyderPanel result={spyderResult} />
+                      : m.Content
+                        ? <MarkdownText text={m.Content} />
+                        : null
+                    }
                   </div>
                 </div>
               )

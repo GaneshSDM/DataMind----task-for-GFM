@@ -46,8 +46,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("valkyrie")
 
-_GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-_GROQ_MODEL   = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+_LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("GROQ_API_KEY", "")
+_LLM_MODEL   = os.getenv("LLM_MODEL")   or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 _groq_client: Optional[GroqClient] = None
 
@@ -55,11 +55,11 @@ _groq_client: Optional[GroqClient] = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _groq_client
-    if _GROQ_API_KEY:
-        _groq_client = GroqClient(api_key=_GROQ_API_KEY, model=_GROQ_MODEL)
-        logger.info("VALKYRIE ready — Groq enabled (model=%s)", _GROQ_MODEL)
+    if _LLM_API_KEY:
+        _groq_client = GroqClient(api_key=_LLM_API_KEY, model=_LLM_MODEL)
+        logger.info("VALKYRIE ready — LLM enabled (model=%s)", _LLM_MODEL)
     else:
-        logger.warning("VALKYRIE ready — GROQ_API_KEY not set, LLM checks disabled")
+        logger.warning("VALKYRIE ready — LLM_API_KEY not set, LLM checks disabled")
     yield
 
 
@@ -394,8 +394,8 @@ async def health():
     return {
         "status":      "ok",
         "agent":       "VALKYRIE",
-        "groq_enabled": _groq_client is not None,
-        "model":       _GROQ_MODEL if _groq_client else None,
+        "llm_enabled": _groq_client is not None,
+        "model":       _LLM_MODEL if _groq_client else None,
     }
 
 

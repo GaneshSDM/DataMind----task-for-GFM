@@ -200,7 +200,13 @@ def get_messages(chat_id: int, current_user=Depends(get_current_user), db: Sessi
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     msgs = db.query(ChatMessage).filter(ChatMessage.chat_id == chat_id).order_by(ChatMessage.created_date).all()
-    return [{"MessageID": m.message_id, "Role": m.role, "Content": m.content, "Payload": m.payload, "CreatedDate": m.created_date} for m in msgs]
+    result = []
+    for m in msgs:
+        row = {"MessageID": m.message_id, "Role": m.role, "Content": m.content, "Payload": m.payload, "CreatedDate": m.created_date}
+        if m.role == "assistant" and m.payload and isinstance(m.payload, dict):
+            row["SpyderResult"] = m.payload.get("spyder_result")
+        result.append(row)
+    return result
 
 
 @router.post("/send")
@@ -251,6 +257,9 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
     spyder_status       = pipeline_result.get("spyder_status")
     spyder_result       = pipeline_result.get("spyder_result")
     spyder_error        = pipeline_result.get("spyder_error")
+    raven_status        = pipeline_result.get("raven_status")
+    raven_result        = pipeline_result.get("raven_result")
+    raven_error         = pipeline_result.get("raven_error")
 
     # Get or create chat
     if payload.chat_id:
@@ -340,23 +349,34 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
                 sql_note += f"\n⚠️ **VALKYRIE validation failed**{corr_note} — queries may not satisfy security policies"
             elif valkyrie_status == "error":
                 sql_note += f"\n⚠️ **VALKYRIE unavailable** — {valkyrie_error or 'validation skipped'}"
-            # SPYDER synthesis note
-            if spyder_status == "success":
-                sql_note += "\n✅ **SPYDER synthesis complete**"
-            elif spyder_status == "error":
-                sql_note += f"\n⚠️ **SPYDER synthesis failed** — {spyder_error or 'unknown error'}"
         elif sql_status == "error":
             sql_note = f"\n\n⚠️ **SQL generation failed** — {sql_error or 'unknown error'}"
         else:
             sql_note = ""
 
-        assistant_content = (
-            f"✅ **Guardrails passed.** ARIA detected **{total} intent(s)**:\n\n"
-            f"{intent_block}"
-            f"{sql_note}"
-        )
+        # RAVEN + SPYDER notes appended for ALL cases (SQL or pure-unstructured)
+        if raven_status == "success":
+            n_inputs = len((raven_result or {}).get("similarity_search_inputs", []))
+            sql_note += f"\n✅ **RAVEN retrieved {n_inputs} RAG input(s)**"
+        elif raven_status == "error":
+            sql_note += f"\n⚠️ **RAVEN retrieval failed** — {raven_error or 'unknown error'}"
+        if spyder_status == "success":
+            sql_note += "\n✅ **SPYDER synthesis complete**"
+        elif spyder_status == "error":
+            sql_note += f"\n⚠️ **SPYDER synthesis failed** — {spyder_error or 'unknown error'}"
 
-    db.add(ChatMessage(chat_id=chat.chat_id, role="assistant", content=assistant_content))
+        # Pipeline tracking goes to backend logs only — chat shows synthesis result
+        if spyder_status == "success":
+            assistant_content = ""
+        else:
+            assistant_content = (
+                f"✅ **Guardrails passed.** ARIA detected **{total} intent(s)**:\n\n"
+                f"{intent_block}"
+                f"{sql_note}"
+            )
+
+    assistant_payload = {"spyder_result": spyder_result} if spyder_result else None
+    db.add(ChatMessage(chat_id=chat.chat_id, role="assistant", content=assistant_content, payload=assistant_payload))
     db.commit()
 
     return {
@@ -376,6 +396,9 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
         "spyder_status":       spyder_status,
         "spyder_result":       spyder_result,
         "spyder_error":        spyder_error,
+        "raven_status":        raven_status,
+        "raven_result":        raven_result,
+        "raven_error":         raven_error,
         "response":            assistant_content,
     }
 

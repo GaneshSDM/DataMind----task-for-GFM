@@ -17,26 +17,31 @@ import logging
 from collections import defaultdict
 from typing import Optional
 
-from core.groq_client import GroqClient
+from core.groq_client import LLMClient
 from core.rag_retriever import retrieve_chunks
 
 logger = logging.getLogger("aria.intent_processor")
 
 _SCHEMA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "schema_reference.json")
 
-# Compact 3-intent example for LLM few-shot
+# Compact 3-intent example for LLM few-shot (covers Structured, Unstructured, and Both)
 _SCHEMA_EXAMPLE = (
-    '{"original_query":"...","total_intents":2,"intents":['
+    '{"original_query":"...","total_intents":3,"intents":['
     '{"intent_id":1,"description":"Fetch total revenue by region for Q1 2026",'
     '"domain":"Sales","sub_domain":"Order Tracking","data_source":"Structured",'
     '"structured_table":"fact_orders","relevant_columns":["region","revenue_usd","order_date"],'
     '"unstructured_source":null,'
     '"intent_types":["Data"],"requires_data_fetch":true,"requires_reasoning":false,"requires_action":false},'
-    '{"intent_id":2,"description":"Compare against Q1 target per the sales plan document",'
-    '"domain":"Sales","sub_domain":"Order Tracking","data_source":"Unstructured",'
+    '{"intent_id":2,"description":"Retrieve cancellation eligibility rules and refund timelines from policy document",'
+    '"domain":"Sales","sub_domain":"Cancellation","data_source":"Unstructured",'
     '"structured_table":null,"relevant_columns":[],'
-    '"unstructured_source":"Q1_Sales_Plan_2026.pdf — Q1 regional targets",'
-    '"intent_types":["Reasoning"],"requires_data_fetch":false,"requires_reasoning":true,"requires_action":false}'
+    '"unstructured_source":"Cancellation_Policy_2026.pdf — Eligibility rules and refund timelines",'
+    '"intent_types":["Data"],"requires_data_fetch":true,"requires_reasoning":false,"requires_action":false},'
+    '{"intent_id":3,"description":"Fetch raw sales order cancellation records to apply policy rules for eligibility and refund status",'
+    '"domain":"Sales","sub_domain":"Cancellation","data_source":"Both",'
+    '"structured_table":"sales_cancellation","relevant_columns":["order_id","order_date","cancellation_date","order_value","refund_amount","cancellation_reason","cancellation_status"],'
+    '"unstructured_source":"Cancellation_Policy_2026.pdf — Eligibility rules and refund timelines",'
+    '"intent_types":["Data","Reasoning"],"requires_data_fetch":true,"requires_reasoning":true,"requires_action":false}'
     ']}'
 )
 
@@ -72,8 +77,13 @@ def _load_schema() -> Optional[dict]:
 
 
 class IntentProcessor:
-    def __init__(self) -> None:
-        self._client = GroqClient()
+    def __init__(self, llm_config: dict = None) -> None:
+        llm_cfg = llm_config or {}
+        self._client = LLMClient(
+            model=llm_cfg.get("model"),
+            temperature=llm_cfg.get("temperature", 0.05),
+            max_tokens=llm_cfg.get("max_tokens", 2048),
+        )
         self._schema = _load_schema()  # None → fallback mode
 
     def reload_schema(self) -> None:
@@ -225,7 +235,13 @@ class IntentProcessor:
             f"UNSTRUCTURED DOCUMENTS (available RAG files — reference by exact filename):\n{rag_block}\n\n"
 
             "RULES:\n"
-            "data_source: Structured=table records | Unstructured=documents/PDFs/reports | Both=reads table AND document simultaneously\n"
+            "data_source values:\n"
+            "  Structured  = fetch records from a DB table only (structured_table set, unstructured_source null)\n"
+            "  Unstructured= fetch information from a PDF/document/KB only (structured_table null, unstructured_source set)\n"
+            "  Both        = single question that needs raw DB records AND rules/thresholds from a KB document to answer;\n"
+            "                structured_table AND unstructured_source must BOTH be set;\n"
+            "                SQL for Both intents fetches raw columns only — SPYDER applies KB rules after retrieval;\n"
+            "                do NOT split into Structured+Unstructured when one question requires both sources together.\n"
             "intent_types: Data=fetch/list/retrieve | Reasoning=compare/analyse/validate | Action=create/update/notify\n"
             "structured_table: exact table name from STRUCTURED TABLES list, or null\n"
             "relevant_columns: list column names from that table relevant to this intent, or []\n"

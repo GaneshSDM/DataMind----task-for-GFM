@@ -13,12 +13,14 @@ Production note:
 """
 
 import logging
+import os
 import numpy as np
 import psycopg2
 from typing import Optional
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
-from config.settings import DATABASE_URL
+from config.settings import DATABASE_URL, EMBEDDER_BASE_URL, EMBEDDER_MODEL
+import httpx as _httpx
 
 load_dotenv()
 
@@ -39,6 +41,16 @@ def _get_model() -> SentenceTransformer:
 
 
 def _embed(text: str) -> list[float]:
+    if EMBEDDER_BASE_URL:
+        url = EMBEDDER_BASE_URL.rstrip("/") + "/embeddings"
+        resp = _httpx.post(
+            url,
+            json={"input": text, "model": EMBEDDER_MODEL},
+            headers={"Authorization": f"Bearer {os.getenv('LLM_API_KEY', '')}"},
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        return resp.json()["data"][0]["embedding"]
     vec = _get_model().encode(text, normalize_embeddings=True)
     return vec.tolist()
 

@@ -3,9 +3,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-GROQ_API_KEY: str  = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL: str    = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-GROQ_BASE_URL: str = "https://api.groq.com/openai/v1/chat/completions"
+# LLM — provider-agnostic (any OpenAI-compatible endpoint)
+LLM_API_KEY:  str = os.getenv("LLM_API_KEY", os.getenv("GROQ_API_KEY", ""))
+LLM_MODEL:    str = os.getenv("LLM_MODEL",   os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"))
+LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+
+# Embedding — if EMBEDDER_BASE_URL is set, use remote API; else use local sentence_transformers
+EMBEDDER_BASE_URL: str = os.getenv("EMBEDDER_BASE_URL", "")
+EMBEDDER_MODEL:    str = os.getenv("EMBEDDER_MODEL", "BAAI/bge-large-en-v1.5")
 
 DATABASE_URL:  str = os.getenv("DATABASE_URL", "")
 TARGET_SCHEMA: str = os.getenv("TARGET_SCHEMA", "sales")

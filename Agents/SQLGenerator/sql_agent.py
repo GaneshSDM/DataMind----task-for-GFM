@@ -31,9 +31,9 @@
 SQL Generator Agent
 -------------------
 Converts natural language to PostgreSQL.
-Provider: auto-detects from .env
-  - GEMINI_API_KEY set → Google Gemini (primary)
-  - GROQ_API_KEY set   → Groq (fallback)
+Provider: any OpenAI-compatible endpoint.
+  Reads LLM_API_KEY (or GROQ_API_KEY), LLM_BASE_URL, LLM_MODEL (or GROQ_MODEL) from .env.
+  Per-request llm_config dict can override model / temperature / max_tokens.
 Input : agent_input.json (prompt + table names + security context)
 Schema: schema_reference.json (canonical table/column definitions)
 Output: output_<request_id>.json (passed to validation agent)
@@ -59,63 +59,29 @@ FEW_SHOT_COUNT = 6
 
 
 # ── LLM provider abstraction ──────────────────────────────────────────────────
-def get_provider():
-    """Return ('gemini', model, client) or ('groq', model, client)."""
-
-    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    gemini_model = os.environ.get("GEMINI_MODEL", "gemma-4-26b-a4b-it").strip()
-
-    groq_key   = os.environ.get("GROQ_API_KEY", "").strip()
-    groq_model = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant").strip()
-
-    if gemini_key:
-        from google import genai
-        client = genai.Client(api_key=gemini_key)
-        return "gemini", gemini_model, client
-
-    if groq_key:
-        from groq import Groq
-        client = Groq(api_key=groq_key)
-        return "groq", groq_model, client
-
-    raise EnvironmentError("No LLM API key found. Set GEMINI_API_KEY or GROQ_API_KEY in .env")
+def get_llm_client(llm_config: dict = None):
+    """Return (client, model) for any OpenAI-compatible provider."""
+    from openai import OpenAI
+    cfg      = llm_config or {}
+    api_key  = os.environ.get("LLM_API_KEY") or os.environ.get("GROQ_API_KEY", "")
+    base_url = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+    model    = cfg.get("model") or os.environ.get("LLM_MODEL") or os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+    client   = OpenAI(api_key=api_key, base_url=base_url)
+    return client, model
 
 
-def call_llm(provider, client, model, system_prompt, user_prompt):
-    """Unified LLM call. Returns raw text response."""
-
-    if provider == "gemini":
-        from google.genai import types
-        response = client.models.generate_content(
-            model=model,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=0.05,
-                max_output_tokens=2048,
-            ),
-            contents=user_prompt,
-        )
-        if response.text is None:
-            reason = "unknown"
-            if response.candidates:
-                reason = getattr(response.candidates[0], "finish_reason", "unknown")
-            raise ValueError(f"Gemini returned no text (finish_reason={reason}). "
-                             "Possible safety block or empty response.")
-        return response.text.strip()
-
-    if provider == "groq":
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": user_prompt},
-            ],
-            temperature=0.05,
-            max_tokens=2048,
-        )
-        return resp.choices[0].message.content.strip()
-
-    raise ValueError(f"Unknown provider: {provider}")
+def call_llm(client, model, system_prompt, user_prompt, temperature=0.05, max_tokens=2048):
+    """Unified LLM call — OpenAI-compat interface."""
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_prompt},
+        ],
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+    return resp.choices[0].message.content.strip()
 
 
 def strip_fences(text):
@@ -203,7 +169,7 @@ def build_rls_where(rls_config):
 
 
 # ── Prompt builder ────────────────────────────────────────────────────────────
-def build_system_prompt(resolved_tables, examples, rls_where, excluded_cols):
+def build_system_prompt(resolved_tables, examples, rls_where, excluded_cols, data_source="Structured", relevant_cols=None):
     restricted = set(excluded_cols)
 
     schema_blocks = []
@@ -224,6 +190,20 @@ def build_system_prompt(resolved_tables, examples, rls_where, excluded_cols):
         f"\nCLS  : NEVER SELECT these columns: {', '.join(excluded_cols)}"
         if excluded_cols else ""
     )
+    if data_source == "Both":
+        tbl_name = f"{resolved_tables[0].get('schema_name','')}.{resolved_tables[0]['table_name']}" if resolved_tables else "the table"
+        cols_constraint = (
+            f"SELECT ONLY these columns: {', '.join(relevant_cols)}. "
+            if relevant_cols else "SELECT only the raw data columns listed in the prompt. "
+        )
+        both_note = (
+            f"\nRAW DATA ONLY (data_source=Both): {cols_constraint}"
+            f"FROM {tbl_name} ONLY — NO JOINs to any other table. "
+            "NO CASE statements. NO threshold comparisons. NO derived columns. NO aggregations. "
+            "A separate KB document supplies all business rules; SPYDER applies them post-retrieval."
+        )
+    else:
+        both_note = ""
 
     shots = "\n\n".join(
         f"-- Prompt: {ex['prompt']}\n{ex['expected_sql']}" for ex in examples
@@ -235,7 +215,7 @@ RULES
 - Output ONLY the SQL query. No markdown, no explanation.
 - Use schema-qualified names (schema.table).
 - Use table aliases.
-- CTEs for multi-step logic.{rls_note}{cls_note}
+- CTEs for multi-step logic.{rls_note}{cls_note}{both_note}
 
 SCHEMA
 {chr(10).join(schema_blocks)}
@@ -246,15 +226,21 @@ EXAMPLES
 
 
 # ── SQL generation ────────────────────────────────────────────────────────────
-def generate_sql(provider, client, model, input_data, resolved_tables, examples):
+def generate_sql(client, model, input_data, resolved_tables, examples, llm_config=None):
+    cfg = llm_config or {}
+    temperature = cfg.get("temperature", 0.05)
+    max_tokens  = cfg.get("max_tokens", 2048)
+
     cls_cfg = input_data.get("column_level_security", {})
     rls_cfg = input_data.get("row_level_security", {})
+    data_source   = input_data.get("data_source", "Structured")
+    relevant_cols = input_data.get("relevant_columns", []) if data_source == "Both" else []
 
     excluded_cols = cls_cfg.get("restricted_columns", []) if cls_cfg.get("enabled") else []
     rls_where, _  = build_rls_where(rls_cfg)
 
-    system = build_system_prompt(resolved_tables, examples, rls_where, excluded_cols)
-    raw    = call_llm(provider, client, model, system, input_data["prompt"])
+    system = build_system_prompt(resolved_tables, examples, rls_where, excluded_cols, data_source, relevant_cols)
+    raw    = call_llm(client, model, system, input_data["prompt"], temperature, max_tokens)
     sql    = strip_fences(raw)
 
     return sql, excluded_cols, rls_where, rls_cfg, cls_cfg
@@ -312,7 +298,9 @@ def build_correction_prompt(correction_input, resolved_tables, examples):
     }
     rls_where, _ = build_rls_where(rls_cfg)
 
-    system = build_system_prompt(resolved_tables, examples, rls_where, excluded_cols)
+    data_source   = correction_input.get("metadata", {}).get("data_source", "Structured")
+    relevant_cols = correction_input.get("relevant_columns", []) if data_source == "Both" else []
+    system = build_system_prompt(resolved_tables, examples, rls_where, excluded_cols, data_source, relevant_cols)
 
     errors = correction_input.get("validation_errors", [])
     suggestions = correction_input.get("suggested_corrections", [])
@@ -343,13 +331,13 @@ Output ONLY the corrected SQL query."""
 
 
 # ── SQL correction ────────────────────────────────────────────────────────────
-def run_correction(correction_input, schema_ref=None, examples=None):
+def run_correction(correction_input, schema_ref=None, examples=None, llm_config=None):
     """
     Apply validation feedback to produce corrected SQL.
     correction_input: dict in correction_examples.json format
     Returns: correction output dict
     """
-    provider, model, client = get_provider()
+    client, model = get_llm_client(llm_config)
 
     if schema_ref is None:
         schema_ref = load_schema_reference()
@@ -361,11 +349,11 @@ def run_correction(correction_input, schema_ref=None, examples=None):
     resolved_tables = resolve_tables(schema_ref, domain, expected_tables)
 
     print(f"[SQLAgent] CORRECTION mode — {len(correction_input.get('validation_errors', []))} error(s)")
-    print(f"[SQLAgent] provider : {provider} / {model}")
+    print(f"[SQLAgent] model    : {model}")
     print(f"[SQLAgent] tables   : {[t['table_name'] for t in resolved_tables]}")
 
-    system, user = build_correction_prompt(correction_input, resolved_tables, examples)
-    raw           = call_llm(provider, client, model, system, user)
+    system, user  = build_correction_prompt(correction_input, resolved_tables, examples)
+    raw           = call_llm(client, model, system, user)
     corrected_sql = strip_fences(raw)
 
     return {
@@ -389,20 +377,19 @@ def run_agent(input_source="file", input_path=INPUT_FILE, agent_payload=None):
     Dev  : run_agent()
     Live : run_agent(input_source="agent", agent_payload=<upstream_dict>)
     """
-    provider, model, client = get_provider()
+    client, model   = get_llm_client()
     input_data      = load_input(source=input_source, path=input_path, agent_payload=agent_payload)
     schema_ref      = load_schema_reference()
     examples        = load_examples()
     resolved_tables = resolve_tables(schema_ref, domain=input_data["domain"], table_names=input_data["tables"])
 
-    print(f"[SQLAgent] provider: {provider}")
     print(f"[SQLAgent] model   : {model}")
     print(f"[SQLAgent] prompt  : {input_data['prompt'][:100]}")
     print(f"[SQLAgent] domain  : {input_data['domain']} / {input_data.get('sub_domain')}")
     print(f"[SQLAgent] tables  : {[t['table_name'] for t in resolved_tables]}")
 
     sql, excluded_cols, rls_where, rls_cfg, cls_cfg = generate_sql(
-        provider, client, model, input_data, resolved_tables, examples
+        client, model, input_data, resolved_tables, examples
     )
 
     output = build_output(

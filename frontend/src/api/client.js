@@ -108,6 +108,11 @@ export const createDBConnection = d => api.post('/db-connections/', d).then(r =>
 export const testDBConnection = d => api.post('/db-connections/test', d).then(r => r.data)
 export const deleteDBConnection = id => api.delete(`/db-connections/${id}`).then(r => r.data)
 
+// ── Agents ───────────────────────────────────────────────────
+export const getAgents        = ()         => api.get('/agents/').then(r => r.data)
+export const getAgentStatuses = ()         => api.get('/agents/statuses').then(r => r.data)
+export const updateAgent      = (name, d)  => api.put(`/agents/${name}`, d).then(r => r.data)
+
 // ── RAG ─────────────────────────────────────────────────────
 export const getRagCategories     = ()        => api.get('/rag/categories').then(r => r.data)
 export const createRagCategory    = d         => api.post('/rag/categories', d).then(r => r.data)

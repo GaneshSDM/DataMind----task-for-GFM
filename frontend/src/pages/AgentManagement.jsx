@@ -1,0 +1,511 @@
+import { useState, useEffect, useCallback } from 'react'
+import { RefreshCw } from 'lucide-react'
+import { getAgents, getAgentStatuses, updateAgent } from '../api/client'
+import { useAuth } from '../contexts/AuthContext'
+import toast from 'react-hot-toast'
+
+// ── Static tool definitions (structural — not stored in DB) ───────────────────
+const AGENT_TOOLS = {
+  heimdall: [
+    { label: 'all-MiniLM-L6-v2 Embedder',      category: 'Model'     },
+    { label: 'tracopp.prompt_policies',          category: 'Database'  },
+    { label: 'LangGraph StateGraph',             category: 'Framework' },
+  ],
+  aria: [
+    { label: 'Groq LLM API',                              category: 'LLM'      },
+    { label: 'tracopp.rag_document_chunks (pgvector)',     category: 'Database' },
+    { label: 'BAAI/bge-large-en-v1.5 Embedder',           category: 'Model'    },
+    { label: 'schema_reference.json',                      category: 'Config'   },
+  ],
+  sage: [
+    { label: 'Groq LLM API',              category: 'LLM'    },
+    { label: 'schema_reference.json',      category: 'Config' },
+    { label: 'examples.json (few-shot)',   category: 'Config' },
+    { label: 'correction_examples.json',   category: 'Config' },
+  ],
+  valkyrie: [
+    { label: 'Groq LLM API',              category: 'LLM'  },
+    { label: 'SQL Syntax Checker',         category: 'Tool' },
+    { label: 'RLS / CLS Policy Enforcer', category: 'Tool' },
+  ],
+  spyder: [
+    { label: 'Groq LLM API',                          category: 'LLM'      },
+    { label: 'tracopp.rag_document_chunks (pgvector)', category: 'Database' },
+    { label: 'tracopp.rag_files',                      category: 'Database' },
+    { label: 'SQL Executor',                           category: 'Tool'     },
+  ],
+  raven: [
+    { label: 'BAAI/bge-large-en-v1.5 Embedder',           category: 'Model'    },
+    { label: 'tracopp.rag_document_chunks (pgvector)',     category: 'Database' },
+    { label: 'tracopp.rag_files (auth check)',             category: 'Database' },
+  ],
+}
+
+const CATEGORY_COLOURS = {
+  LLM:       { bg: '#eff6ff', color: '#3b82f6', border: '#3b82f6' },
+  Model:     { bg: '#f0fdf4', color: '#16a34a', border: '#16a34a' },
+  Database:  { bg: '#fff7ed', color: '#ea580c', border: '#ea580c' },
+  Config:    { bg: '#faf5ff', color: '#9333ea', border: '#9333ea' },
+  Tool:      { bg: '#fefce8', color: '#ca8a04', border: '#ca8a04' },
+  Framework: { bg: '#f1f5f9', color: '#475569', border: '#475569' },
+}
+
+const TABS = ['Persona', 'LLM Config', 'Tools', 'Behavior']
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj ?? {}))
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function StatusDot({ status }) {
+  const colour = status === 'online' ? '#16a34a' : status === 'degraded' ? '#f59e0b' : '#9ca3af'
+  return (
+    <span style={{
+      display: 'inline-block', width: 8, height: 8,
+      borderRadius: '50%', background: colour, flexShrink: 0,
+    }} title={status ?? 'unknown'} />
+  )
+}
+
+function TabBar({ active, onChange }) {
+  return (
+    <div style={{ display: 'flex', borderBottom: '1px solid var(--border-default)', padding: '0 16px', gap: 2 }}>
+      {TABS.map(t => (
+        <button
+          key={t}
+          onClick={() => onChange(t)}
+          style={{
+            padding: '8px 14px',
+            fontSize: 12.5, fontWeight: active === t ? 700 : 500,
+            color: active === t ? 'var(--brand-orange)' : 'var(--text-secondary)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            borderBottom: active === t ? '2px solid var(--brand-orange)' : '2px solid transparent',
+            marginBottom: -1,
+          }}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function Field({ label, children }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
+        {label}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+const inputStyle = {
+  width: '100%', padding: '7px 10px',
+  fontSize: 13, fontFamily: 'inherit',
+  border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-md, 6px)',
+  background: 'var(--bg-surface)',
+  color: 'var(--text-primary)',
+  boxSizing: 'border-box',
+  outline: 'none',
+}
+
+// ── Tab content ───────────────────────────────────────────────────────────────
+
+function PersonaTab({ config, onChange }) {
+  const persona = config.persona ?? {}
+  return (
+    <div style={{ padding: 20 }}>
+      <Field label="Role Name">
+        <input
+          style={inputStyle}
+          value={persona.role ?? ''}
+          onChange={e => onChange({ ...config, persona: { ...persona, role: e.target.value } })}
+          placeholder="e.g. Domain Synthesizer Agent"
+        />
+      </Field>
+      <Field label="System Instruction">
+        <textarea
+          style={{ ...inputStyle, minHeight: 180, resize: 'vertical', lineHeight: 1.6 }}
+          value={persona.instruction ?? ''}
+          onChange={e => onChange({ ...config, persona: { ...persona, instruction: e.target.value } })}
+          placeholder="Describe how the agent should behave…"
+        />
+      </Field>
+    </div>
+  )
+}
+
+function LLMTab({ config, onChange }) {
+  const llm = config.llm
+  if (!llm) {
+    return (
+      <div style={{ padding: 20, color: 'var(--text-tertiary)', fontSize: 13 }}>
+        This agent does not use an LLM — it runs on a local embedding model.
+      </div>
+    )
+  }
+  return (
+    <div style={{ padding: 20 }}>
+      <Field label="Model">
+        <input
+          style={inputStyle}
+          value={llm.model ?? ''}
+          onChange={e => onChange({ ...config, llm: { ...llm, model: e.target.value } })}
+          placeholder="e.g. llama-3.3-70b-versatile"
+        />
+      </Field>
+      <Field label={`Temperature — ${llm.temperature ?? 0.2}`}>
+        <input
+          type="range" min="0" max="1" step="0.05"
+          value={llm.temperature ?? 0.2}
+          onChange={e => onChange({ ...config, llm: { ...llm, temperature: parseFloat(e.target.value) } })}
+          style={{ width: '100%', accentColor: 'var(--brand-orange)' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-tertiary)', marginTop: 2 }}>
+          <span>0 — deterministic</span><span>1 — creative</span>
+        </div>
+      </Field>
+      <Field label="Max Tokens">
+        <input
+          type="number" min="256" max="32768" step="256"
+          style={{ ...inputStyle, width: 160 }}
+          value={llm.max_tokens ?? 4096}
+          onChange={e => onChange({ ...config, llm: { ...llm, max_tokens: parseInt(e.target.value) || 4096 } })}
+        />
+      </Field>
+    </div>
+  )
+}
+
+function ToolsTab({ agentName }) {
+  const tools = AGENT_TOOLS[agentName] ?? []
+  return (
+    <div style={{ padding: 20 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 14, fontStyle: 'italic' }}>
+        Tools are structural — changing them requires code changes.
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {tools.map((t, i) => {
+          const c = CATEGORY_COLOURS[t.category] ?? CATEGORY_COLOURS.Tool
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 12px',
+              border: '1px solid var(--border-default)',
+              borderRadius: 6,
+              background: 'var(--bg-surface)',
+            }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: '2px 7px',
+                borderRadius: 'var(--radius-pill)',
+                background: c.bg, color: c.color, border: `1px solid ${c.border}`,
+                flexShrink: 0,
+              }}>
+                {t.category}
+              </span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{t.label}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function BehaviorTab({ config, onChange }) {
+  const behavior = config.behavior ?? {}
+  const entries = Object.entries(behavior)
+  if (!entries.length) {
+    return <div style={{ padding: 20, color: 'var(--text-tertiary)', fontSize: 13 }}>No behavior settings for this agent.</div>
+  }
+
+  const update = (key, val) => onChange({ ...config, behavior: { ...behavior, [key]: val } })
+
+  // Keys that should be read-only (structural / embedding params)
+  const READONLY_KEYS = new Set(['check_types', 'embedder_model', 'embedder_dim'])
+
+  return (
+    <div style={{ padding: 20 }}>
+      {entries.map(([key, val]) => {
+        const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        const readonly = READONLY_KEYS.has(key)
+
+        if (typeof val === 'boolean') {
+          return (
+            <Field key={key} label={label}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: readonly ? 'default' : 'pointer' }}>
+                <input
+                  type="checkbox" checked={val}
+                  disabled={readonly}
+                  onChange={e => !readonly && update(key, e.target.checked)}
+                  style={{ accentColor: 'var(--brand-orange)', width: 14, height: 14 }}
+                />
+                <span style={{ fontSize: 13, color: readonly ? 'var(--text-tertiary)' : 'var(--text-primary)' }}>
+                  {val ? 'Enabled' : 'Disabled'}
+                </span>
+              </label>
+            </Field>
+          )
+        }
+
+        if (Array.isArray(val)) {
+          return (
+            <Field key={key} label={label}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {val.map((v, i) => (
+                  <span key={i} style={{
+                    fontSize: 11, padding: '2px 8px',
+                    borderRadius: 'var(--radius-pill)',
+                    background: 'var(--bg-subtle)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
+                  }}>{v}</span>
+                ))}
+              </div>
+            </Field>
+          )
+        }
+
+        if (typeof val === 'number') {
+          return (
+            <Field key={key} label={label}>
+              <input
+                type="number" style={{ ...inputStyle, width: 160 }}
+                value={val} disabled={readonly}
+                onChange={e => !readonly && update(key, parseFloat(e.target.value) || 0)}
+              />
+            </Field>
+          )
+        }
+
+        return (
+          <Field key={key} label={label}>
+            <input
+              style={{ ...inputStyle, color: readonly ? 'var(--text-tertiary)' : 'var(--text-primary)' }}
+              value={val ?? ''} readOnly={readonly}
+              onChange={e => !readonly && update(key, e.target.value)}
+            />
+          </Field>
+        )
+      })}
+    </div>
+  )
+}
+
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+export default function AgentManagement() {
+  const { logout } = useAuth()
+  const [agents,    setAgents]    = useState([])
+  const [statuses,  setStatuses]  = useState({})
+  const [selected,  setSelected]  = useState(null)      // agent_name string
+  const [activeTab, setActiveTab] = useState('Persona')
+  const [editConfig, setEditConfig] = useState({})
+  const [dirty,     setDirty]     = useState(false)
+  const [saving,    setSaving]    = useState(false)
+  const [loading,   setLoading]   = useState(true)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [list, sts] = await Promise.all([getAgents(), getAgentStatuses()])
+      setAgents(list)
+      setStatuses(sts)
+      if (!selected && list.length) {
+        setSelected(list[0].agent_name)
+        setEditConfig(deepClone(list[0].config))
+      }
+    } catch {
+      toast.error('Failed to load agents')
+    } finally {
+      setLoading(false)
+    }
+  }, []) // eslint-disable-line
+
+  useEffect(() => { load() }, [load])
+
+  const selectedAgent = agents.find(a => a.agent_name === selected)
+
+  const handleSelect = ag => {
+    if (dirty && !confirm('Discard unsaved changes?')) return
+    setSelected(ag.agent_name)
+    setEditConfig(deepClone(ag.config))
+    setDirty(false)
+    setActiveTab('Persona')
+  }
+
+  const handleConfigChange = newConfig => {
+    setEditConfig(newConfig)
+    setDirty(true)
+  }
+
+  const handleDiscard = () => {
+    if (!selectedAgent) return
+    setEditConfig(deepClone(selectedAgent.config))
+    setDirty(false)
+  }
+
+  const handleSave = async () => {
+    if (!selected || !dirty) return
+    setSaving(true)
+    try {
+      const updated = await updateAgent(selected, { config: editConfig })
+      setAgents(prev => prev.map(a => a.agent_name === selected ? { ...a, config: updated.config } : a))
+      setDirty(false)
+      toast.success('Agent config saved')
+      setTimeout(() => {
+        const doLogout = window.confirm(
+          'Changes take effect on next login.\n\nLog out now to apply the new configuration?'
+        )
+        if (doLogout) logout()
+      }, 400)
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+        Loading agents…
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+      {/* ── Header ── */}
+      <div style={{
+        height: 52, minHeight: 52, background: 'var(--bg-header)',
+        borderBottom: '1px solid var(--border-default)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px', flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 14, fontWeight: 700 }}>Agent Management</span>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={load}
+          title="Refresh agent list and statuses"
+          style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+        >
+          <RefreshCw size={12} /> Refresh
+        </button>
+      </div>
+
+      {/* ── Body ── */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+        {/* ── Left: agent list ── */}
+        <div style={{
+          width: 220, minWidth: 220, flexShrink: 0,
+          borderRight: '1px solid var(--border-default)',
+          overflowY: 'auto',
+          background: 'var(--bg-surface)',
+        }}>
+          <div style={{ padding: '10px 12px 6px', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Agents
+          </div>
+          {agents.map(ag => {
+            const isActive = ag.agent_name === selected
+            const status   = statuses[ag.agent_name] ?? 'unknown'
+            return (
+              <button
+                key={ag.agent_name}
+                onClick={() => handleSelect(ag)}
+                style={{
+                  width: '100%', textAlign: 'left',
+                  padding: '9px 14px',
+                  display: 'flex', alignItems: 'center', gap: 9,
+                  background: isActive ? 'var(--brand-orange-subtle)' : 'transparent',
+                  border: 'none',
+                  borderLeft: isActive ? '3px solid var(--brand-orange)' : '3px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'background var(--transition-fast)',
+                }}
+              >
+                <StatusDot status={status} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--brand-orange)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {ag.display_name}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>:{ag.port}</div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ── Right: detail ── */}
+        {selectedAgent ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+            {/* Agent header */}
+            <div style={{
+              padding: '12px 20px 10px',
+              borderBottom: '1px solid var(--border-default)',
+              background: 'var(--bg-header)',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <StatusDot status={statuses[selected] ?? 'unknown'} />
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {selectedAgent.display_name}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 1 }}>
+                    {selectedAgent.description}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <TabBar active={activeTab} onChange={setActiveTab} />
+
+            {/* Tab body */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {activeTab === 'Persona'   && <PersonaTab  config={editConfig} onChange={handleConfigChange} />}
+              {activeTab === 'LLM Config'&& <LLMTab      config={editConfig} onChange={handleConfigChange} />}
+              {activeTab === 'Tools'     && <ToolsTab    agentName={selected} />}
+              {activeTab === 'Behavior'  && <BehaviorTab config={editConfig} onChange={handleConfigChange} />}
+            </div>
+
+            {/* Footer: always visible; Save disabled until dirty */}
+            <div style={{
+              padding: '10px 20px',
+              borderTop: '1px solid var(--border-default)',
+              background: 'var(--bg-surface)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: dirty ? 'var(--color-warning, #f59e0b)' : 'var(--text-tertiary)' }}>
+                {dirty ? '⚠ Unsaved changes' : 'Changes take effect on next login'}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-ghost btn-sm" onClick={handleDiscard} disabled={!dirty || saving}>
+                  Discard
+                </button>
+                <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={!dirty || saving}>
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+            Select an agent
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

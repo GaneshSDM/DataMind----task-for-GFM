@@ -7,7 +7,8 @@
     "SYNTAX": 8,
     "RLS":    6,
     "CLS":    6,
-    "FILTER": 6
+    "FILTER": 6,
+    "LOGIC":  1
   },
   "examples": [
     {
@@ -728,6 +729,31 @@
       "cls_applied": { "enabled": false, "policy_name": null, "columns_excluded": [] },
       "metadata": { "domain": "HR", "sub_domain": "Recruitment", "tables_in_scope": ["hr_semantic_layer.hr_payroll"], "model_used": "llama-3.3-70b-versatile", "generated_at": "2026-05-23T06:01:00+00:00" },
       "validation_hints": { "original_prompt": "Show chart analysis of department wise total employee count", "expected_tables": ["hr_payroll"] }
+    },
+    {
+      "id": 33,
+      "request_id": "corr-033",
+      "status": "validation_failed",
+      "validation_status": "failed",
+      "error_type": "LOGIC",
+      "generated_sql": "SELECT sc.order_id, sc.order_date, sc.cancellation_date, sc.customer_id, sc.order_value, sc.cancellation_reason, sc.cancellation_status, sc.refund_amount, sc.refund_date, CASE WHEN sc.cancellation_date IS NOT NULL AND sc.cancellation_date <= sc.order_date + INTERVAL '7 day' THEN 'Eligible' ELSE 'Not Eligible' END AS cancellation_eligibility, CASE WHEN sc.refund_date IS NOT NULL AND sc.refund_date <= sc.cancellation_date + INTERVAL '14 day' THEN 'On Time' WHEN sc.refund_date IS NOT NULL AND sc.refund_date > sc.cancellation_date + INTERVAL '14 day' THEN 'Delayed' ELSE 'Not Refunded' END AS refund_timeline, CASE WHEN sc.refund_amount < sc.order_value * 0.8 THEN 'Deduction Applied' ELSE 'No Deduction' END AS refund_deduction FROM sales_semantic_layer.sales_cancellation sc ORDER BY sc.order_id",
+      "validation_errors": [
+        {
+          "type": "LOGIC",
+          "detail": "Intent data_source=Both means business rule thresholds (7-day window, 14-day refund SLA, 0.8 deduction factor) must come from the KB document retrieved by RAVEN, not be hardcoded in SQL CASE statements. Hardcoded thresholds will be stale if policy changes.",
+          "fix": "Remove all CASE statement derived columns (cancellation_eligibility, refund_timeline, refund_deduction). SELECT only raw data columns from the table. SPYDER will apply KB rules to the raw data after retrieval."
+        }
+      ],
+      "suggested_corrections": [
+        "Remove CASE WHEN cancellation_eligibility block — threshold '7 day' is a KB policy rule, not a SQL constant",
+        "Remove CASE WHEN refund_timeline block — '14 day' SLA comes from the cancellation KB document",
+        "Remove CASE WHEN refund_deduction block — 0.8 deduction factor is a KB policy rule",
+        "Keep only raw columns: order_id, order_date, cancellation_date, customer_id, order_value, cancellation_reason, cancellation_status, refund_amount, refund_method, refund_date, refund_status, payment_method, channel, agent_id, churn_risk, retention_offer_made"
+      ],
+      "rls_applied": { "enabled": false, "policy_name": null, "where_clause_injected": null, "filters_applied": [] },
+      "cls_applied": { "enabled": false, "policy_name": null, "columns_excluded": [] },
+      "metadata": { "domain": "Sales", "sub_domain": "Cancellation", "tables_in_scope": ["sales_semantic_layer.sales_cancellation"], "model_used": "llama-3.3-70b-versatile", "generated_at": "2026-05-24T06:00:00+00:00" },
+      "validation_hints": { "original_prompt": "Fetch sales order details to apply cancellation eligibility rules, refund timelines, refund deductions, escalation rules, and retention process for a sales order", "expected_tables": ["sales_cancellation"] }
     }
   ]
 }

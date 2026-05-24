@@ -41,7 +41,7 @@ logger = logging.getLogger("sage")
 
 # Lazy imports — heavy models load once at startup
 from sql_agent import (
-    get_provider,
+    get_llm_client,
     load_schema_reference,
     load_examples,
     resolve_tables,
@@ -134,18 +134,17 @@ def _normalize_schema(schema: dict) -> dict:
 
 # ── startup ────────────────────────────────────────────────────────────────────
 
-_provider = None
-_model    = None
 _client   = None
+_model    = None
 _schema   = None
 _examples = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _provider, _model, _client, _schema, _examples
-    logger.info("SAGE startup — loading provider and schema…")
-    _provider, _model, _client = get_provider()
+    global _client, _model, _schema, _examples
+    logger.info("SAGE startup — loading LLM client and schema…")
+    _client, _model = get_llm_client()
     _schema   = _normalize_schema(load_schema_reference())
     _examples = load_examples()
     table_count = sum(
@@ -153,7 +152,7 @@ async def lifespan(app: FastAPI):
         for cat in _schema.get("catalog", [])
         for sd in cat.get("sub_domains", [])
     )
-    logger.info("SAGE ready — provider=%s model=%s tables=%d", _provider, _model, table_count)
+    logger.info("SAGE ready — model=%s tables=%d", _model, table_count)
     yield
 
 
@@ -170,6 +169,7 @@ class IntentItem(BaseModel):
     data_source: str                        # Structured | Unstructured | Both
     structured_table: Optional[str] = None
     relevant_columns: list[str] = []
+    unstructured_source: Optional[str] = None  # present on Both intents — for context only
 
 
 class SecurityProfile(BaseModel):
@@ -185,6 +185,7 @@ class SAGERequest(BaseModel):
     security_profile: SecurityProfile
     intents: list[IntentItem]
     metadata: dict = {}
+    llm_config: Optional[dict] = None   # per-request overrides: model/temperature/max_tokens
 
 
 class SQLResult(BaseModel):
@@ -216,9 +217,12 @@ class CorrectionRequest(BaseModel):
     domain: str
     sub_domain: Optional[str] = None
     tables: list[str] = []
+    data_source: str = "Structured"        # Structured | Both — controls raw-only rule
+    relevant_columns: list[str] = []       # column constraints for Both intents
     rls_applied: Optional[dict] = None
     cls_applied: Optional[dict] = None
     model_used: Optional[str] = None
+    llm_config: Optional[dict] = None      # per-request overrides: model/temperature/max_tokens
 
 
 class CorrectionResponse(BaseModel):
@@ -320,12 +324,25 @@ async def generate(request: SAGERequest):
         rls_cfg = _adapt_rls(sp.row_level_security, table_name)
         cls_cfg = _adapt_cls(sp.column_level_security, table_name)
 
+        # For Both intents: override prompt to remove table-name hints that cause JOIN hallucination.
+        # Use a neutral raw-fetch prompt; relevant_columns constrain what SAGE selects.
+        if intent.data_source == "Both":
+            cols_hint = ", ".join(intent.relevant_columns) if intent.relevant_columns else "all columns"
+            effective_prompt = (
+                f"Fetch raw data from {table_name}: select {cols_hint}. "
+                "Return all rows without filtering, aggregation, or derived columns."
+            )
+        else:
+            effective_prompt = intent.description
+
         agent_payload = {
             "request_id":             f"{request.request_id}_i{intent.intent_id}",
-            "prompt":                 intent.description,   # intent description → SQL
+            "prompt":                 effective_prompt,
             "domain":                 intent.domain,
             "sub_domain":             intent.sub_domain or "",
             "tables":                 [table_name],
+            "data_source":            intent.data_source,  # Structured|Both → controls raw-only rule
+            "relevant_columns":       intent.relevant_columns,  # passed for Both constraint
             "row_level_security":     rls_cfg,
             "column_level_security":  cls_cfg,
         }
@@ -334,7 +351,7 @@ async def generate(request: SAGERequest):
             loop = asyncio.get_running_loop()
             output = await loop.run_in_executor(
                 None,
-                lambda p=agent_payload: _generate_one(p)
+                lambda p=agent_payload: _generate_one(p, request.llm_config)
             )
             sql_results.append(SQLResult(
                 intent_id=intent.intent_id,
@@ -392,10 +409,12 @@ async def correct(request: CorrectionRequest):
             "expected_tables": request.tables,
         },
         "metadata": {
-            "domain":     request.domain,
-            "sub_domain": request.sub_domain or "",
-            "model_used": request.model_used or _model or "",
+            "domain":      request.domain,
+            "sub_domain":  request.sub_domain or "",
+            "model_used":  request.model_used or _model or "",
+            "data_source": request.data_source,
         },
+        "relevant_columns": request.relevant_columns,
         # Preserve RLS — include expression so build_rls_where uses it in correction prompt
         "rls_applied": {
             "enabled":             rls_applied.get("enabled", False),
@@ -418,9 +437,10 @@ async def correct(request: CorrectionRequest):
 
     try:
         loop = asyncio.get_running_loop()
+        llm_cfg = request.llm_config
         result = await loop.run_in_executor(
             None,
-            lambda ci=correction_input: run_correction(ci, _schema, _examples),
+            lambda ci=correction_input, cfg=llm_cfg: run_correction(ci, _schema, _examples, llm_config=cfg),
         )
         corrected_sql = result.get("corrected_sql")
         logger.info(
@@ -443,7 +463,7 @@ async def correct(request: CorrectionRequest):
         )
 
 
-def _generate_one(agent_payload: dict) -> dict:
+def _generate_one(agent_payload: dict, llm_config: dict = None) -> dict:
     """Synchronous generation for a single intent. Runs in executor."""
     resolved = resolve_tables(_schema, agent_payload["domain"], agent_payload["tables"])
     if not resolved:
@@ -451,10 +471,15 @@ def _generate_one(agent_payload: dict) -> dict:
             f"Table '{agent_payload['tables']}' not found in schema_reference "
             f"for domain '{agent_payload['domain']}'"
         )
+    # Per-request client if llm_config provided, else reuse startup singleton
+    if llm_config:
+        client, model = get_llm_client(llm_config)
+    else:
+        client, model = _client, _model
     sql, excluded_cols, rls_where, rls_cfg, cls_cfg = generate_sql(
-        _provider, _client, _model, agent_payload, resolved, _examples
+        client, model, agent_payload, resolved, _examples, llm_config=llm_config
     )
-    return build_output(agent_payload, resolved, sql, excluded_cols, rls_where, rls_cfg, cls_cfg, _model)
+    return build_output(agent_payload, resolved, sql, excluded_cols, rls_where, rls_cfg, cls_cfg, model)
 
 
 # ── schema reload ──────────────────────────────────────────────────────────────
@@ -489,7 +514,6 @@ async def health():
     return {
         "status":        "ok",
         "agent":         "SAGE",
-        "provider":      _provider,
         "model":         _model,
         "schema_loaded": _schema is not None,
         "tables":        table_count,
