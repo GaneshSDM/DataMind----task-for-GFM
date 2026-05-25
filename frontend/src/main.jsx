@@ -13,6 +13,7 @@ import { UserManagement, RLSPage, CLSPage, SLMConfigPage, DBConnectionsPage } fr
 import RAGPipelines from './pages/RAGPipelines'
 import UserProfile from './pages/UserProfile'
 import AgentManagement from './pages/AgentManagement'
+import AppMapping from './pages/AppMapping'
 import './styles/global.css'
 
 createRoot(document.getElementById('root')).render(
@@ -39,6 +40,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="rag-categories"   element={<RagCategoryPage />} />
             <Route path="rag-sub-categories" element={<RagSubCategoryPage />} />
             <Route path="agent-management"   element={<AgentManagement />} />
+            <Route path="app-mapping"        element={<AppMapping />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

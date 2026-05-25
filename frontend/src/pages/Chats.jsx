@@ -1,10 +1,20 @@
-import { useState, useEffect, useRef } from 'react'
-import { Plus, Trash2, Send, MessageSquare, ChevronDown, ChevronUp, X } from 'lucide-react'
-import { getChats, getChatMessages, sendPrompt, deleteChat, getSecurityGroups, getMe } from '../api/client'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Plus, Trash2, Send, MessageSquare, ChevronDown, ChevronUp, Download, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { getChats, getChatMessages, sendPrompt, deleteChat, getSecurityGroups, getMe, exportReport } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
+import * as XLSX from 'xlsx'
+import {
+  ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart, Line,
+  PieChart, Pie, Cell, Legend,
+} from 'recharts'
 
-// ── Simple inline markdown renderer (no dependency) ──────────────────────────
+// ── Palette ───────────────────────────────────────────────────────────────────
+const CHART_COLORS = ['#1A4FA0', '#F47920', '#22c55e', '#a855f7', '#06b6d4', '#f43f5e', '#eab308', '#64748b']
+
+// ── Simple inline markdown renderer ──────────────────────────────────────────
 function InlineBold({ text }) {
   const parts = text.split(/\*\*(.+?)\*\*/g)
   return <>{parts.map((p, i) => i % 2 === 1 ? <strong key={i}>{p}</strong> : p)}</>
@@ -33,7 +43,225 @@ function MarkdownText({ text }) {
   )
 }
 
-// ── SPYDER synthesis panel ────────────────────────────────────────────────────
+// ── Download helpers ──────────────────────────────────────────────────────────
+function downloadCSV(sqlResults, requestId) {
+  const rows = sqlResults.flatMap(sr =>
+    (sr.rows || []).map(row => ({ _query: sr.label || sr.query_id, ...row }))
+  )
+  if (!rows.length) return
+  const cols = Object.keys(rows[0])
+  const csv = [cols.join(','), ...rows.map(r => cols.map(c => JSON.stringify(r[c] ?? '')).join(','))].join('\n')
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  a.download = `report_${requestId || Date.now()}.csv`
+  a.click()
+}
+
+function downloadExcel(sqlResults, requestId) {
+  const wb = XLSX.utils.book_new()
+  sqlResults.forEach(sr => {
+    if (!sr.rows?.length) return
+    const ws = XLSX.utils.json_to_sheet(sr.rows)
+    XLSX.utils.book_append_sheet(wb, ws, (sr.label || sr.query_id || 'Sheet').slice(0, 31))
+  })
+  if (!wb.SheetNames.length) return
+  XLSX.writeFile(wb, `report_${requestId || Date.now()}.xlsx`)
+}
+
+async function downloadPDF(panelRef, requestId) {
+  if (!panelRef.current) return
+  try {
+    const { default: html2canvas } = await import('html2canvas')
+    const { default: jsPDF } = await import('jspdf')
+    const canvas = await html2canvas(panelRef.current, { scale: 2, useCORS: true })
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pageW = 190
+    const imgH = (canvas.height * pageW) / canvas.width
+    const pageH = 277
+    let yPos = 0
+    let remaining = imgH
+
+    while (remaining > 0) {
+      if (yPos > 0) pdf.addPage()
+      const sliceH = Math.min(remaining, pageH)
+      pdf.addImage(imgData, 'PNG', 10, 10, pageW, imgH, '', 'FAST', 0)
+      remaining -= sliceH
+      yPos += sliceH
+      if (remaining > 0) break // simple single-page for now; multi-page needs canvas slicing
+    }
+    pdf.save(`report_${requestId || Date.now()}.pdf`)
+  } catch (e) {
+    toast.error('PDF export failed: ' + e.message)
+  }
+}
+
+// ── KPI Card ─────────────────────────────────────────────────────────────────
+function KPICards({ rows, columns }) {
+  const row = rows[0]
+  return (
+    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      {columns.map((col, i) => {
+        const val = row[col]
+        const isNum = typeof val === 'number'
+        return (
+          <div key={col} style={{
+            flex: '1 1 120px', minWidth: 100, maxWidth: 200,
+            padding: '10px 14px',
+            borderRadius: 8,
+            background: 'var(--bg-subtle)',
+            border: '1px solid var(--border-default)',
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{col}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: isNum ? 'var(--brand-orange, #F47920)' : 'var(--text-primary)' }}>
+              {isNum ? val.toLocaleString() : String(val ?? '—')}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Chart view ────────────────────────────────────────────────────────────────
+function ChartView({ rows, columns, chartType }) {
+  const catCol = columns.find(c => typeof rows[0][c] === 'string') || columns[0]
+  const numCols = columns.filter(c => typeof rows[0][c] === 'number')
+  if (!numCols.length) return null
+
+  const data = rows.slice(0, 30).map(r => ({ name: String(r[catCol] ?? ''), ...Object.fromEntries(numCols.map(nc => [nc, r[nc]])) }))
+
+  const axisStyle = { fontSize: 10, fill: 'var(--text-tertiary)' }
+  const tipStyle  = { fontSize: 11 }
+
+  if (chartType === 'pie' && numCols.length >= 1) {
+    const pieData = data.map(d => ({ name: d.name, value: d[numCols[0]] }))
+    return (
+      <ResponsiveContainer width="100%" height={220}>
+        <PieChart>
+          <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+            {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+          </Pie>
+          <Tooltip formatter={v => v?.toLocaleString()} contentStyle={tipStyle} />
+          <Legend iconSize={10} wrapperStyle={{ fontSize: 10 }} />
+        </PieChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (chartType === 'line') {
+    return (
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+          <XAxis dataKey="name" tick={axisStyle} />
+          <YAxis tick={axisStyle} width={50} />
+          <Tooltip formatter={v => v?.toLocaleString()} contentStyle={tipStyle} />
+          {numCols.map((nc, i) => <Line key={nc} type="monotone" dataKey={nc} stroke={CHART_COLORS[i % CHART_COLORS.length]} dot={false} strokeWidth={2} />)}
+        </LineChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  // default: bar
+  return (
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+        <XAxis dataKey="name" tick={axisStyle} />
+        <YAxis tick={axisStyle} width={50} />
+        <Tooltip formatter={v => v?.toLocaleString()} contentStyle={tipStyle} />
+        {numCols.map((nc, i) => <Bar key={nc} dataKey={nc} fill={CHART_COLORS[i % CHART_COLORS.length]} radius={[2, 2, 0, 0]} />)}
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+// ── SpyderTable ───────────────────────────────────────────────────────────────
+function SpyderTable({ sr }) {
+  const rows    = sr.rows || []
+  const columns = sr.columns || (rows[0] ? Object.keys(rows[0]) : [])
+  if (rows.length === 0) return null
+
+  const numCols   = columns.filter(c => typeof rows[0][c] === 'number')
+  const hasDate   = columns.some(c => /date|month|year|week|day|time/i.test(c))
+  const isKPI     = rows.length === 1 && columns.length <= 4
+  const hasChart  = numCols.length > 0 && !isKPI
+
+  // Default chart type heuristic
+  const defaultChart = hasDate ? 'line' : rows.length <= 6 && numCols.length === 1 ? 'pie' : 'bar'
+  const [view, setView]           = useState(isKPI ? 'kpi' : hasChart ? 'chart' : 'table')
+  const [chartType, setChartType] = useState(defaultChart)
+
+  const viewBtnStyle = active => ({
+    fontSize: 10, padding: '2px 7px', borderRadius: 4,
+    border: `1px solid ${active ? 'var(--brand-blue, #1A4FA0)' : 'var(--border-default)'}`,
+    background: active ? 'var(--brand-blue-subtle, #eff6ff)' : 'transparent',
+    color: active ? 'var(--brand-blue, #1A4FA0)' : 'var(--text-secondary)',
+    cursor: 'pointer',
+  })
+
+  return (
+    <div>
+      {/* Row: label + view toggles */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {sr.label || sr.query_id} <span style={{ fontWeight: 400 }}>({sr.row_count} rows)</span>
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {isKPI && <button style={viewBtnStyle(view === 'kpi')} onClick={() => setView('kpi')}>KPI</button>}
+          {hasChart && (
+            <>
+              <button style={viewBtnStyle(view === 'chart' && chartType === 'bar')}  onClick={() => { setView('chart'); setChartType('bar') }}>Bar</button>
+              <button style={viewBtnStyle(view === 'chart' && chartType === 'line')} onClick={() => { setView('chart'); setChartType('line') }}>Line</button>
+              <button style={viewBtnStyle(view === 'chart' && chartType === 'pie')}  onClick={() => { setView('chart'); setChartType('pie') }}>Pie</button>
+            </>
+          )}
+          <button style={viewBtnStyle(view === 'table')} onClick={() => setView('table')}>Table</button>
+        </div>
+      </div>
+
+      {/* Content */}
+      {view === 'kpi' && <KPICards rows={rows} columns={columns} />}
+
+      {view === 'chart' && <ChartView rows={rows} columns={columns} chartType={chartType} />}
+
+      {view === 'table' && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+            <thead>
+              <tr>
+                {columns.map(c => (
+                  <th key={c} style={{ padding: '3px 8px', background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-default)', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, 20).map((row, ri) => (
+                <tr key={ri} style={{ borderBottom: '1px solid var(--border-default)' }}>
+                  {columns.map(c => (
+                    <td key={c} style={{ padding: '3px 8px', color: 'var(--text-primary)' }}>
+                      {row[c] === null || row[c] === undefined ? '—' : String(row[c])}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length > 20 && (
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', padding: '3px 8px' }}>
+              Showing 20 of {rows.length} rows
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── SpyderSection ─────────────────────────────────────────────────────────────
 function SpyderSection({ section, value, isFirst }) {
   if (!value) return null
   const labelStyle = {
@@ -70,32 +298,72 @@ function SpyderSection({ section, value, isFirst }) {
   return null
 }
 
-function SpyderPanel({ result }) {
+// ── SpyderPanel ───────────────────────────────────────────────────────────────
+function SpyderPanel({ result, prompt }) {
+  const panelRef = useRef()
+  const [exportOpen, setExportOpen] = useState(false)
+  const [feedback, setFeedback] = useState(null)
+
   const llm    = result.llm_response || {}
   const sqlRes = (result.sql_results || []).filter(r => r.status === 'success' && r.rows?.length > 0)
 
-  // Action 3: use dynamic sections from schema; fall back to legacy keys if absent
-  const schemaSections = (result.expected_output_schema?.sections || [])
-    .filter(s => s.source === 'llm')
+  const downloadBrandedReport = async () => {
+    // Extract synthesis text from LLM response
+    const sections = result.expected_output_schema?.sections || []
+    let synthesis  = llm.synthesized_answer || ''
+    if (!synthesis) {
+      sections
+        .filter(s => s.source === 'llm')
+        .forEach(s => {
+          const v = llm[s.section_id]
+          if (typeof v === 'string' && v.trim()) synthesis += v + '\n'
+          if (Array.isArray(v) && v.length)      synthesis += v.join('\n') + '\n'
+        })
+    }
+    const recs = Array.isArray(llm.recommendations) ? llm.recommendations : []
+    if (!synthesis && recs.length) synthesis = recs.join('\n')
 
-  const legacyAnswer = llm.synthesized_answer
-  const legacyRecs   = Array.isArray(llm.recommendations) ? llm.recommendations : []
+    try {
+      const title = prompt
+        ? `Report: ${prompt.slice(0, 60)}${prompt.length > 60 ? '…' : ''}`
+        : 'DataMind Report'
+      const res = await exportReport({
+        title,
+        prompt:      prompt || '',
+        synthesis:   synthesis.trim(),
+        sql_results: sqlRes.map(sr => ({
+          label:   sr.label || sr.query_id || 'Results',
+          rows:    sr.rows  || [],
+          columns: sr.columns || (sr.rows?.[0] ? Object.keys(sr.rows[0]) : []),
+        })),
+      })
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a   = document.createElement('a')
+      a.href     = url
+      a.download = `datamind_report_${result.request_id || Date.now()}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Branded report downloaded')
+    } catch (e) {
+      toast.error('Report failed: ' + (e.response?.data?.detail || e.message))
+    }
+  }
+
+  const schemaSections = (result.expected_output_schema?.sections || []).filter(s => s.source === 'llm')
+  const legacyAnswer   = llm.synthesized_answer
+  const legacyRecs     = Array.isArray(llm.recommendations) ? llm.recommendations : []
 
   const hasDynamicContent = schemaSections.some(s => {
     const v = llm[s.section_id]
     return v && (typeof v === 'string' ? v.trim() : Array.isArray(v) ? v.length > 0 : false)
   })
-  const hasLegacyContent = !!(legacyAnswer || legacyRecs.length > 0)
 
-  if (sqlRes.length === 0 && !hasDynamicContent && !hasLegacyContent) return null
+  if (sqlRes.length === 0 && !hasDynamicContent && !legacyAnswer && !legacyRecs.length) return null
+
+  const hasData = sqlRes.length > 0
 
   return (
-    <div style={{
-      marginTop: 14,
-      border: '1px solid var(--border-default)',
-      borderRadius: 8,
-      overflow: 'hidden',
-    }}>
+    <div ref={panelRef} style={{ marginTop: 14, border: '1px solid var(--border-default)', borderRadius: 8, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
@@ -109,16 +377,94 @@ function SpyderPanel({ result }) {
         <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: 'var(--text-tertiary)' }}>
           {result.domain || ''}
         </span>
+
+        {/* Feedback buttons */}
+        <button
+          onClick={() => { setFeedback(f => f === 'up' ? null : 'up'); toast.success('Thanks for the feedback!', { icon: '👍', duration: 2000 }) }}
+          style={{
+            display: 'flex', alignItems: 'center',
+            padding: '2px 6px', borderRadius: 4,
+            border: `1px solid ${feedback === 'up' ? '#22c55e' : 'var(--border-default)'}`,
+            background: feedback === 'up' ? '#f0fdf4' : 'transparent',
+            color: feedback === 'up' ? '#22c55e' : 'var(--text-secondary)',
+            cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+          }}
+        >
+          <ThumbsUp size={12} />
+        </button>
+        <button
+          onClick={() => { setFeedback(f => f === 'down' ? null : 'down'); toast('We\'ll use this to improve', { icon: '👎', duration: 2000 }) }}
+          style={{
+            display: 'flex', alignItems: 'center',
+            padding: '2px 6px', borderRadius: 4,
+            border: `1px solid ${feedback === 'down' ? '#ef4444' : 'var(--border-default)'}`,
+            background: feedback === 'down' ? '#fef2f2' : 'transparent',
+            color: feedback === 'down' ? '#ef4444' : 'var(--text-secondary)',
+            cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+          }}
+        >
+          <ThumbsDown size={12} />
+        </button>
+
+        {/* Export menu */}
+        <div style={{ position: 'relative', marginLeft: 8 }}>
+          <button
+            onClick={() => setExportOpen(o => !o)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              fontSize: 10, padding: '2px 8px', borderRadius: 4,
+              border: '1px solid var(--border-default)',
+              background: 'var(--bg-surface)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer', fontWeight: 600,
+              textTransform: 'none', letterSpacing: 0,
+            }}
+          >
+            <Download size={10} /> Export
+          </button>
+          {exportOpen && (
+            <div
+              style={{
+                position: 'absolute', right: 0, top: '110%', zIndex: 100,
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                minWidth: 150, overflow: 'hidden',
+              }}
+              onMouseLeave={() => setExportOpen(false)}
+            >
+              {[
+                hasData && { label: 'Excel (.xlsx)',       action: () => downloadExcel(sqlRes, result.request_id) },
+                hasData && { label: 'CSV (.csv)',           action: () => downloadCSV(sqlRes, result.request_id) },
+                hasData && { label: 'PDF — snapshot',      action: () => downloadPDF(panelRef, result.request_id) },
+                          { label: 'Branded Report (.pdf)', action: () => downloadBrandedReport() },
+              ].filter(Boolean).map(({ label, action }) => (
+                <button
+                  key={label}
+                  onClick={() => { action(); setExportOpen(false) }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '7px 12px', fontSize: 11,
+                    background: 'none', border: 'none',
+                    color: 'var(--text-primary)', cursor: 'pointer',
+                    textTransform: 'none', letterSpacing: 0, fontWeight: 400,
+                  }}
+                  onMouseEnter={e => e.target.style.background = 'var(--bg-subtle)'}
+                  onMouseLeave={e => e.target.style.background = 'none'}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* SQL result tables / charts / KPI */}
+        {sqlRes.map(sr => <SpyderTable key={sr.query_id} sr={sr} />)}
 
-        {/* SQL result tables + bar charts */}
-        {sqlRes.map(sr => (
-          <SpyderTable key={sr.query_id} sr={sr} />
-        ))}
-
-        {/* Dynamic LLM sections (Action 3) */}
+        {/* Dynamic LLM sections */}
         {schemaSections.length > 0
           ? schemaSections.map((section, idx) => (
               <SpyderSection
@@ -128,8 +474,7 @@ function SpyderPanel({ result }) {
                 isFirst={idx === 0 && sqlRes.length === 0}
               />
             ))
-          : /* Legacy fallback for old messages / SQL-only responses */
-            <>
+          : <>
               {legacyAnswer && (
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
@@ -157,105 +502,17 @@ function SpyderPanel({ result }) {
   )
 }
 
-function SpyderTable({ sr }) {
-  const [showChart, setShowChart] = useState(true)
-  const rows    = sr.rows || []
-  const columns = sr.columns || (rows[0] ? Object.keys(rows[0]) : [])
-  if (rows.length === 0) return null
-
-  // Auto-detect category col (first string) and value col (first number)
-  const catCol = columns.find(c => typeof rows[0][c] === 'string') || columns[0]
-  const numCol = columns.find(c => typeof rows[0][c] === 'number')
-  const maxVal = numCol ? Math.max(...rows.map(r => Number(r[numCol]) || 0)) : 0
-
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {sr.label || sr.query_id} <span style={{ fontWeight: 400 }}>({sr.row_count} rows)</span>
-        </div>
-        {numCol && (
-          <button
-            onClick={() => setShowChart(v => !v)}
-            style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-default)', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
-          >
-            {showChart ? 'Table' : 'Chart'}
-          </button>
-        )}
-      </div>
-
-      {/* Bar chart */}
-      {showChart && numCol && maxVal > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {rows.slice(0, 15).map((row, i) => {
-            const pct = maxVal > 0 ? (Number(row[numCol]) / maxVal) * 100 : 0
-            return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
-                <div style={{ width: 110, textAlign: 'right', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  {String(row[catCol] ?? '')}
-                </div>
-                <div style={{ flex: 1, background: 'var(--bg-subtle)', borderRadius: 3, height: 14, overflow: 'hidden' }}>
-                  <div style={{
-                    width: `${pct}%`, height: '100%',
-                    background: 'var(--brand-orange, #f97316)',
-                    borderRadius: 3,
-                    transition: 'width 0.4s ease',
-                    minWidth: pct > 0 ? 3 : 0,
-                  }} />
-                </div>
-                <div style={{ width: 64, color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right', flexShrink: 0 }}>
-                  {typeof row[numCol] === 'number' ? row[numCol].toLocaleString() : row[numCol]}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        /* Data table */
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-            <thead>
-              <tr>
-                {columns.map(c => (
-                  <th key={c} style={{ padding: '3px 8px', background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-default)', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                    {c}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.slice(0, 20).map((row, ri) => (
-                <tr key={ri} style={{ borderBottom: '1px solid var(--border-default)' }}>
-                  {columns.map(c => (
-                    <td key={c} style={{ padding: '3px 8px', color: 'var(--text-primary)' }}>
-                      {row[c] === null || row[c] === undefined ? '—' : String(row[c])}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {rows.length > 20 && (
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', padding: '3px 8px' }}>
-              Showing 20 of {rows.length} rows
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
+// ── Chats page ────────────────────────────────────────────────────────────────
 export default function Chats() {
-  const [chats, setChats] = useState([])
+  const [chats, setChats]               = useState([])
   const [activeChatId, setActiveChatId] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [prompt, setPrompt] = useState('')
-  const [sending, setSending] = useState(false)
-  const [allSGs, setAllSGs] = useState([])           // all SGs available
-  const [userSGIds, setUserSGIds] = useState([])      // IDs assigned to user
-  const [selectedSGIds, setSelectedSGIds] = useState([]) // currently selected
-  const [recentOpen, setRecentOpen] = useState(true)
+  const [messages, setMessages]         = useState([])
+  const [prompt, setPrompt]             = useState('')
+  const [sending, setSending]           = useState(false)
+  const [allSGs, setAllSGs]             = useState([])
+  const [userSGIds, setUserSGIds]       = useState([])
+  const [selectedSGIds, setSelectedSGIds] = useState([])
+  const [recentOpen, setRecentOpen]     = useState(true)
   const { user } = useAuth()
   const bottomRef = useRef()
   const suppressNextLoadRef = useRef(false)
@@ -267,52 +524,31 @@ export default function Chats() {
         setAllSGs(sgs)
         const assignedIds = (me.security_groups || []).map(sg => sg.SecurityGroupID)
         setUserSGIds(assignedIds)
-        // Default: select all assigned SGs
         setSelectedSGIds(assignedIds)
       })
-      .catch(() => {
-        getSecurityGroups().then(setAllSGs).catch(() => {})
-      })
+      .catch(() => { getSecurityGroups().then(setAllSGs).catch(() => {}) })
   }, [])
 
-  useEffect(() => {
-    if (activeChatId) loadMessages(activeChatId)
-  }, [activeChatId])
+  useEffect(() => { if (activeChatId) loadMessages(activeChatId) }, [activeChatId])
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  const loadChats = async () => {
-    try { setChats(await getChats()) } catch {}
-  }
+  const loadChats = async () => { try { setChats(await getChats()) } catch {} }
 
   const loadMessages = async id => {
-    if (suppressNextLoadRef.current) {
-      suppressNextLoadRef.current = false
-      return
-    }
+    if (suppressNextLoadRef.current) { suppressNextLoadRef.current = false; return }
     try {
       const raw = await getChatMessages(id)
-      setMessages(raw.map(m => ({
-        ...m,
-        SpyderResult: m.SpyderResult ?? m.Payload?.spyder_result ?? null,
-      })))
+      setMessages(raw.map(m => ({ ...m, SpyderResult: m.SpyderResult ?? m.Payload?.spyder_result ?? null })))
     } catch {}
   }
 
-  const toggleSG = id => {
-    setSelectedSGIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    )
-  }
+  const toggleSG = id => setSelectedSGIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const handleSend = async () => {
     if (!prompt.trim() || sending) return
     const text = prompt.trim()
     setPrompt('')
     setSending(true)
-
     const tempId = Date.now()
     setMessages(m => [...m, { MessageID: tempId, Role: 'user', Content: text }])
 
@@ -320,15 +556,13 @@ export default function Chats() {
       const res = await sendPrompt({
         chat_id: activeChatId || null,
         prompt: text,
-        // Send list if specific subset selected; null means backend uses all assigned
         security_group_ids: selectedSGIds.length > 0 ? selectedSGIds : null,
       })
       if (!activeChatId) {
-        suppressNextLoadRef.current = true   // prevent useEffect loadMessages from wiping SpyderResult
+        suppressNextLoadRef.current = true
         setActiveChatId(res.chat_id)
         await loadChats()
       }
-      const guardrailStatus = res.guardrail_status  // 'passed' | 'blocked' | 'error'
       setMessages(m => [
         ...m.filter(x => x.MessageID !== tempId),
         { MessageID: tempId + '_u', Role: 'user', Content: text },
@@ -336,7 +570,7 @@ export default function Chats() {
           MessageID: tempId + '_a',
           Role: 'assistant',
           Content: res.response,
-          GuardrailStatus: guardrailStatus,
+          GuardrailStatus: res.guardrail_status,
           BlockedBy: res.blocked_by,
           IntentResult: res.intent_result,
           SqlResult: res.sql_result,
@@ -353,14 +587,8 @@ export default function Chats() {
     }
   }
 
-  const handleKeyDown = e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
-  }
-
-  const startNewChat = () => {
-    setActiveChatId(null)
-    setMessages([])
-  }
+  const handleKeyDown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }
+  const startNewChat  = () => { setActiveChatId(null); setMessages([]) }
 
   const handleDelete = async (e, id) => {
     e.stopPropagation()
@@ -370,7 +598,6 @@ export default function Chats() {
     toast.success('Chat deleted')
   }
 
-  // SGs available to show in selector — user's assigned ones only
   const visibleSGs = allSGs.filter(sg => userSGIds.includes(sg.SecurityGroupID))
 
   return (
@@ -384,12 +611,9 @@ export default function Chats() {
       }}>
         <span style={{ fontSize: 14, fontWeight: 700 }}>Chats</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Multi-select SG chips */}
           {visibleSGs.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 2 }}>
-                Groups:
-              </span>
+              <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 2 }}>Groups:</span>
               {visibleSGs.map(sg => {
                 const selected = selectedSGIds.includes(sg.SecurityGroupID)
                 return (
@@ -398,16 +622,13 @@ export default function Chats() {
                     onClick={() => toggleSG(sg.SecurityGroupID)}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4,
-                      padding: '3px 9px',
-                      borderRadius: 'var(--radius-pill)',
+                      padding: '3px 9px', borderRadius: 'var(--radius-pill)',
                       fontSize: 11.5, fontWeight: 600,
                       border: `1px solid ${selected ? 'var(--brand-orange)' : 'var(--border-default)'}`,
                       background: selected ? 'var(--brand-orange-subtle)' : 'var(--bg-surface)',
                       color: selected ? 'var(--brand-orange)' : 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      transition: 'all var(--transition-fast)',
+                      cursor: 'pointer', transition: 'all var(--transition-fast)',
                     }}
-                    title={selected ? 'Click to deselect' : 'Click to select'}
                   >
                     {sg.SecurityGroupName}
                   </button>
@@ -415,16 +636,13 @@ export default function Chats() {
               })}
             </div>
           )}
-          <button className="btn btn-primary btn-sm" onClick={startNewChat}>
-            <Plus size={12} /> New Chat
-          </button>
+          <button className="btn btn-primary btn-sm" onClick={startNewChat}><Plus size={12} /> New Chat</button>
         </div>
       </div>
 
       {/* Chat shell */}
       <div className="chat-shell">
         <div className="chat-main">
-          {/* Messages */}
           <div className="messages-area">
             {messages.length === 0 && (
               <div className="empty-state" style={{ flex: 1, justifyContent: 'center' }}>
@@ -434,14 +652,14 @@ export default function Chats() {
               </div>
             )}
             {messages.map((m, i) => {
-              const isBlocked = m.GuardrailStatus === 'blocked'
-              const isError = m.GuardrailStatus === 'error'
+              const isBlocked  = m.GuardrailStatus === 'blocked'
+              const isError    = m.GuardrailStatus === 'error'
+              const prevPrompt = i > 0 && messages[i - 1]?.Role === 'user' ? messages[i - 1].Content : ''
               const bubbleStyle = isBlocked
                 ? { borderLeft: '3px solid var(--color-error, #ef4444)', background: 'var(--bg-error-subtle, #fef2f2)' }
                 : isError
                   ? { borderLeft: '3px solid var(--color-warning, #f59e0b)', background: 'var(--bg-warning-subtle, #fffbeb)' }
                   : {}
-              const spyderResult  = m.SpyderResult
               return (
                 <div key={m.MessageID || i} className={`message ${m.Role}`}>
                   <div className="message-bubble" style={bubbleStyle}>
@@ -451,15 +669,12 @@ export default function Chats() {
                           display: 'inline-flex', alignItems: 'center', gap: 4,
                           fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em',
                           padding: '2px 8px', borderRadius: 'var(--radius-pill)',
-                          background: 'var(--color-error, #ef4444)',
-                          color: '#fff',
-                        }}>
-                          🚫 {m.BlockedBy}
-                        </span>
+                          background: 'var(--color-error, #ef4444)', color: '#fff',
+                        }}>🚫 {m.BlockedBy}</span>
                       </div>
                     )}
-                    {spyderResult
-                      ? <SpyderPanel result={spyderResult} />
+                    {m.SpyderResult
+                      ? <SpyderPanel result={m.SpyderResult} prompt={prevPrompt} />
                       : m.Content
                         ? <MarkdownText text={m.Content} />
                         : null
@@ -500,7 +715,7 @@ export default function Chats() {
           </div>
         </div>
 
-        {/* Recent chats strip — below input */}
+        {/* Recent chats strip */}
         {chats.length > 0 && (
           <div className="chat-recent">
             <div className="chat-recent-header" onClick={() => setRecentOpen(o => !o)}>

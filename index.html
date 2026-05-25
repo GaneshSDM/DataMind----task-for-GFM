@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manthan AI — Architecture Explorer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/cytoscape@3.29.2/dist/cytoscape.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+    code, .mono { font-family: 'JetBrains Mono', monospace; }
+    body { background: #07070f; color: #e2e8f0; margin: 0; }
+
+    .glass {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(10px);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .tab-btn { transition: all 0.2s; }
+    .tab-btn.active {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff !important;
+    }
+    .service-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+    .service-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+
+    .pipeline-connector { width: 2px; height: 28px; background: linear-gradient(to bottom, #374151, #6366f1); margin: 0 auto; }
+
+    @keyframes pulse-glow {
+      0%,100% { box-shadow: 0 0 6px rgba(99,102,241,0.4); }
+      50%      { box-shadow: 0 0 24px rgba(99,102,241,0.8), 0 0 48px rgba(99,102,241,0.2); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .slide-in { animation: slideIn 0.3s ease forwards; }
+
+    #cy { width: 100%; height: 100%; border-radius: 12px; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #07070f; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
+    .step-detail { white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6; color: #9ca3af; }
+
+    .modal-overlay { animation: slideIn 0.2s ease; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ─── HEADER ────────────────────────────────────────────── -->
+<header class="sticky top-0 z-50 glass border-b border-white/10">
+  <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-base">M</div>
+      <div>
+        <div class="text-white font-semibold leading-none">Manthan AI</div>
+        <div class="text-gray-500 text-xs mt-0.5">Architecture Explorer</div>
+      </div>
+    </div>
+    <nav class="flex gap-1">
+      <button onclick="showTab('overview')"   id="tab-overview"   class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-white">Overview</button>
+      <button onclick="showTab('pipeline')"   id="tab-pipeline"   class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white">Pipeline</button>
+      <button onclick="showTab('services')"   id="tab-services"   class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white">Services</button>
+      <button onclick="showTab('security')"   id="tab-security"   class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white">Security</button>
+      <button onclick="showTab('techstack')"  id="tab-techstack"  class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white">Tech Stack</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+<!-- ─── TAB: OVERVIEW ─────────────────────────────────────── -->
+<section id="sec-overview">
+  <div class="mb-8">
+    <h2 class="text-3xl font-bold text-white mb-2">
+      Intelligent Data Platform with <span class="gradient-text">AI Governance</span>
+    </h2>
+    <p class="text-gray-400 text-lg max-w-3xl">
+      Manthan AI lets business users query enterprise data in natural language while enforcing security policies
+      at every stage through a multi-agent AI pipeline.
+    </p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-4 gap-4 mb-8">
+    <div class="glass rounded-xl p-4 text-center"><div class="text-3xl font-bold gradient-text">8</div><div class="text-gray-400 text-sm mt-1">Microservices</div></div>
+    <div class="glass rounded-xl p-4 text-center"><div class="text-3xl font-bold gradient-text">6</div><div class="text-gray-400 text-sm mt-1">AI Agents</div></div>
+    <div class="glass rounded-xl p-4 text-center"><div class="text-3xl font-bold gradient-text">25+</div><div class="text-gray-400 text-sm mt-1">Database Tables</div></div>
+    <div class="glass rounded-xl p-4 text-center"><div class="text-3xl font-bold gradient-text">4</div><div class="text-gray-400 text-sm mt-1">Security Layers</div></div>
+  </div>
+
+  <!-- Diagram + detail panel -->
+  <div class="grid grid-cols-3 gap-6">
+    <div class="col-span-2 glass rounded-2xl p-4" style="height:520px">
+      <div class="text-xs text-gray-600 mb-2">● Click any node to explore · Scroll to zoom · Drag to pan</div>
+      <div id="cy" style="height:470px"></div>
+    </div>
+    <div id="node-detail" class="col-span-1 glass rounded-2xl p-6 flex flex-col justify-center" style="height:520px;overflow-y:auto">
+      <div class="text-center">
+        <div class="text-5xl mb-4">🏗️</div>
+        <h3 class="text-white font-semibold text-lg mb-2">Click a node</h3>
+        <p class="text-gray-500 text-sm">Select any component in the diagram to see its role, responsibilities, and connections.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TAB: PIPELINE ─────────────────────────────────────── -->
+<section id="sec-pipeline" class="hidden">
+  <div class="mb-8">
+    <h2 class="text-3xl font-bold text-white mb-2">Query Pipeline</h2>
+    <p class="text-gray-400">Watch a user query travel through the AI agent pipeline in real-time.</p>
+  </div>
+
+  <div class="glass rounded-2xl p-6 mb-6">
+    <h3 class="text-white font-medium mb-3">Try a scenario:</h3>
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button onclick="setQuery('Show me top 10 customers by revenue this quarter')" class="px-3 py-1.5 rounded-lg text-sm glass text-gray-300 hover:text-white border border-transparent hover:border-indigo-500 transition-all">📊 Sales Query</button>
+      <button onclick="setQuery('Delete all records from the users table')"             class="px-3 py-1.5 rounded-lg text-sm glass text-gray-300 hover:text-white border border-transparent hover:border-red-500 transition-all">🚫 Harmful Query</button>
+      <button onclick="setQuery('What are the top selling products in Asia region?')"   class="px-3 py-1.5 rounded-lg text-sm glass text-gray-300 hover:text-white border border-transparent hover:border-green-500 transition-all">🌏 Regional + Docs Query</button>
+    </div>
+    <div class="flex gap-3">
+      <input id="query-input" type="text" value="Show me top 10 customers by revenue this quarter"
+        class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors text-sm">
+      <button onclick="runPipeline()" id="run-btn"
+        class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg text-white font-medium text-sm hover:from-indigo-500 hover:to-purple-500 transition-all disabled:opacity-50">
+        Simulate →
+      </button>
+    </div>
+  </div>
+
+  <div class="flex gap-6">
+    <div class="flex-1" id="pipeline-steps">
+      <div class="text-center text-gray-600 py-16">Run a simulation to see the pipeline in action.</div>
+    </div>
+    <div class="w-72 flex-shrink-0">
+      <div id="pipeline-result" class="glass rounded-2xl p-5 sticky top-24">
+        <h3 class="text-white font-medium mb-2 text-sm">Pipeline Result</h3>
+        <div id="result-content" class="text-gray-500 text-sm">Run a simulation to see results here.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TAB: SERVICES ─────────────────────────────────────── -->
+<section id="sec-services" class="hidden">
+  <div class="mb-8">
+    <h2 class="text-3xl font-bold text-white mb-2">Microservices</h2>
+    <p class="text-gray-400">Eight independent services, each with a focused responsibility. Click any card for full details.</p>
+  </div>
+  <div id="services-grid" class="grid grid-cols-2 gap-4"></div>
+</section>
+
+<!-- ─── TAB: SECURITY ─────────────────────────────────────── -->
+<section id="sec-security" class="hidden">
+  <div class="mb-8">
+    <h2 class="text-3xl font-bold text-white mb-2">Security Model</h2>
+    <p class="text-gray-400">Defense in depth — four independent security layers from prompt to result.</p>
+  </div>
+
+  <div class="grid grid-cols-2 gap-5 mb-6">
+    <!-- Layer 1 -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-xl">🛡️</div>
+        <div><h3 class="text-white font-semibold">Layer 1 — Prompt Guardrails</h3><p class="text-gray-500 text-xs">Heimdall · :8001</p></div>
+      </div>
+      <p class="text-gray-400 text-sm mb-4">Every prompt is inspected before reaching any AI model.</p>
+      <div class="space-y-2">
+        <div class="flex items-start gap-2 text-sm"><span class="mt-1 w-2 h-2 rounded-full bg-red-400 flex-shrink-0"></span><span class="text-gray-300"><strong class="text-white">KEYWORD</strong> — blocks known destructive terms (DROP, DELETE, TRUNCATE…)</span></div>
+        <div class="flex items-start gap-2 text-sm"><span class="mt-1 w-2 h-2 rounded-full bg-orange-400 flex-shrink-0"></span><span class="text-gray-300"><strong class="text-white">SEMANTIC</strong> — embedding similarity to known threat patterns</span></div>
+        <div class="flex items-start gap-2 text-sm"><span class="mt-1 w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-300"><strong class="text-white">THRESHOLD</strong> — configurable similarity score ceiling</span></div>
+        <div class="flex items-start gap-2 text-sm"><span class="mt-1 w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span><span class="text-gray-300"><strong class="text-white">CONTEXT</strong> — fail-safe: blocks if user has no domain access</span></div>
+      </div>
+    </div>
+
+    <!-- Layer 2 -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center text-xl">🔒</div>
+        <div><h3 class="text-white font-semibold">Layer 2 — Data Access Control</h3><p class="text-gray-500 text-xs">SAGE · :8003</p></div>
+      </div>
+      <p class="text-gray-400 text-sm mb-4">Security policies enforced at SQL generation time, not as an afterthought.</p>
+      <div class="space-y-3">
+        <div class="bg-white/5 rounded-xl p-3">
+          <div class="text-white text-sm font-medium mb-1">Row-Level Security (RLS)</div>
+          <div class="text-gray-400 text-xs mb-2">Users only see rows matching their security group. India rep → only Indian data.</div>
+          <div class="mono text-xs text-green-400 bg-black/40 rounded-lg p-2">WHERE country IN ('India')  -- auto-injected</div>
+        </div>
+        <div class="bg-white/5 rounded-xl p-3">
+          <div class="text-white text-sm font-medium mb-1">Column-Level Security (CLS)</div>
+          <div class="text-gray-400 text-xs mb-2">Restricted columns excluded from generated SQL based on user permissions.</div>
+          <div class="mono text-xs text-red-400 bg-black/40 rounded-lg p-2">-- profit_usd excluded (restricted)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer 3 -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-xl">✅</div>
+        <div><h3 class="text-white font-semibold">Layer 3 — SQL Validation</h3><p class="text-gray-500 text-xs">VALKYRIE · :8004</p></div>
+      </div>
+      <p class="text-gray-400 text-sm mb-4">Generated SQL verified before it ever surfaces to the user.</p>
+      <div class="space-y-2">
+        <div class="flex items-center gap-2 text-sm"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-300"><strong class="text-white">Syntax</strong> — valid PostgreSQL</span></div>
+        <div class="flex items-center gap-2 text-sm"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-300"><strong class="text-white">RLS</strong> — filter expressions present in WHERE clause</span></div>
+        <div class="flex items-center gap-2 text-sm"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-300"><strong class="text-white">CLS</strong> — restricted columns absent from SELECT</span></div>
+        <div class="flex items-center gap-2 text-sm"><span class="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0"></span><span class="text-gray-300"><strong class="text-white">Semantic</strong> — LLM verifies intent matches the SQL</span></div>
+        <div class="mt-3 bg-white/5 rounded-lg p-3 text-xs text-gray-400">Correction loop: VALKYRIE calls SAGE <code class="text-yellow-400">/sql/correct</code> per failed query and re-validates (max 2 rounds).</div>
+      </div>
+    </div>
+
+    <!-- Layer 4 -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-xl">👤</div>
+        <div><h3 class="text-white font-semibold">Layer 4 — Identity & RBAC</h3><p class="text-gray-500 text-xs">Backend · :8000</p></div>
+      </div>
+      <p class="text-gray-400 text-sm mb-4">JWT-based auth with role-based access and fine-grained security groups.</p>
+      <div class="space-y-2 mb-4">
+        <div class="flex items-center justify-between bg-white/5 rounded-lg p-3">
+          <div><div class="text-white text-sm font-medium">User Role</div><div class="text-gray-500 text-xs">Chat + My Profile only</div></div>
+          <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">Limited</span>
+        </div>
+        <div class="flex items-center justify-between bg-white/5 rounded-lg p-3">
+          <div><div class="text-white text-sm font-medium">Admin Role</div><div class="text-gray-500 text-xs">Full platform access</div></div>
+          <span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">Full</span>
+        </div>
+      </div>
+      <div class="bg-white/5 rounded-lg p-3 text-xs text-gray-400">
+        <strong class="text-white">Security Groups</strong> — fine-grained data access. Each user belongs to groups that define allowed domains, RLS filters, and CLS column exclusions.
+      </div>
+    </div>
+  </div>
+
+  <!-- Security flow timeline -->
+  <div class="glass rounded-2xl p-6">
+    <h3 class="text-white font-semibold mb-5">End-to-End Security Flow</h3>
+    <div class="flex items-stretch gap-2 overflow-x-auto pb-2">
+      <div class="flex-shrink-0 flex flex-col items-center gap-2 min-w-[110px]">
+        <div class="w-full bg-blue-500/20 border border-blue-500/30 rounded-xl p-3 text-center flex-1 flex flex-col justify-center">
+          <div class="text-2xl mb-1">📝</div><div class="text-xs text-blue-400 font-medium">User Prompt</div>
+        </div>
+        <div class="text-xs text-gray-600">Any text</div>
+      </div>
+      <div class="flex items-center flex-shrink-0 text-gray-700 font-bold text-xl">→</div>
+      <div class="flex-shrink-0 flex flex-col items-center gap-2 min-w-[110px]">
+        <div class="w-full bg-red-500/20 border border-red-500/30 rounded-xl p-3 text-center flex-1 flex flex-col justify-center">
+          <div class="text-2xl mb-1">🛡️</div><div class="text-xs text-red-400 font-medium">Guardrail Check</div>
+        </div>
+        <div class="text-xs text-gray-600">Keyword / Semantic</div>
+      </div>
+      <div class="flex items-center flex-shrink-0 text-gray-700 font-bold text-xl">→</div>
+      <div class="flex-shrink-0 flex flex-col items-center gap-2 min-w-[110px]">
+        <div class="w-full bg-purple-500/20 border border-purple-500/30 rounded-xl p-3 text-center flex-1 flex flex-col justify-center">
+          <div class="text-2xl mb-1">🧠</div><div class="text-xs text-purple-400 font-medium">Intent + Domain</div>
+        </div>
+        <div class="text-xs text-gray-600">LLM classification</div>
+      </div>
+      <div class="flex items-center flex-shrink-0 text-gray-700 font-bold text-xl">→</div>
+      <div class="flex-shrink-0 flex flex-col items-center gap-2 min-w-[110px]">
+        <div class="w-full bg-green-500/20 border border-green-500/30 rounded-xl p-3 text-center flex-1 flex flex-col justify-center">
+          <div class="text-2xl mb-1">📝</div><div class="text-xs text-green-400 font-medium">SQL + RLS/CLS</div>
+        </div>
+        <div class="text-xs text-gray-600">Auto-injected filters</div>
+      </div>
+      <div class="flex items-center flex-shrink-0 text-gray-700 font-bold text-xl">→</div>
+      <div class="flex-shrink-0 flex flex-col items-center gap-2 min-w-[110px]">
+        <div class="w-full bg-yellow-500/20 border border-yellow-500/30 rounded-xl p-3 text-center flex-1 flex flex-col justify-center">
+          <div class="text-2xl mb-1">✅</div><div class="text-xs text-yellow-400 font-medium">SQL Validation</div>
+        </div>
+        <div class="text-xs text-gray-600">4-point check</div>
+      </div>
+      <div class="flex items-center flex-shrink-0 text-gray-700 font-bold text-xl">→</div>
+      <div class="flex-shrink-0 flex flex-col items-center gap-2 min-w-[110px]">
+        <div class="w-full bg-emerald-500/20 border border-emerald-500/30 rounded-xl p-3 text-center flex-1 flex flex-col justify-center">
+          <div class="text-2xl mb-1">📊</div><div class="text-xs text-emerald-400 font-medium">Safe Response</div>
+        </div>
+        <div class="text-xs text-gray-600">User sees their data</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TAB: TECH STACK ────────────────────────────────────── -->
+<section id="sec-techstack" class="hidden">
+  <div class="mb-8">
+    <h2 class="text-3xl font-bold text-white mb-2">Technology Stack</h2>
+    <p class="text-gray-400">Battle-tested technologies chosen for performance, developer experience, and scalability.</p>
+  </div>
+
+  <div class="grid grid-cols-3 gap-5 mb-5">
+    <!-- Frontend -->
+    <div class="glass rounded-2xl p-6">
+      <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><span class="text-blue-400">◆</span> Frontend</h3>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center text-lg">⚛️</div><div><div class="text-white text-sm font-medium">React 18</div><div class="text-gray-500 text-xs">UI framework + hooks</div></div></div>
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center text-lg">⚡</div><div><div class="text-white text-sm font-medium">Vite</div><div class="text-gray-500 text-xs">Build tool · dev server :5173</div></div></div>
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-indigo-500/20 flex items-center justify-center text-lg">🔀</div><div><div class="text-white text-sm font-medium">React Router v6</div><div class="text-gray-500 text-xs">Client-side routing</div></div></div>
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-cyan-500/20 flex items-center justify-center text-lg">🌐</div><div><div class="text-white text-sm font-medium">Axios</div><div class="text-gray-500 text-xs">HTTP client + JWT interceptor</div></div></div>
+      </div>
+    </div>
+
+    <!-- Backend -->
+    <div class="glass rounded-2xl p-6">
+      <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><span class="text-indigo-400">◆</span> Backend</h3>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-green-500/20 flex items-center justify-center text-lg">🐍</div><div><div class="text-white text-sm font-medium">FastAPI</div><div class="text-gray-500 text-xs">High-performance Python API</div></div></div>
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center text-lg">🔗</div><div><div class="text-white text-sm font-medium">SQLAlchemy 2.0</div><div class="text-gray-500 text-xs">ORM + Alembic migrations</div></div></div>
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center text-lg">🔐</div><div><div class="text-white text-sm font-medium">JWT + bcrypt</div><div class="text-gray-500 text-xs">Auth tokens + password hashing</div></div></div>
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center text-lg">📊</div><div><div class="text-white text-sm font-medium">LangGraph</div><div class="text-gray-500 text-xs">Agent pipeline state machine</div></div></div>
+      </div>
+    </div>
+
+    <!-- AI & Data -->
+    <div class="glass rounded-2xl p-6">
+      <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><span class="text-emerald-400">◆</span> AI & Data</h3>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center text-lg">🐘</div><div><div class="text-white text-sm font-medium">PostgreSQL + pgvector</div><div class="text-gray-500 text-xs">Relational + vector search · Supabase</div></div></div>
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-yellow-500/20 flex items-center justify-center text-lg">🤖</div><div><div class="text-white text-sm font-medium">Groq · LLaMA 3.3 70B</div><div class="text-gray-500 text-xs">Ultra-fast LLM inference</div></div></div>
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-teal-500/20 flex items-center justify-center text-lg">🔍</div><div><div class="text-white text-sm font-medium">BAAI/bge-large-en-v1.5</div><div class="text-gray-500 text-xs">1024-dim embedding model</div></div></div>
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-lg bg-pink-500/20 flex items-center justify-center text-lg">🎯</div><div><div class="text-white text-sm font-medium">sentence-transformers</div><div class="text-gray-500 text-xs">Local embedding inference</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Patterns -->
+  <div class="glass rounded-2xl p-6">
+    <h3 class="text-white font-semibold mb-5">Architecture Patterns</h3>
+    <div class="grid grid-cols-4 gap-4">
+      <div class="text-center bg-white/5 rounded-xl p-4"><div class="text-3xl mb-2">🔌</div><div class="text-white font-medium text-sm">Microservices</div><div class="text-gray-500 text-xs mt-1">8 independent services, single responsibility each</div></div>
+      <div class="text-center bg-white/5 rounded-xl p-4"><div class="text-3xl mb-2">🔄</div><div class="text-white font-medium text-sm">State Machine</div><div class="text-gray-500 text-xs mt-1">LangGraph orchestrates agent transitions with typed state</div></div>
+      <div class="text-center bg-white/5 rounded-xl p-4"><div class="text-3xl mb-2">🔒</div><div class="text-white font-medium text-sm">Defense in Depth</div><div class="text-gray-500 text-xs mt-1">4 independent security layers — no single point of failure</div></div>
+      <div class="text-center bg-white/5 rounded-xl p-4"><div class="text-3xl mb-2">📚</div><div class="text-white font-medium text-sm">RAG-Augmented</div><div class="text-gray-500 text-xs mt-1">pgvector retrieval enriches AI with domain documents</div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ─── SERVICE MODAL (dynamic) ──────────────────────────── -->
+<div id="modal-overlay" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6 modal-overlay" onclick="closeModal(event)">
+  <div id="modal-content" class="glass rounded-2xl p-8 max-w-xl w-full overflow-y-auto" style="max-height:80vh"></div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+// DATA
+// ──────────────────────────────────────────────
+const SERVICES = [
+  {
+    id: 'frontend', name: 'Frontend', emoji: '🖥️', port: '5173',
+    tech: 'React 18 + Vite', type: 'ui', color: '#3b82f6', bg: '#0f1f3d',
+    desc: 'User-facing SPA — natural language query interface with role-based navigation.',
+    detail: 'React 18 single-page app with JWT auth stored in localStorage. Role-based nav: User role sees Chat + My Profile only; Admin sees all management dashboards. Vite dev server proxies /api/* to backend :8000. Chat page renders SQL code blocks with RLS/CLS badges, guardrail status bubbles, and intent cards.',
+    responsibilities: ['Natural language query chat UI', 'JWT authentication flow', 'Admin dashboards (users, SGs, policies)', 'RAG document upload', 'Role-based navigation'],
+    connects: ['backend']
+  },
+  {
+    id: 'backend', name: 'Backend API', emoji: '⚙️', port: '8000',
+    tech: 'FastAPI + SQLAlchemy 2.0', type: 'core', color: '#6366f1', bg: '#0f0f3d',
+    desc: 'Core orchestration layer. Validates JWT, runs CRUD, triggers the LangGraph agent pipeline.',
+    detail: 'FastAPI app with 13 route files covering auth, users, geographies, domains, subdomains, security groups, RLS, CLS, guardrails, chats, SLM config, DB connections, and RAG. Auto-creates all 25+ tables on startup. Pre-warms the RAG embedder. Invokes the LangGraph pipeline on every chat message. Loads guardrails cache from DB at startup.',
+    responsibilities: ['JWT auth + bcrypt password hashing', 'CRUD for all 25+ entities', 'LangGraph pipeline orchestration', 'Background RAG ingestion tasks', 'Guardrails cache management'],
+    connects: ['frontend', 'heimdall', 'aria', 'sage', 'postgres', 'valkyrie']
+  },
+  {
+    id: 'heimdall', name: 'Heimdall', emoji: '🛡️', port: '8001',
+    tech: 'FastAPI + LangGraph', type: 'security', color: '#ef4444', bg: '#3d0f0f',
+    desc: 'Guardrail microservice — first line of defense. Blocks harmful prompts before any AI sees them.',
+    detail: 'LangGraph StateGraph with 5 nodes: embed_prompt → threshold → keyword → semantic → context → END. Reads prompt policies from the database at startup. Embeds prompts using all-MiniLM-L6-v2 (384-dim). CONTEXT node validates the user has at least one allowed domain — fails safe by blocking if not. All check types are configurable and stored in tracopp.prompt_policies.',
+    responsibilities: ['Keyword-based prompt blocking', 'Semantic similarity check against threat patterns', 'Configurable similarity threshold', 'Domain context validation (fail-safe)'],
+    connects: ['backend', 'postgres']
+  },
+  {
+    id: 'aria', name: 'ARIA', emoji: '🧠', port: '8002',
+    tech: 'FastAPI + Groq LLM + pgvector', type: 'agent', color: '#8b5cf6', bg: '#1f0f3d',
+    desc: 'Intent Classification Agent — understands what data the user is asking for.',
+    detail: 'Uses LLaMA 3.3 70B via Groq to classify the user\'s query into one or more structured intents. Each intent identifies: domain, sub-domain, data source (Structured/Unstructured/Both), target table, and relevant columns. For Unstructured/Both intents, runs pgvector RAG retrieval using BAAI/bge-large-en-v1.5 (top-5 chunks) filtered to the user\'s allowed domains. Domain-constrained: only suggests tables within the user\'s permitted domains.',
+    responsibilities: ['LLM-based query intent classification', 'Domain constraint enforcement', 'Send unstructured context to RAVEN', 'Schema-aware SQL planning', 'Shared schema_reference.json generation'],
+    connects: ['backend', 'raven', 'postgres']
+  },
+  {
+    id: 'sage', name: 'SAGE', emoji: '📝', port: '8003',
+    tech: 'FastAPI + Groq LLM', type: 'agent', color: '#10b981', bg: '#0f2d1f',
+    desc: 'SQL Generation Agent — converts classified intents into secure PostgreSQL queries.',
+    detail: 'Converts ARIA\'s structured intents to PostgreSQL using LLaMA 3.3 70B + 30 domain-specific few-shot examples. Automatically injects RLS WHERE clauses and excludes CLS-restricted columns. Handles correction requests from VALKYRIE via POST /sql/correct with 30 correction examples covering SCHEMA/SYNTAX/RLS/CLS/FILTER error types. Reads the shared schema_reference.json written by ARIA\'s bootstrap.',
+    responsibilities: ['PostgreSQL generation from structured intents', 'Automatic RLS WHERE clause injection', 'CLS column exclusion from SELECT', 'SQL correction on VALKYRIE feedback'],
+    connects: ['backend', 'valkyrie']
+  },
+  {
+    id: 'valkyrie', name: 'VALKYRIE', emoji: '✅', port: '8004',
+    tech: 'FastAPI + Groq LLM', type: 'agent', color: '#f59e0b', bg: '#2d1f0f',
+    desc: 'SQL Validation Agent — verifies security compliance before results reach the user.',
+    detail: 'Validates SAGE-generated SQL with four checks: syntax, CLS (restricted columns absent), RLS (filter expressions present in WHERE), and LLM semantic analysis verifying the SQL matches the original intent. Correction loop: calls SAGE /sql/correct per failed intent and re-validates (max 2 rounds). Packages synthesizer_context on pass for SPYDER to consume.',
+    responsibilities: ['SQL syntax validation', 'RLS filter presence check', 'CLS restricted column absence check', 'LLM semantic intent-SQL match', 'Correction loop orchestration (max 2 rounds)', 'Package synthesizer_context for SPYDER'],
+    connects: ['backend', 'sage', 'spyder']
+  },
+  {
+    id: 'spyder', name: 'SPYDER', emoji: '🕷️', port: '8005',
+    tech: 'FastAPI + Groq LLM', type: 'agent', color: '#ec4899', bg: '#3d0f1f',
+    desc: 'Response Synthesizer — turns SQL results and document context into natural language answers.',
+    detail: 'Receives the synthesizer_context bundle from VALKYRIE (validated SQL + intents) and unstructured context from RAVEN. Fetches actual data directly from PostgreSQL + pgvector — executing the validated SQL for structured results and performing vector similarity search for unstructured document chunks. Combines both into a coherent, business-friendly natural language response presented to the user.',
+    responsibilities: ['Receive synthesizer_context from VALKYRIE', 'Receive unstructured context from RAVEN', 'Fetch structured data from PostgreSQL (validated SQL)', 'Fetch unstructured chunks from pgvector', 'Synthesize final natural language response'],
+    connects: ['postgres']
+  },
+  {
+    id: 'raven', name: 'RAVEN', emoji: '🦅', port: '8006',
+    tech: 'FastAPI + pgvector', type: 'agent', color: '#14b8a6', bg: '#0f2d2b',
+    desc: 'RAG Query Agent — retrieves relevant document chunks for unstructured queries.',
+    detail: 'Embeds unstructured queries using BAAI/bge-large-en-v1.5 (1024-dim). Performs cosine similarity search on tracopp.rag_document_chunks via pgvector. Validates domain access against the user\'s security_profile — only returns chunks from domains the user is permitted to access. Passes the retrieved unstructured context directly to SPYDER for final synthesis.',
+    responsibilities: ['Query embedding (1024-dim)', 'pgvector cosine similarity search', 'Domain access validation', 'Pass unstructured context to SPYDER'],
+    connects: ['postgres', 'spyder']
+  },
+  {
+    id: 'postgres', name: 'PostgreSQL', emoji: '🐘', port: null,
+    tech: 'PostgreSQL + pgvector · Supabase', type: 'database', color: '#64748b', bg: '#1a1f2e',
+    desc: 'Primary database — relational storage plus vector search for document retrieval.',
+    detail: 'tracopp schema with 25+ tables across 7 categories. Auth/Users: User, Role, Permission, UserRole, RolePermission, UserSession. Security: SecurityGroup, RLS, CLS + mapping tables. Governance: Domain, SubDomain, Geography. LLM: SLMConfig, DBConnection, PromptPolicy, PromptPolicyCheck. Chat: ChatHistory, ChatMessage. RAG: RagCategory, RagSubCategory, RagIngestionRun, RagFile, RagDocumentChunk (VECTOR 1024). Audit: AuditLog.',
+    responsibilities: ['All application data storage', 'Vector embeddings (1024-dim) via pgvector', 'Security policy + group storage', 'Audit logging', 'Chat history persistence'],
+    connects: []
+  }
+];
+
+const TYPE_LABEL = { ui:'UI', core:'Core', security:'Security', agent:'AI Agent', database:'Database' };
+
+// ──────────────────────────────────────────────
+// PIPELINE SCENARIOS
+// ──────────────────────────────────────────────
+const SCENARIOS = {
+  safe: {
+    steps: [
+      { sid:'frontend',  label:'User submits query',           status:'passed',  detail:'Query received via chat interface. JWT token sent with request.' },
+      { sid:'backend',   label:'Backend — authenticate & route', status:'passed',  detail:'JWT validated ✓\nUser identity confirmed ✓\nLangGraph pipeline triggered.' },
+      { sid:'heimdall',  label:'Heimdall — Guardrail Check',   status:'passed',  detail:'KEYWORD   ✓  no destructive terms\nSEMANTIC  ✓  similarity 0.12 (threshold 0.75)\nTHRESHOLD ✓  score within limit\nCONTEXT   ✓  user has Sales domain access\n\nQuery cleared to proceed.' },
+      { sid:'aria',      label:'ARIA — Intent Classification', status:'passed',  detail:'Intent: "Top customers by revenue"\nDomain:       Sales\nSub-domain:   Customer Analytics\nData source:  Structured\nTable:        sales.fact_orders\nColumns:      customer_id, customer_name, revenue_usd, order_date' },
+      { sid:'sage',      label:'SAGE — SQL Generation',        status:'passed',  detail:"Generated SQL:\nSELECT customer_id, customer_name,\n       SUM(revenue_usd) AS total_revenue\nFROM   sales.fact_orders\nWHERE  order_date >= date_trunc('quarter', now())\n  AND  country IN ('India')   -- RLS auto-injected\n  -- profit_usd excluded     -- CLS applied\nGROUP  BY 1, 2\nORDER  BY 3 DESC\nLIMIT  10" },
+      { sid:'valkyrie',  label:'VALKYRIE — SQL Validation',    status:'passed',  detail:'SYNTAX    ✓  valid PostgreSQL\nRLS       ✓  country IN (\'India\') present in WHERE\nCLS       ✓  profit_usd absent from SELECT\nSEMANTIC  ✓  SQL matches intent\n\nAll checks passed.' },
+      { sid:'spyder',    label:'SPYDER — Response Synthesis',  status:'passed',  detail:'Synthesizing natural language response\nfrom SQL results + user intent context...' },
+      { sid:'frontend',  label:'Response delivered to user',   status:'passed',  detail:'✅ Guardrails passed\n✅ 1 intent classified\n📊 SQL shown with RLS + CLS badges\n📋 Intent card: Customer Analytics' }
+    ],
+    outcome: 'success',
+    summary: 'Pipeline completed successfully. SQL generated with RLS (country filter) and CLS (profit_usd excluded) applied. User sees only their authorized data.'
+  },
+  harmful: {
+    steps: [
+      { sid:'frontend',  label:'User submits query',            status:'passed',  detail:'Query received via chat interface.' },
+      { sid:'backend',   label:'Backend — authenticate & route', status:'passed',  detail:'JWT validated ✓\nLangGraph pipeline triggered.' },
+      { sid:'heimdall',  label:'Heimdall — Guardrail Check',    status:'blocked', detail:'KEYWORD ✗  matched "delete" + "records"\nPolicy: "SQL Injection & Destructive Commands"\n\nQuery BLOCKED. Pipeline halted.\nNo data or AI model was reached.' }
+    ],
+    outcome: 'blocked',
+    summary: 'Query blocked at Layer 1 by Heimdall. Policy "SQL Injection & Destructive Commands" triggered. No AI model or data was ever accessed.'
+  },
+  regional: {
+    steps: [
+      { sid:'frontend',  label:'User submits query',             status:'passed', detail:'Query received via chat interface.' },
+      { sid:'backend',   label:'Backend — authenticate & route', status:'passed', detail:'JWT validated ✓\nLangGraph pipeline triggered.' },
+      { sid:'heimdall',  label:'Heimdall — Guardrail Check',     status:'passed', detail:'KEYWORD   ✓\nSEMANTIC  ✓  similarity 0.08\nTHRESHOLD ✓\nCONTEXT   ✓\n\nQuery cleared.' },
+      { sid:'aria',      label:'ARIA — Intent Classification',   status:'passed', detail:'Intent: "Top products by region"\nDomain:       Sales\nSub-domain:   Product Analytics\nData source:  Both (Structured + Unstructured)\nTable:        sales.fact_orders\n\nRAG retrieval triggered (data_source = Both):\n• Product_Catalog_Asia.pdf  p.4  sim: 0.91\n• Regional_Market_Q4.pdf    p.8  sim: 0.87\n• Distribution_Guide.docx   p.3  sim: 0.82' },
+      { sid:'sage',      label:'SAGE — SQL Generation',          status:'passed', detail:"Generated SQL:\nSELECT product_name, SUM(units_sold) AS total_units\nFROM   sales.fact_orders\nWHERE  region = 'Asia'\n  AND  country IN ('India')  -- RLS auto-injected\nGROUP  BY product_name\nORDER  BY total_units DESC\nLIMIT  20" },
+      { sid:'valkyrie',  label:'VALKYRIE — SQL Validation',      status:'passed', detail:'SYNTAX    ✓\nRLS       ✓\nCLS       ✓\nSEMANTIC  ✓\n\nAll checks passed.' },
+      { sid:'spyder',    label:'SPYDER — Response Synthesis',    status:'passed', detail:'Combining SQL results with 3 retrieved\ndocument chunks into unified response...' },
+      { sid:'frontend',  label:'Response delivered to user',     status:'passed', detail:'✅ Guardrails passed\n✅ 1 intent classified\n📊 SQL results shown\n📄 3 document sources cited with page refs' }
+    ],
+    outcome: 'success',
+    summary: 'Hybrid query processed. Structured SQL results combined with 3 retrieved document chunks for a comprehensive, context-rich answer.'
+  }
+};
+
+// ──────────────────────────────────────────────
+// TAB SWITCHING
+// ──────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('section[id^="sec-"]').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('active');
+    b.classList.add('text-gray-400');
+    b.classList.remove('text-white');
+  });
+  document.getElementById('sec-' + id).classList.remove('hidden');
+  const btn = document.getElementById('tab-' + id);
+  btn.classList.add('active');
+  btn.classList.remove('text-gray-400');
+  btn.classList.add('text-white');
+}
+
+// ──────────────────────────────────────────────
+// CYTOSCAPE DIAGRAM
+// ──────────────────────────────────────────────
+function initCytoscape() {
+  const cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: [
+      { data: { id:'frontend',  label:'🖥️ Frontend\n:5173',      color:'#3b82f6', bg:'#0c1a30' } },
+      { data: { id:'backend',   label:'⚙️ Backend API\n:8000',   color:'#6366f1', bg:'#0c0c30' } },
+      { data: { id:'heimdall',  label:'🛡️ Heimdall\n:8001',      color:'#ef4444', bg:'#2d0c0c' } },
+      { data: { id:'aria',      label:'🧠 ARIA\n:8002',           color:'#8b5cf6', bg:'#180c30' } },
+      { data: { id:'sage',      label:'📝 SAGE\n:8003',           color:'#10b981', bg:'#0c2318' } },
+      { data: { id:'valkyrie',  label:'✅ VALKYRIE\n:8004',       color:'#f59e0b', bg:'#231800' } },
+      { data: { id:'spyder',    label:'🕷️ SPYDER\n:8005',        color:'#ec4899', bg:'#2d0c18' } },
+      { data: { id:'raven',     label:'🦅 RAVEN\n:8006',          color:'#14b8a6', bg:'#0c2322' } },
+      { data: { id:'postgres',  label:'🐘 PostgreSQL\n+pgvector', color:'#64748b', bg:'#141920' } },
+      { data: { id:'user',      label:'👤 User\n(Business)',    color:'#22d3ee', bg:'#0b1e22' } },
+      { data: { source:'frontend',  target:'backend',  label:'HTTP/REST' } },
+      { data: { source:'backend',   target:'heimdall', label:'guardrail' } },
+      { data: { source:'heimdall',  target:'aria',     label:'if passed' } },
+      { data: { source:'aria',      target:'sage',     label:'structured' } },
+      { data: { source:'sage',      target:'valkyrie', label:'validate' } },
+      { data: { source:'valkyrie',  target:'sage',     label:'correct' } },
+      { data: { source:'valkyrie',  target:'spyder',   label:'synthesizer_context' } },
+      { data: { source:'aria',      target:'raven',    label:'unstructured context' } },
+      { data: { source:'raven',     target:'spyder',   label:'unstructured context' } },
+      { data: { source:'spyder',    target:'postgres', label:'fetch data' } },
+      { data: { source:'spyder',    target:'user',     label:'Insights' } },
+      { data: { source:'backend',   target:'postgres', label:'CRUD' } },
+      { data: { source:'heimdall',  target:'postgres', label:'policies' } },
+      { data: { source:'aria',      target:'postgres', label:'schema + RAG' } },
+      { data: { source:'raven',     target:'postgres', label:'vector search' } },
+    ],
+    style: [
+      {
+        selector: 'node',
+        style: {
+          label: 'data(label)', 'text-wrap': 'wrap', 'text-valign': 'center', 'text-halign': 'center',
+          'background-color': 'data(bg)', 'border-color': 'data(color)', 'border-width': 1.5,
+          color: '#cbd5e1', 'font-size': '10px', 'font-family': 'Inter, sans-serif',
+          width: '95px', height: '55px', shape: 'round-rectangle', padding: '6px',
+          'text-max-width': '85px',
+        }
+      },
+      { selector: 'node:selected', style: { 'border-width': 3, 'border-color': '#fff', 'background-color': 'data(color)', color: '#fff' } },
+      {
+        selector: 'edge',
+        style: {
+          width: 1.2, 'line-color': '#2d3748', 'target-arrow-color': '#4a5568',
+          'target-arrow-shape': 'triangle', 'curve-style': 'bezier',
+          label: 'data(label)', 'font-size': '8px', color: '#4b5563',
+          'text-background-color': '#07070f', 'text-background-opacity': 0.9,
+          'text-background-padding': '2px', 'font-family': 'Inter, sans-serif',
+        }
+      },
+      { selector: '.hl-edge', style: { 'line-color': '#6366f1', 'target-arrow-color': '#6366f1', width: 2 } },
+      { selector: '#user', style: { 'border-style': 'dashed', shape: 'ellipse', 'font-weight': '600' } },
+    ],
+    layout: {
+      name: 'preset',
+      positions: {
+        frontend:  { x: 310, y: 35 },
+        backend:   { x: 310, y: 120 },
+        heimdall:  { x: 95,  y: 210 },
+        aria:      { x: 220, y: 300 },
+        sage:      { x: 380, y: 300 },
+        valkyrie:  { x: 520, y: 210 },
+        raven:     { x: 95,  y: 390 },
+        spyder:    { x: 310, y: 390 },
+        postgres:  { x: 490, y: 390 },
+        user:      { x: 310, y: 465 },
+      }
+    },
+    userZoomingEnabled: true,
+    userPanningEnabled: true,
+  });
+
+  cy.on('tap', 'node', function(e) {
+    const id = e.target.id();
+    cy.elements().removeClass('hl-edge');
+    e.target.connectedEdges().addClass('hl-edge');
+    renderNodeDetail(id);
+  });
+  cy.on('tap', function(e) {
+    if (e.target === cy) { cy.elements().removeClass('hl-edge'); resetNodeDetail(); }
+  });
+}
+
+function renderNodeDetail(id) {
+  const s = SERVICES.find(x => x.id === id);
+  if (!s) return;
+  const portBadge = s.port ? `<span class="mono text-xs px-2 py-0.5 rounded bg-white/10 text-gray-300">:${s.port}</span>` : '';
+  const connectedTo = s.connects.map(c => {
+    const cs = SERVICES.find(x => x.id === c);
+    return cs ? `<span class="text-xs px-2 py-1 rounded-full border" style="color:${cs.color};border-color:${cs.color}40;background:${cs.color}15">${cs.emoji} ${cs.name}</span>` : '';
+  }).join('');
+  document.getElementById('node-detail').innerHTML = `
+    <div class="slide-in">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style="background:${s.color}20;border:1px solid ${s.color}40">${s.emoji}</div>
+        <div>
+          <h3 class="text-white font-bold text-lg leading-tight">${s.name}</h3>
+          <div class="flex items-center gap-2 mt-1">${portBadge}<span class="text-gray-500 text-xs">${s.tech}</span></div>
+        </div>
+      </div>
+      <p class="text-gray-300 text-sm mb-4 leading-relaxed">${s.detail}</p>
+      <div class="mb-4">
+        <div class="text-xs text-gray-600 uppercase tracking-widest font-semibold mb-2">Responsibilities</div>
+        <ul class="space-y-1">${s.responsibilities.map(r=>`<li class="text-xs text-gray-300 flex items-start gap-2"><span style="color:${s.color}" class="mt-0.5 flex-shrink-0">▸</span>${r}</li>`).join('')}</ul>
+      </div>
+      ${connectedTo ? `<div><div class="text-xs text-gray-600 uppercase tracking-widest font-semibold mb-2">Connects To</div><div class="flex flex-wrap gap-1.5">${connectedTo}</div></div>` : ''}
+    </div>`;
+}
+
+function resetNodeDetail() {
+  document.getElementById('node-detail').innerHTML = `
+    <div class="text-center"><div class="text-5xl mb-4">🏗️</div>
+    <h3 class="text-white font-semibold text-lg mb-2">Click a node</h3>
+    <p class="text-gray-500 text-sm">Select any component in the diagram to see its role, responsibilities, and connections.</p></div>`;
+}
+
+// ──────────────────────────────────────────────
+// PIPELINE SIMULATION
+// ──────────────────────────────────────────────
+function setQuery(q) { document.getElementById('query-input').value = q; }
+
+async function runPipeline() {
+  const q = document.getElementById('query-input').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.textContent = 'Simulating…';
+
+  const ql = q.toLowerCase();
+  let scenario;
+  if (ql.includes('delete') || ql.includes('drop') || ql.includes('truncate') || ql.includes('remove all')) {
+    scenario = SCENARIOS.harmful;
+  } else if (ql.includes('asia') || ql.includes('region') || ql.includes('document') || ql.includes('report') || ql.includes('catalog')) {
+    scenario = SCENARIOS.regional;
+  } else {
+    scenario = SCENARIOS.safe;
+  }
+
+  document.getElementById('pipeline-steps').innerHTML = '';
+  document.getElementById('result-content').innerHTML = '<span class="text-gray-600">Running…</span>';
+
+  for (let i = 0; i < scenario.steps.length; i++) {
+    await sleep(650);
+    appendStep(scenario.steps[i], i, i < scenario.steps.length - 1 && scenario.steps[i].status !== 'blocked');
+    if (scenario.steps[i].status === 'blocked') break;
+  }
+
+  await sleep(500);
+  document.getElementById('result-content').innerHTML = buildResult(scenario);
+  btn.disabled = false; btn.textContent = 'Simulate →';
+}
+
+function appendStep(step, idx, showConnector) {
+  const s = SERVICES.find(x => x.id === step.sid);
+  const icon   = step.status === 'blocked' ? '🚫' : step.status === 'passed' ? '✅' : '⏳';
+  const border = step.status === 'blocked' ? 'border-red-500/60 bg-red-500/8' : 'border-green-500/50 bg-green-500/5';
+  const badge  = s ? `<span class="text-xs px-2 py-0.5 rounded-full border" style="color:${s.color};border-color:${s.color}40;background:${s.color}15">${s.name}</span>` : '';
+  const el = document.createElement('div');
+  el.innerHTML = `
+    <div class="slide-in glass rounded-xl p-4 border ${border}">
+      <div class="flex items-start gap-3">
+        <span class="text-xl flex-shrink-0 mt-0.5">${icon}</span>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span class="text-white font-medium text-sm">${step.label}</span>
+            ${badge}
+          </div>
+          <div class="step-detail">${step.detail}</div>
+        </div>
+      </div>
+    </div>
+    ${showConnector ? '<div class="pipeline-connector"></div>' : ''}`;
+  document.getElementById('pipeline-steps').appendChild(el);
+}
+
+function buildResult(scenario) {
+  const icon  = scenario.outcome === 'success' ? '✅' : '🚫';
+  const color = scenario.outcome === 'success' ? 'green' : 'red';
+  const title = scenario.outcome === 'success' ? 'Pipeline Completed' : 'Pipeline Blocked';
+  return `<div class="text-center mb-3"><span class="text-3xl">${icon}</span></div>
+    <div class="font-medium text-${color}-400 text-sm mb-2">${title}</div>
+    <p class="text-gray-300 text-xs leading-relaxed">${scenario.summary}</p>
+    <div class="mt-3 pt-3 border-t border-white/10 text-xs text-gray-600">
+      Steps executed: ${scenario.steps.length} ·
+      Status: <span class="text-${color}-400 font-medium">${scenario.outcome.toUpperCase()}</span>
+    </div>`;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ──────────────────────────────────────────────
+// SERVICES GRID
+// ──────────────────────────────────────────────
+function initServices() {
+  document.getElementById('services-grid').innerHTML = SERVICES.map(s => `
+    <div class="service-card glass rounded-2xl p-5" onclick="openModal('${s.id}')">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style="background:${s.color}20;border:1px solid ${s.color}40">${s.emoji}</div>
+          <div>
+            <h3 class="text-white font-semibold">${s.name}</h3>
+            <span class="mono text-xs text-gray-500">${s.port ? ':' + s.port : 'Supabase'}</span>
+          </div>
+        </div>
+        <span class="text-xs px-2 py-1 rounded-full flex-shrink-0 mt-1" style="background:${s.color}20;color:${s.color}">${TYPE_LABEL[s.type]}</span>
+      </div>
+      <p class="text-gray-400 text-sm mb-3 leading-relaxed">${s.desc}</p>
+      <div class="flex flex-wrap gap-1.5">
+        ${s.responsibilities.slice(0, 2).map(r => `<span class="text-xs bg-white/5 text-gray-500 px-2 py-1 rounded">${r}</span>`).join('')}
+        ${s.responsibilities.length > 2 ? `<span class="text-xs bg-white/5 text-gray-600 px-2 py-1 rounded">+${s.responsibilities.length - 2} more</span>` : ''}
+      </div>
+      <div class="mt-3 text-xs text-gray-600">${s.tech}</div>
+    </div>`).join('');
+}
+
+// ──────────────────────────────────────────────
+// MODAL
+// ──────────────────────────────────────────────
+function openModal(id) {
+  const s = SERVICES.find(x => x.id === id);
+  if (!s) return;
+  const connectedTo = s.connects.map(c => {
+    const cs = SERVICES.find(x => x.id === c);
+    return cs ? `<span class="flex items-center gap-1.5 text-sm px-3 py-1 rounded-full border" style="color:${cs.color};border-color:${cs.color}40;background:${cs.color}15">${cs.emoji} ${cs.name}</span>` : '';
+  }).join('');
+  document.getElementById('modal-content').innerHTML = `
+    <div class="flex items-start justify-between mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl" style="background:${s.color}20;border:2px solid ${s.color}40">${s.emoji}</div>
+        <div>
+          <h2 class="text-white font-bold text-xl">${s.name}</h2>
+          <div class="flex items-center gap-2 mt-1">
+            ${s.port ? `<span class="mono text-sm" style="color:${s.color}">:${s.port}</span>` : ''}
+            <span class="text-gray-500 text-sm">${s.tech}</span>
+          </div>
+        </div>
+      </div>
+      <button onclick="closeModal()" class="text-gray-500 hover:text-white text-xl leading-none mt-1">✕</button>
+    </div>
+    <p class="text-gray-300 text-sm leading-relaxed mb-6">${s.detail}</p>
+    <div class="mb-5">
+      <div class="text-xs text-gray-600 uppercase tracking-widest font-semibold mb-3">All Responsibilities</div>
+      <ul class="space-y-2">${s.responsibilities.map(r => `<li class="flex items-start gap-2 text-sm text-gray-300"><span style="color:${s.color}" class="mt-0.5 flex-shrink-0">▸</span>${r}</li>`).join('')}</ul>
+    </div>
+    ${connectedTo ? `<div><div class="text-xs text-gray-600 uppercase tracking-widest font-semibold mb-3">Connected Services</div><div class="flex flex-wrap gap-2">${connectedTo}</div></div>` : ''}`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.add('hidden');
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ──────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initCytoscape();
+  initServices();
+});
+</script>
+</body>
+</html>

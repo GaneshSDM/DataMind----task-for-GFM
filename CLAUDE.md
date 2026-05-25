@@ -106,9 +106,10 @@ Full-stack SLM (Small Language Model) management platform with governance/securi
 - `db/session.py` — SQLAlchemy engine + `SessionLocal` + `get_db` dependency
 - `models/user.py` — All 25+ ORM models in `schema="tracopp"`
 - `schemas/schemas.py` — All Pydantic request/response models
-- `api/routes/` — One file per domain: `auth`, `users`, `geo_domain`, `security`, `guardrails`, `chat`, `config`, `rag`
+- `api/routes/` — One file per domain: `auth`, `users`, `geo_domain`, `security`, `guardrails`, `chat`, `config`, `rag`, `agents`, `reports`
+- `api/routes/reports.py` — `POST /api/reports/export` → branded PDF via reportlab; accepts `{title, prompt, synthesis, sql_results[]}`; returns `application/pdf` stream
 
-API prefixes: `/api/auth`, `/api/users`, `/api/geographies`, `/api/domains`, `/api/subdomains`, `/api/security-groups`, `/api/rls`, `/api/cls`, `/api/guardrails`, `/api/chats`, `/api/slm-config`, `/api/db-connections`, `/api/rag`
+API prefixes: `/api/auth`, `/api/users`, `/api/geographies`, `/api/domains`, `/api/subdomains`, `/api/security-groups`, `/api/rls`, `/api/cls`, `/api/guardrails`, `/api/chats`, `/api/slm-config`, `/api/db-connections`, `/api/rag`, `/api/agents`, `/api/reports`
 
 All protected routes use `current_user = Depends(get_current_user)`. Admin-only ops call `check_admin()`.
 
@@ -182,7 +183,7 @@ Port **8003**. Groq LLM (`llama-3.3-70b-versatile`). Converts ARIA structured in
 
 **Key files:**
 - `sage.py` — FastAPI app; loads `backend/.env`; resolves `SCHEMA_FILE_PATH` to ARIA's `schema_reference.json` before importing `sql_agent`; adapts pipeline security_profile → SAGE input per intent
-- `sql_agent.py` — core SQL generation: `get_provider()`, `resolve_tables()`, `generate_sql()`, `build_output()`, `run_correction()`; reads `SCHEMA_FILE_PATH` env var at module level
+- `sql_agent.py` — core SQL generation: `get_llm_client()`, `resolve_tables()`, `generate_sql()`, `build_output()`, `run_correction(llm_config=None)`; reads `SCHEMA_FILE_PATH` env var at module level
 - `examples.json` — 30 few-shot SQL examples (Sales domain)
 - `correction_examples.json` — 30 validation error correction examples (SCHEMA/SYNTAX/RLS/CLS/FILTER)
 - `sync_schema.py` — one-time schema sync from live DB (use ARIA's `bootstrap_schema.py` instead for shared schema)
@@ -215,7 +216,7 @@ Port **8004**. Validates SAGE-generated SQL against security policy before surfa
 
 **Validation approach:**
 - Rule-based: syntax check, CLS (restricted cols from pipeline `security_profile`), RLS (filter expression presence in WHERE)
-- Groq LLM: semantic analysis via `validate_permissions()` using `GROQ_API_KEY`/`GROQ_MODEL` from `backend/.env`
+- LLM semantic analysis via `validate_permissions()` using `LLM_API_KEY`/`LLM_MODEL` (with `GROQ_*` fallback) from `backend/.env`
 - Correction loop: `valkyrie_node.py` calls SAGE `/sql/correct` per failed intent, re-validates (max 2 rounds)
 - Synthesizer context: packages `{request_id, prompt, security_profile, intents, validated_sql_results, retrieved_context}` on pass
 
@@ -257,13 +258,17 @@ uvicorn raven:app --host 0.0.0.0 --port 8006 --reload   # :8006
 ### Frontend (`frontend/src/`)
 
 - `main.jsx` — React Router v6, routes, auth wrapper, Toast provider
-- `api/client.js` — Axios + JWT interceptor; all API functions here
+- `api/client.js` — Axios + JWT interceptor; all API functions here; `exportReport(data)` sends blob request to `/api/reports/export`
 - `contexts/AuthContext.jsx` — Auth state, localStorage token, `theme`/`toggleTheme` (dark mode)
 - `components/common/CRUDPage.jsx` — generic list/create/edit/delete
-- `pages/Chats.jsx` — reads `guardrail_status`, `blocked_by`, `intent_result`, `sql_result`; renders SQL code blocks (with RLS/CLS badges) then intent cards
+- `pages/Chats.jsx` — SpyderPanel: Recharts bar/line/pie charts + KPI tiles (single-row auto-detect) + data tables; export menu: CSV (Blob), Excel (SheetJS), PDF snapshot (html2canvas+jsPDF), Branded Report (backend reportlab); 👍👎 feedback buttons; `prompt` prop passed from prior user message
 - `pages/UserProfile.jsx` — read-only profile (name/email/role/SGs) + change password form
+- `pages/AgentManagement.jsx` — 3-section layout: **Agents** (two-panel config editor), **Observability** (KPI tiles, agent health grid, pipeline traces placeholder), **Evaluation** (feedback KPIs, SQL quality, intent classification, RAG quality — all placeholder)
+- `pages/AppMapping.jsx` — Application User Mapping (admin only, dummy/frontend-only): left panel app list (seeded: Salesforce/Oracle/Outlook); right panel: user selector, per-API Read/Write checkboxes, auth-type-specific credential fields (Basic/API Key/OAuth2) with show/hide; Add Application + Add API modals; no backend wiring yet
 
 Role-based nav: `User` role sees Chats + My Profile only. `Admin` sees all.
+
+Frontend deps (key): `react`, `react-router-dom`, `axios`, `react-hot-toast`, `lucide-react`, `recharts`, `xlsx`, `html2canvas`, `jspdf`
 
 Vite proxies `/api/*` → `http://localhost:8000`.
 
@@ -309,3 +314,5 @@ Default admin: `admin@slm.local` / `Admin@1234` (created by `seed.py`).
 
 - **Pydantic Settings `extra='forbid'` (v2 default)** — `backend/app/core/config.py` uses `extra = "ignore"` so agent-only `.env` keys (`DB_HOST`, `GROQ_API_KEY`, `DB_SSLMODE`, etc.) don't crash backend startup. Do not remove this setting after single-`.env` consolidation.
 - **`bootstrap_schema.py` must load from `backend/.env`** — uses absolute `_BACKEND_ENV` path (same pattern as `aria.py`). Plain `load_dotenv()` with no path reads the local empty stub and fails with `DATABASE_URL not set`.
+- **`LLM_BASE_URL` must be base URL only** — e.g. `https://api.groq.com/openai/v1`. Code appends `/chat/completions`. Including the suffix causes double-path 404: `…/chat/completions/chat/completions`.
+- **reportlab required for `/api/reports/export`** — add to backend venv: `pip install reportlab`. No system dependencies (pure Python). Already in `requirements.txt`.

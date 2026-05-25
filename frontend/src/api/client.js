@@ -113,6 +113,10 @@ export const getAgents        = ()         => api.get('/agents/').then(r => r.da
 export const getAgentStatuses = ()         => api.get('/agents/statuses').then(r => r.data)
 export const updateAgent      = (name, d)  => api.put(`/agents/${name}`, d).then(r => r.data)
 
+// ── Reports ──────────────────────────────────────────────────
+export const exportReport = (data) =>
+  api.post('/reports/export', data, { responseType: 'blob' })
+
 // ── RAG ─────────────────────────────────────────────────────
 export const getRagCategories     = ()        => api.get('/rag/categories').then(r => r.data)
 export const createRagCategory    = d         => api.post('/rag/categories', d).then(r => r.data)
