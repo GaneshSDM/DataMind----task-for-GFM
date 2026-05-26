@@ -303,7 +303,9 @@ function SpyderSection({ section, value, isFirst }) {
 function SpyderPanel({ result, prompt }) {
   const panelRef = useRef()
   const [exportOpen, setExportOpen] = useState(false)
-  const [feedback, setFeedback] = useState(null)
+  const [feedback,        setFeedback]        = useState(null)
+  const [showCommentBox,  setShowCommentBox]  = useState(false)
+  const [feedbackComment, setFeedbackComment] = useState('')
 
   const llm    = result.llm_response || {}
   const sqlRes = (result.sql_results || []).filter(r => r.status === 'success' && r.rows?.length > 0)
@@ -394,7 +396,13 @@ function SpyderPanel({ result, prompt }) {
           <ThumbsUp size={12} />
         </button>
         <button
-          onClick={() => { setFeedback(f => f === 'down' ? null : 'down'); toast('We\'ll use this to improve', { icon: '👎', duration: 2000 }) }}
+          onClick={() => {
+            if (feedback === 'down') {
+              setFeedback(null); setShowCommentBox(false); setFeedbackComment('')
+            } else {
+              setFeedback('down'); setShowCommentBox(true)
+            }
+          }}
           style={{
             display: 'flex', alignItems: 'center',
             padding: '2px 6px', borderRadius: 4,
@@ -460,6 +468,48 @@ function SpyderPanel({ result, prompt }) {
           )}
         </div>
       </div>
+
+      {/* Thumbs-down comment box */}
+      {showCommentBox && (
+        <div style={{
+          padding: '10px 12px', borderBottom: '1px solid var(--border-default)',
+          background: '#fef2f2', display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: '#ef4444' }}>
+            What went wrong?{' '}
+            <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(optional)</span>
+          </div>
+          <textarea
+            autoFocus
+            value={feedbackComment}
+            onChange={e => setFeedbackComment(e.target.value)}
+            placeholder="e.g. Wrong data, incorrect calculation, missing context…"
+            rows={2}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              padding: '6px 8px', fontSize: 12, fontFamily: 'inherit',
+              border: '1px solid #fca5a5', borderRadius: 6,
+              background: 'var(--bg-surface)', color: 'var(--text-primary)',
+              resize: 'vertical', outline: 'none',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => { setShowCommentBox(false); toast('Feedback noted', { icon: '👎', duration: 2000 }) }}
+            >
+              Skip
+            </button>
+            <button
+              className="btn btn-sm"
+              style={{ background: '#ef4444', color: '#fff', border: 'none' }}
+              onClick={() => { setShowCommentBox(false); toast('Feedback submitted — thanks!', { icon: '👎', duration: 2000 }) }}
+            >
+              Submit
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* SQL result tables / charts / KPI */}
