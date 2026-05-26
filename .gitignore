@@ -34,8 +34,9 @@ sentence_transformers/
 huggingface/
 
 # ── Pipeline Queue ────────────────────────────────────────────────────────────
-# Per-request audit JSON files — not source-controlled
-Agents/pipeline_queue/*.json
+# Runtime artifacts — not source-controlled
+Agents/pipeline_queue/*
+!Agents/pipeline_queue/.gitignore
 
 # ── RAG / Schema ──────────────────────────────────────────────────────────────
 # Generated at runtime — rebuild via bootstrap_schema.py
@@ -43,7 +44,9 @@ Agents/IntentClassifier/schema_reference.json
 
 # ── Logs ─────────────────────────────────────────────────────────────────────
 logs/
+**/logs/
 *.log
+**/*.log
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store

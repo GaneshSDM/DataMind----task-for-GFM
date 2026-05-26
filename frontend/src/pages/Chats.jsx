@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Plus, Trash2, Send, MessageSquare, ChevronDown, ChevronUp, Download, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { getChats, getChatMessages, sendPrompt, deleteChat, getSecurityGroups, getMe, exportReport } from '../api/client'
+import { useSkills } from '../contexts/SkillsContext'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -515,7 +516,42 @@ export default function Chats() {
   const [recentOpen, setRecentOpen]     = useState(true)
   const { user } = useAuth()
   const bottomRef = useRef()
+  const textareaRef = useRef()
   const suppressNextLoadRef = useRef(false)
+
+  // ── @skill autocomplete ──────────────────────────────────────────────────
+  const { skills } = useSkills()
+  const [skillMenu, setSkillMenu]   = useState(false)
+  const [skillQuery, setSkillQuery] = useState('')
+
+  const activeSkills = useMemo(() => skills.filter(s => s.is_active), [skills])
+  const suggestedSkills = useMemo(() => {
+    if (!skillQuery) return activeSkills
+    return activeSkills.filter(s =>
+      s.name.includes(skillQuery) || s.description.toLowerCase().includes(skillQuery)
+    )
+  }, [activeSkills, skillQuery])
+
+  const handlePromptChange = e => {
+    const val = e.target.value
+    setPrompt(val)
+    const atMatch = val.match(/@(\w*)$/)
+    if (atMatch) {
+      setSkillMenu(true)
+      setSkillQuery(atMatch[1].toLowerCase())
+    } else {
+      setSkillMenu(false)
+      setSkillQuery('')
+    }
+  }
+
+  const insertSkill = skill => {
+    const params = (skill.parameters || []).filter(p => p.name)
+    const text = `@${skill.name}${params.map(p => ` ${p.name}=<${p.example || p.name}>`).join('')} `
+    setPrompt(p => p.replace(/@\w*$/, text))
+    setSkillMenu(false)
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
 
   useEffect(() => {
     loadChats()
@@ -587,7 +623,10 @@ export default function Chats() {
     }
   }
 
-  const handleKeyDown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }
+  const handleKeyDown = e => {
+    if (e.key === 'Escape' && skillMenu) { setSkillMenu(false); return }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+  }
   const startNewChat  = () => { setActiveChatId(null); setMessages([]) }
 
   const handleDelete = async (e, id) => {
@@ -694,14 +733,62 @@ export default function Chats() {
           </div>
 
           {/* Input bar */}
-          <div className="chat-input-bar">
+          <div className="chat-input-bar" style={{ position: 'relative' }}>
+            {/* @skill autocomplete dropdown */}
+            {skillMenu && suggestedSkills.length > 0 && (
+              <div style={{
+                position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 4, zIndex: 50,
+                background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+                borderRadius: 8, boxShadow: '0 -4px 16px rgba(0,0,0,0.12)',
+                maxHeight: 230, overflowY: 'auto',
+              }}>
+                <div style={{
+                  padding: '6px 12px 5px', fontSize: 9.5, fontWeight: 700,
+                  color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em',
+                  borderBottom: '1px solid var(--border-default)',
+                }}>
+                  Agent Skills {skillQuery && `— "${skillQuery}"`}
+                </div>
+                {suggestedSkills.map(s => (
+                  <div
+                    key={s.id}
+                    onMouseDown={e => { e.preventDefault(); insertSkill(s) }}
+                    style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 10 }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <code style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-blue, #1A4FA0)', fontFamily: 'monospace', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      @{s.name}
+                    </code>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {s.description}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>
+                        {s.type === 'template' && s.parameters?.length > 0
+                          ? `Params: ${s.parameters.map(p => p.name).join(', ')}`
+                          : s.type === 'view' ? 'DB View — no parameters' : 'No parameters'
+                        }
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {suggestedSkills.length === 0 && (
+                  <div style={{ padding: '10px 12px', fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    No matching skills for "{skillQuery}"
+                  </div>
+                )}
+              </div>
+            )}
             <textarea
+              ref={textareaRef}
               className="chat-textarea"
               rows={2}
-              placeholder="Type your prompt… (Enter to send, Shift+Enter for newline)"
+              placeholder="Type your prompt… (Enter to send · Shift+Enter for newline · @ for skills)"
               value={prompt}
-              onChange={e => setPrompt(e.target.value)}
+              onChange={handlePromptChange}
               onKeyDown={handleKeyDown}
+              onBlur={() => setTimeout(() => setSkillMenu(false), 150)}
               disabled={sending}
             />
             <button

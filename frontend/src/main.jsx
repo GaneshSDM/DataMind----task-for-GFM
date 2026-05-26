@@ -14,11 +14,14 @@ import RAGPipelines from './pages/RAGPipelines'
 import UserProfile from './pages/UserProfile'
 import AgentManagement from './pages/AgentManagement'
 import AppMapping from './pages/AppMapping'
+import AgentSkills from './pages/AgentSkills'
+import { SkillsProvider } from './contexts/SkillsContext'
 import './styles/global.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
+      <SkillsProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<SignIn />} />
@@ -41,10 +44,12 @@ createRoot(document.getElementById('root')).render(
             <Route path="rag-sub-categories" element={<RagSubCategoryPage />} />
             <Route path="agent-management"   element={<AgentManagement />} />
             <Route path="app-mapping"        element={<AppMapping />} />
+            <Route path="agent-skills"       element={<AgentSkills />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </SkillsProvider>
       <Toaster
         position="top-right"
         toastOptions={{

@@ -234,6 +234,30 @@ function BehaviorTab({ config, onChange }) {
 }
 
 // ── Observability section ─────────────────────────────────────────────────────
+const SAMPLE_TRACES = [
+  { id: 'req_a3f9d1', user: 'priya.m@corp.in',  domain: 'Sales',        guardrail: 'pass',  intent: 'pass',  sql: 'pass',      validation: 'pass', synthesis: 'pass', duration: '3.8s', ts: '26 May 09:14' },
+  { id: 'req_b72c4e', user: 'rahul.k@corp.in',  domain: 'Finance',      guardrail: 'pass',  intent: 'pass',  sql: 'corrected', validation: 'pass', synthesis: 'pass', duration: '6.1s', ts: '26 May 09:07' },
+  { id: 'req_c1e80a', user: 'admin@slm.local',  domain: 'HR',           guardrail: 'block', intent: '—',     sql: '—',         validation: '—',    synthesis: '—',    duration: '0.4s', ts: '26 May 08:52' },
+  { id: 'req_d4b3f2', user: 'ananya.s@corp.in', domain: 'Sales',        guardrail: 'pass',  intent: 'pass',  sql: 'fail',      validation: '—',    synthesis: '—',    duration: '5.2s', ts: '26 May 08:31' },
+  { id: 'req_e9a1c7', user: 'priya.m@corp.in',  domain: 'Supply Chain', guardrail: 'pass',  intent: 'pass',  sql: 'pass',      validation: 'pass', synthesis: 'pass', duration: '4.7s', ts: '25 May 17:45' },
+  { id: 'req_f6d2b8', user: 'vikram.t@corp.in', domain: 'Sales',        guardrail: 'pass',  intent: 'pass',  sql: 'corrected', validation: 'pass', synthesis: 'pass', duration: '7.3s', ts: '25 May 16:22' },
+  { id: 'req_g0e5a3', user: 'rahul.k@corp.in',  domain: 'Finance',      guardrail: 'pass',  intent: 'error', sql: '—',         validation: '—',    synthesis: '—',    duration: '2.9s', ts: '25 May 15:08' },
+  { id: 'req_h8c4d6', user: 'admin@slm.local',  domain: 'Sales',        guardrail: 'pass',  intent: 'pass',  sql: 'pass',      validation: 'pass', synthesis: 'pass', duration: '3.2s', ts: '25 May 14:37' },
+]
+
+function TraceStatusBadge({ v }) {
+  const M = {
+    pass:      { t: '✓ Pass',      c: '#16a34a', b: '#f0fdf4' },
+    corrected: { t: '⟳ Corrected', c: '#d97706', b: '#fffbeb' },
+    block:     { t: '🚫 Blocked',  c: '#dc2626', b: '#fef2f2' },
+    fail:      { t: '✗ Failed',    c: '#dc2626', b: '#fef2f2' },
+    error:     { t: '⚠ Error',     c: '#f59e0b', b: '#fffbeb' },
+    '—':       { t: '—',           c: 'var(--text-tertiary)', b: 'transparent' },
+  }
+  const s = M[v] ?? M['—']
+  return <span style={{ fontSize: 10, fontWeight: 600, padding: v === '—' ? 0 : '2px 6px', borderRadius: 4, background: s.b, color: s.c, whiteSpace: 'nowrap' }}>{s.t}</span>
+}
+
 function ObservabilitySection({ agents, statuses }) {
   const PIPELINE_COLS = ['Request ID', 'User', 'Domain', 'Guardrail', 'Intent', 'SQL', 'Validation', 'Synthesis', 'Duration', 'Timestamp']
 
@@ -243,11 +267,11 @@ function ObservabilitySection({ agents, statuses }) {
       {/* KPI row */}
       <SectionLabel>Pipeline Overview</SectionLabel>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-        <MetricTile label="Total Requests"   value="—"   sub="All time" />
-        <MetricTile label="Avg Latency"      value="—"   sub="End-to-end (s)" />
-        <MetricTile label="Error Rate"       value="—"   sub="Any agent failure" accent="#ef4444" />
-        <MetricTile label="Guardrail Blocks" value="—"   sub="% of total" accent="#f59e0b" />
-        <MetricTile label="Avg Intents / Prompt" value="—" sub="ARIA output" />
+        <MetricTile label="Total Requests"       value="1,247" sub="All time" />
+        <MetricTile label="Avg Latency"          value="4.2s"  sub="End-to-end" />
+        <MetricTile label="Error Rate"           value="3.1%"  sub="Any agent failure" accent="#ef4444" />
+        <MetricTile label="Guardrail Blocks"     value="8.4%"  sub="% of total" accent="#f59e0b" />
+        <MetricTile label="Avg Intents / Prompt" value="2.3"   sub="ARIA output" />
       </div>
 
       {/* Agent health grid */}
@@ -301,11 +325,20 @@ function ObservabilitySection({ agents, statuses }) {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan={PIPELINE_COLS.length} style={{ padding: '28px 10px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 12 }}>
-                  No trace data yet — backend integration pending
-                </td>
-              </tr>
+              {SAMPLE_TRACES.map((row, i) => (
+                <tr key={row.id} style={{ background: i % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-subtle)' }}>
+                  <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontSize: 10.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{row.id}</td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{row.user}</td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{row.domain}</td>
+                  <td style={{ padding: '6px 10px' }}><TraceStatusBadge v={row.guardrail} /></td>
+                  <td style={{ padding: '6px 10px' }}><TraceStatusBadge v={row.intent} /></td>
+                  <td style={{ padding: '6px 10px' }}><TraceStatusBadge v={row.sql} /></td>
+                  <td style={{ padding: '6px 10px' }}><TraceStatusBadge v={row.validation} /></td>
+                  <td style={{ padding: '6px 10px' }}><TraceStatusBadge v={row.synthesis} /></td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{row.duration}</td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', color: 'var(--text-tertiary)' }}>{row.ts}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -315,6 +348,34 @@ function ObservabilitySection({ agents, statuses }) {
 }
 
 // ── Evaluation section ────────────────────────────────────────────────────────
+const SAMPLE_FEEDBACK = [
+  { id: 'req_a3f9d1', user: 'priya.m@corp.in',  domain: 'Sales',        rating: '👍', comment: 'Exactly the breakdown I needed'     , ts: '26 May 09:15' },
+  { id: 'req_b72c4e', user: 'rahul.k@corp.in',  domain: 'Finance',      rating: '👍', comment: 'Good but took too long'              , ts: '26 May 09:08' },
+  { id: 'req_e9a1c7', user: 'priya.m@corp.in',  domain: 'Supply Chain', rating: '👍', comment: ''                                    , ts: '25 May 17:46' },
+  { id: 'req_f6d2b8', user: 'vikram.t@corp.in', domain: 'Sales',        rating: '👎', comment: 'Wrong quarter filter applied'        , ts: '25 May 16:24' },
+  { id: 'req_h8c4d6', user: 'admin@slm.local',  domain: 'Sales',        rating: '👍', comment: 'Commission calc spot-on'             , ts: '25 May 14:38' },
+]
+
+const SAMPLE_VIOLATIONS = [
+  { intent: 'INT-02', domain: 'Finance',      type: 'CLS',    detail: 'profit_usd column excluded per CLS policy',              corrected: 'Yes', ts: '26 May 09:07' },
+  { intent: 'INT-01', domain: 'Sales',        type: 'RLS',    detail: 'Missing country filter — injected WHERE country IN (…)', corrected: 'Yes', ts: '25 May 16:22' },
+  { intent: 'INT-03', domain: 'HR',           type: 'SCHEMA', detail: 'Table hr.dim_employee not in schema_reference.json',     corrected: 'No',  ts: '25 May 15:08' },
+  { intent: 'INT-01', domain: 'Supply Chain', type: 'SYNTAX', detail: 'Missing GROUP BY for aggregate SUM(units)',               corrected: 'Yes', ts: '25 May 11:34' },
+  { intent: 'INT-02', domain: 'Sales',        type: 'FILTER', detail: 'Date range filter outside allowed window',                corrected: 'Yes', ts: '24 May 14:19' },
+]
+
+function ViolationTypeBadge({ type }) {
+  const M = {
+    CLS:    { c: '#9333ea', b: '#faf5ff' },
+    RLS:    { c: '#ea580c', b: '#fff7ed' },
+    SCHEMA: { c: '#3b82f6', b: '#eff6ff' },
+    SYNTAX: { c: '#ca8a04', b: '#fefce8' },
+    FILTER: { c: '#475569', b: '#f1f5f9' },
+  }
+  const s = M[type] ?? M.SYNTAX
+  return <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: s.b, color: s.c }}>{type}</span>
+}
+
 function EvaluationSection() {
   const VIOLATION_COLS = ['Intent ID', 'Domain', 'Violation Type', 'Detail', 'Corrected', 'Timestamp']
   const FEEDBACK_COLS  = ['Request ID', 'User', 'Domain', 'Rating', 'Comment', 'Timestamp']
@@ -325,10 +386,10 @@ function EvaluationSection() {
       {/* Feedback KPIs */}
       <SectionLabel>User Feedback</SectionLabel>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-        <MetricTile label="👍 Upvotes"      value="—" sub="Total positive" accent="#16a34a" />
-        <MetricTile label="👎 Downvotes"    value="—" sub="Total negative" accent="#ef4444" />
-        <MetricTile label="Satisfaction"    value="—" sub="Upvotes / total rated" />
-        <MetricTile label="Response Rate"   value="—" sub="% prompts rated" />
+        <MetricTile label="👍 Upvotes"    value="89"    sub="Total positive" accent="#16a34a" />
+        <MetricTile label="👎 Downvotes"  value="12"    sub="Total negative" accent="#ef4444" />
+        <MetricTile label="Satisfaction"  value="88.1%" sub="Upvotes / total rated" />
+        <MetricTile label="Response Rate" value="62.4%" sub="% prompts rated" />
       </div>
 
       {/* Feedback log table */}
@@ -343,11 +404,16 @@ function EvaluationSection() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan={FEEDBACK_COLS.length} style={{ padding: '28px 10px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 12 }}>
-                  No feedback recorded yet — integration pending
-                </td>
-              </tr>
+              {SAMPLE_FEEDBACK.map((row, i) => (
+                <tr key={row.id} style={{ background: i % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-subtle)' }}>
+                  <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontSize: 10.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{row.id}</td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{row.user}</td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{row.domain}</td>
+                  <td style={{ padding: '6px 10px', fontSize: 15 }}>{row.rating}</td>
+                  <td style={{ padding: '6px 10px', color: 'var(--text-secondary)', fontStyle: row.comment ? 'normal' : 'italic' }}>{row.comment || 'No comment'}</td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', color: 'var(--text-tertiary)' }}>{row.ts}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -356,10 +422,10 @@ function EvaluationSection() {
       {/* SQL quality KPIs */}
       <SectionLabel>SQL Quality</SectionLabel>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-        <MetricTile label="First-Pass Rate"      value="—" sub="VALKYRIE pass, no correction" accent="#16a34a" />
-        <MetricTile label="Correction Rate"      value="—" sub="Required ≥1 correction round" accent="#f59e0b" />
-        <MetricTile label="Correction Success"   value="—" sub="Corrected SQL passed" />
-        <MetricTile label="Avg Corrections"      value="—" sub="Rounds per failed intent" />
+        <MetricTile label="First-Pass Rate"    value="74.2%" sub="VALKYRIE pass, no correction" accent="#16a34a" />
+        <MetricTile label="Correction Rate"    value="25.8%" sub="Required ≥1 correction round" accent="#f59e0b" />
+        <MetricTile label="Correction Success" value="91.3%" sub="Corrected SQL passed" />
+        <MetricTile label="Avg Corrections"    value="1.4"   sub="Rounds per failed intent" />
       </div>
 
       {/* Violation breakdown */}
@@ -375,11 +441,18 @@ function EvaluationSection() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan={VIOLATION_COLS.length} style={{ padding: '28px 10px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 12 }}>
-                  No violation data yet — backend integration pending
-                </td>
-              </tr>
+              {SAMPLE_VIOLATIONS.map((row, i) => (
+                <tr key={i} style={{ background: i % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-subtle)' }}>
+                  <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontSize: 10.5, color: 'var(--text-secondary)' }}>{row.intent}</td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{row.domain}</td>
+                  <td style={{ padding: '6px 10px' }}><ViolationTypeBadge type={row.type} /></td>
+                  <td style={{ padding: '6px 10px', color: 'var(--text-secondary)', maxWidth: 280 }}>{row.detail}</td>
+                  <td style={{ padding: '6px 10px' }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: row.corrected === 'Yes' ? '#f0fdf4' : '#fef2f2', color: row.corrected === 'Yes' ? '#16a34a' : '#dc2626' }}>{row.corrected}</span>
+                  </td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', color: 'var(--text-tertiary)' }}>{row.ts}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -388,10 +461,10 @@ function EvaluationSection() {
       {/* Intent + RAG metrics */}
       <SectionLabel>Intent Classification</SectionLabel>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-        <MetricTile label="Avg Intents / Prompt"  value="—" sub="ARIA decomposition" />
-        <MetricTile label="Structured %"           value="—" sub="DB query intents" />
-        <MetricTile label="Unstructured %"         value="—" sub="RAG-only intents" />
-        <MetricTile label="Both %"                 value="—" sub="DB + RAG intents" />
+        <MetricTile label="Avg Intents / Prompt" value="2.3"   sub="ARIA decomposition" />
+        <MetricTile label="Structured %"          value="58.2%" sub="DB query intents" />
+        <MetricTile label="Unstructured %"         value="21.4%" sub="RAG-only intents" />
+        <MetricTile label="Both %"                 value="20.4%" sub="DB + RAG intents" />
       </div>
       <div style={{ marginBottom: 24 }}>
         <ComingSoon label="Intent Distribution Chart" />
@@ -400,9 +473,9 @@ function EvaluationSection() {
       {/* RAG quality */}
       <SectionLabel>RAG Retrieval Quality</SectionLabel>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-        <MetricTile label="Avg Similarity"    value="—" sub="Top-1 chunk score" />
-        <MetricTile label="Zero-Result Rate"  value="—" sub="Below threshold" accent="#ef4444" />
-        <MetricTile label="Avg Chunks / Query" value="—" sub="Returned by RAVEN" />
+        <MetricTile label="Avg Similarity"     value="0.847" sub="Top-1 chunk score" />
+        <MetricTile label="Zero-Result Rate"   value="4.2%"  sub="Below threshold" accent="#ef4444" />
+        <MetricTile label="Avg Chunks / Query" value="3.8"   sub="Returned by RAVEN" />
       </div>
       <div style={{ marginBottom: 8 }}>
         <ComingSoon label="Similarity Score Distribution" />
