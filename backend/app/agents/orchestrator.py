@@ -50,6 +50,16 @@ logger = logging.getLogger("orchestrator")
 
 MAX_CORRECTIONS = 2
 
+NODE_NAMES = frozenset({
+    "guardrail_check",
+    "intent_classify",
+    "sql_generate",
+    "validate_sql",
+    "sql_correct",
+    "raven_query",
+    "spyder_synthesize",
+})
+
 
 # ── state schema ─────────────────────────────────────────────
 
@@ -195,13 +205,13 @@ _pipeline_graph = _build_graph()
 
 # ── public API ───────────────────────────────────────────────
 
-async def run_pipeline(
+def _make_initial_state(
     prompt: str,
     guardrails: dict,
     security_profile: dict,
     metadata: dict,
 ) -> OrchestratorState:
-    initial: OrchestratorState = {
+    return {
         "prompt": prompt,
         "guardrails": guardrails,
         "security_profile": security_profile,
@@ -230,5 +240,28 @@ async def run_pipeline(
         "raven_result":       None,
         "raven_error":        None,
     }
-    result = await _pipeline_graph.ainvoke(initial)
+
+
+async def run_pipeline(
+    prompt: str,
+    guardrails: dict,
+    security_profile: dict,
+    metadata: dict,
+) -> OrchestratorState:
+    result = await _pipeline_graph.ainvoke(
+        _make_initial_state(prompt, guardrails, security_profile, metadata)
+    )
     return result
+
+
+async def stream_pipeline(
+    prompt: str,
+    guardrails: dict,
+    security_profile: dict,
+    metadata: dict,
+):
+    """Async generator: yields (node_name, state_delta) for each tracked node completion."""
+    initial = _make_initial_state(prompt, guardrails, security_profile, metadata)
+    async for event in _pipeline_graph.astream_events(initial, version="v2"):
+        if event["event"] == "on_chain_end" and event["name"] in NODE_NAMES:
+            yield event["name"], event["data"].get("output") or {}

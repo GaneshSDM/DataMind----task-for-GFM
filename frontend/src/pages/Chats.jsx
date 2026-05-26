@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Plus, Trash2, Send, MessageSquare, ChevronDown, ChevronUp, Download, ThumbsUp, ThumbsDown } from 'lucide-react'
-import { getChats, getChatMessages, sendPrompt, deleteChat, getSecurityGroups, getMe, exportReport } from '../api/client'
+import { getChats, getChatMessages, sendPrompt, streamSendPrompt, deleteChat, getSecurityGroups, getMe, exportReport } from '../api/client'
 import { useSkills } from '../contexts/SkillsContext'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
@@ -503,6 +503,65 @@ function SpyderPanel({ result, prompt }) {
   )
 }
 
+// ── Pipeline progress ─────────────────────────────────────────────────────────
+const PIPELINE_NODES = [
+  { node: 'guardrail_check',   label: 'Guardrail check' },
+  { node: 'intent_classify',   label: 'Intent classification' },
+  { node: 'sql_generate',      label: 'SQL generation' },
+  { node: 'raven_query',       label: 'RAG retrieval' },
+  { node: 'validate_sql',      label: 'SQL validation' },
+  { node: 'spyder_synthesize', label: 'Synthesis' },
+]
+
+function stepSummary(step) {
+  if (!step) return ''
+  switch (step.node) {
+    case 'guardrail_check':  return step.status === 'passed' ? 'passed' : `blocked — ${step.blocked_by || 'policy'}`
+    case 'intent_classify':  return step.status === 'success' ? `${step.intent_count} intent(s)` : step.error || 'error'
+    case 'sql_generate':     return step.status === 'skipped' ? 'skipped' : step.status === 'error' ? (step.error || 'error') : `${step.sql_count} query(ies)`
+    case 'raven_query':      return step.status === 'skipped' ? 'skipped' : step.status === 'success' ? `${step.inputs} input(s)` : step.error || 'error'
+    case 'validate_sql': {
+      const corr = step.correction_attempt > 0 ? ` · ${step.correction_attempt} correction(s)` : ''
+      return `${step.status}${corr}`
+    }
+    case 'spyder_synthesize': return step.status === 'success' ? 'complete' : step.error || 'error'
+    default: return step.status || ''
+  }
+}
+
+function PipelineProgress({ steps }) {
+  const stepMap    = Object.fromEntries((steps || []).map(s => [s.node, s]))
+  const lastDoneIdx = PIPELINE_NODES.reduce((acc, n, i) => stepMap[n.node] ? i : acc, -1)
+
+  return (
+    <div style={{ padding: '4px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {PIPELINE_NODES.map((n, i) => {
+        const step      = stepMap[n.node]
+        const isRunning = !step && i === lastDoneIdx + 1
+        const isFailed  = step && ['error', 'blocked', 'fail'].includes(step.status)
+        const isSkipped = step?.status === 'skipped'
+        const isDone    = !!step && !isFailed && !isSkipped
+
+        const iconColor = isFailed ? '#ef4444' : isDone ? '#22c55e' : isRunning ? 'var(--brand-orange, #F47920)' : 'var(--border-default)'
+        const icon      = isFailed ? '✗' : isDone ? '✓' : isRunning ? '⟳' : '○'
+        const textColor = isDone || isFailed ? 'var(--text-primary)' : isRunning ? 'var(--text-secondary)' : 'var(--text-tertiary)'
+
+        return (
+          <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
+            <span style={{ width: 12, textAlign: 'center', color: iconColor, fontWeight: 700, fontSize: 11 }}>{icon}</span>
+            <span style={{ color: textColor, fontWeight: isDone || isFailed || isRunning ? 600 : 400 }}>{n.label}</span>
+            {step && (
+              <span style={{ fontSize: 10, color: isFailed ? '#ef4444' : 'var(--text-tertiary)' }}>
+                — {stepSummary(step)}
+              </span>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Chats page ────────────────────────────────────────────────────────────────
 export default function Chats() {
   const [chats, setChats]               = useState([])
@@ -582,41 +641,57 @@ export default function Chats() {
 
   const handleSend = async () => {
     if (!prompt.trim() || sending) return
-    const text = prompt.trim()
+    const text       = prompt.trim()
+    const tempId     = Date.now()
+    const tempUserId = `${tempId}_u`
+    const tempAsstId = `${tempId}_a`
     setPrompt('')
     setSending(true)
-    const tempId = Date.now()
-    setMessages(m => [...m, { MessageID: tempId, Role: 'user', Content: text }])
+    setMessages(m => [
+      ...m,
+      { MessageID: tempId,     Role: 'user',      Content: text },
+      { MessageID: tempAsstId, Role: 'assistant', Content: null, _streaming: true, _steps: [] },
+    ])
 
     try {
-      const res = await sendPrompt({
-        chat_id: activeChatId || null,
-        prompt: text,
-        security_group_ids: selectedSGIds.length > 0 ? selectedSGIds : null,
-      })
-      if (!activeChatId) {
-        suppressNextLoadRef.current = true
-        setActiveChatId(res.chat_id)
-        await loadChats()
-      }
-      setMessages(m => [
-        ...m.filter(x => x.MessageID !== tempId),
-        { MessageID: tempId + '_u', Role: 'user', Content: text },
-        {
-          MessageID: tempId + '_a',
-          Role: 'assistant',
-          Content: res.response,
-          GuardrailStatus: res.guardrail_status,
-          BlockedBy: res.blocked_by,
-          IntentResult: res.intent_result,
-          SqlResult: res.sql_result,
-          ValkyrieResult: res.valkyrie_result,
-          SpyderResult: res.spyder_result,
-        },
-      ])
+      await streamSendPrompt(
+        { chat_id: activeChatId || null, prompt: text, security_group_ids: selectedSGIds.length > 0 ? selectedSGIds : null },
+        (event) => {
+          if (event.type === 'node') {
+            setMessages(m => m.map(msg =>
+              msg.MessageID === tempAsstId
+                ? { ...msg, _steps: [...(msg._steps || []).filter(s => s.node !== event.node), event] }
+                : msg
+            ))
+          } else if (event.type === 'done') {
+            if (!activeChatId) {
+              suppressNextLoadRef.current = true
+              setActiveChatId(event.chat_id)
+              loadChats()
+            }
+            setMessages(m => [
+              ...m.filter(x => x.MessageID !== tempId && x.MessageID !== tempAsstId),
+              { MessageID: tempUserId, Role: 'user', Content: text },
+              {
+                MessageID:       tempAsstId,
+                Role:            'assistant',
+                Content:         event.response,
+                GuardrailStatus: event.guardrail_status,
+                BlockedBy:       event.blocked_by,
+                IntentResult:    event.intent_result,
+                SqlResult:       event.sql_result,
+                ValkyrieResult:  event.valkyrie_result,
+                SpyderResult:    event.spyder_result,
+              },
+            ])
+          } else if (event.type === 'error') {
+            toast.error(event.message || 'Pipeline error')
+          }
+        }
+      )
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to send')
-      setMessages(m => m.filter(x => x.MessageID !== tempId))
+      toast.error(err.message || 'Failed to send')
+      setMessages(m => m.filter(x => x.MessageID !== tempId && x.MessageID !== tempAsstId))
       setPrompt(text)
     } finally {
       setSending(false)
@@ -712,23 +787,18 @@ export default function Chats() {
                         }}>🚫 {m.BlockedBy}</span>
                       </div>
                     )}
-                    {m.SpyderResult
-                      ? <SpyderPanel result={m.SpyderResult} prompt={prevPrompt} />
-                      : m.Content
-                        ? <MarkdownText text={m.Content} />
-                        : null
+                    {m._streaming
+                      ? <PipelineProgress steps={m._steps || []} />
+                      : m.SpyderResult
+                        ? <SpyderPanel result={m.SpyderResult} prompt={prevPrompt} />
+                        : m.Content
+                          ? <MarkdownText text={m.Content} />
+                          : null
                     }
                   </div>
                 </div>
               )
             })}
-            {sending && (
-              <div className="message assistant">
-                <div className="message-bubble" style={{ opacity: 0.6 }}>
-                  <span className="spinner" style={{ display: 'inline-block' }}>⟳</span> Thinking…
-                </div>
-              </div>
-            )}
             <div ref={bottomRef} />
           </div>
 

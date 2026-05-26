@@ -96,6 +96,45 @@ export const getChatMessages = id => api.get(`/chats/${id}/messages`).then(r => 
 export const sendPrompt = d => api.post('/chats/send', d).then(r => r.data)
 export const deleteChat = id => api.delete(`/chats/${id}`).then(r => r.data)
 
+export const streamSendPrompt = async (data, onEvent) => {
+  const token = localStorage.getItem('slm_token')
+  const response = await fetch('/api/chats/send/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(data),
+  })
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('slm_token')
+      localStorage.removeItem('slm_user')
+      window.location.href = '/login'
+    }
+    throw new Error(`HTTP ${response.status}`)
+  }
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try { onEvent(JSON.parse(line.slice(6))) } catch {}
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 // ── SLM Config ────────────────────────────────────────────
 export const getSLMConfigs = () => api.get('/slm-config/').then(r => r.data)
 export const createSLMConfig = d => api.post('/slm-config/', d).then(r => r.data)

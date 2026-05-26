@@ -7,10 +7,9 @@ Returns updated state with intent_result, intent_status, intent_error.
 import logging
 import httpx
 
-logger = logging.getLogger("orchestrator.intent_node")
+from app.agents.http_clients import get_aria_client
 
-ARIA_URL = "http://localhost:8002/intent/classify"
-TIMEOUT = 60.0  # LLM call — allow up to 60s
+logger = logging.getLogger("orchestrator.intent_node")
 
 
 async def intent_node(state: dict) -> dict:
@@ -27,10 +26,10 @@ async def intent_node(state: dict) -> dict:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            resp = await client.post(ARIA_URL, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        client = get_aria_client()
+        resp = await client.post("/intent/classify", json=payload)
+        resp.raise_for_status()
+        data = resp.json()
 
         status = data.get("status", "error")
         logger.info(
@@ -54,7 +53,7 @@ async def intent_node(state: dict) -> dict:
             }
 
     except httpx.ConnectError:
-        logger.error("ARIA unreachable at %s", ARIA_URL)
+        logger.error("ARIA unreachable at http://localhost:8002")
         return {
             "intent_status": "error",
             "intent_result": None,

@@ -1,6 +1,8 @@
+import json
 import uuid
 import time
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.security import get_current_user
@@ -401,6 +403,242 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
         "raven_error":         raven_error,
         "response":            assistant_content,
     }
+
+
+def _node_to_sse(node: str, delta: dict, accumulated: dict) -> dict:
+    base = {"type": "node", "node": node}
+    if node == "guardrail_check":
+        return {**base, "label": "Guardrail check",
+                "status": delta.get("guardrail_status", "error"),
+                "blocked_by": delta.get("blocked_by"),
+                "message": delta.get("guardrail_message", "")}
+    if node == "intent_classify":
+        ir = delta.get("intent_result") or {}
+        return {**base, "label": "Intent classification",
+                "status": delta.get("intent_status", "error"),
+                "intent_count": len(ir.get("intents", [])),
+                "error": delta.get("intent_error")}
+    if node == "sql_generate":
+        sr = delta.get("sql_result") or {}
+        n_ok = sum(1 for r in sr.get("sql_results", []) if r.get("status") == "success")
+        return {**base, "label": "SQL generation",
+                "status": delta.get("sql_status", "error"),
+                "sql_count": n_ok,
+                "error": delta.get("sql_error")}
+    if node == "validate_sql":
+        return {**base, "label": "SQL validation",
+                "status": delta.get("valkyrie_status", "error"),
+                "correction_attempt": accumulated.get("correction_attempt", 0),
+                "error": delta.get("valkyrie_error")}
+    if node == "sql_correct":
+        return {**base, "label": "SQL correction",
+                "attempt": delta.get("correction_attempt", 0)}
+    if node == "raven_query":
+        rr = delta.get("raven_result") or {}
+        return {**base, "label": "RAG retrieval",
+                "status": delta.get("raven_status", "error"),
+                "inputs": len(rr.get("similarity_search_inputs", [])),
+                "error": delta.get("raven_error")}
+    if node == "spyder_synthesize":
+        return {**base, "label": "Synthesis",
+                "status": delta.get("spyder_status", "error"),
+                "error": delta.get("spyder_error")}
+    return base
+
+
+@router.post("/send/stream")
+async def stream_send_prompt(
+    request: Request,
+    payload: SendPromptRequest,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.agents.orchestrator import stream_pipeline as _stream_pipeline
+
+    request_id = str(uuid.uuid4())
+
+    sg_ids = payload.security_group_ids or None
+    sg_id  = payload.security_group_id  or None
+    if sg_ids:
+        security_profile = build_security_payload(db, current_user.user_id, security_group_ids=sg_ids)
+    elif sg_id:
+        security_profile = build_security_payload(db, current_user.user_id, security_group_id=sg_id)
+    else:
+        security_profile = get_cached_user_profile(db, current_user.user_id)
+
+    metadata = {
+        "domain":     payload.domain,
+        "sub_domain": payload.subdomain,
+        "geography":  payload.geography,
+        "request_id": request_id,
+    }
+
+    prompt_guardrails = [
+        {"id": str(g.id), "name": g.policy_name, "type": g.check_type}
+        for g in request.app.state.guardrails
+    ]
+    guardrails_payload = {"prompt_guardrails": prompt_guardrails, "response_guardrails": []}
+
+    # Validate existing chat before streaming so we can 404 early
+    existing_chat_id = None
+    if payload.chat_id:
+        existing = db.query(ChatHistory).filter(
+            ChatHistory.chat_id == payload.chat_id,
+            ChatHistory.user_id == current_user.user_id,
+        ).first()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Chat not found")
+        existing_chat_id = existing.chat_id
+
+    async def _sse():
+        accumulated: dict = {}
+
+        try:
+            async for node_name, delta in _stream_pipeline(
+                prompt=payload.prompt,
+                guardrails=guardrails_payload,
+                security_profile=security_profile,
+                metadata=metadata,
+            ):
+                accumulated.update(delta)
+                yield f"data: {json.dumps(_node_to_sse(node_name, delta, accumulated))}\n\n"
+        except Exception as exc:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
+            return
+
+        # ── Unpack accumulated state ──────────────────────────────────────────
+        guardrail_status  = accumulated.get("guardrail_status", "error")
+        blocked_by        = accumulated.get("blocked_by")
+        guardrail_message = accumulated.get("guardrail_message", "")
+        intent_status     = accumulated.get("intent_status")
+        intent_result     = accumulated.get("intent_result")
+        intent_error      = accumulated.get("intent_error")
+        sql_status        = accumulated.get("sql_status")
+        sql_result        = accumulated.get("sql_result")
+        sql_error         = accumulated.get("sql_error")
+        valkyrie_status   = accumulated.get("valkyrie_status")
+        valkyrie_result   = accumulated.get("valkyrie_result")
+        valkyrie_error    = accumulated.get("valkyrie_error")
+        synthesizer_context = accumulated.get("synthesizer_context")
+        correction_attempt  = accumulated.get("correction_attempt", 0)
+        correction_history  = accumulated.get("correction_history", [])
+        spyder_status     = accumulated.get("spyder_status")
+        spyder_result     = accumulated.get("spyder_result")
+        spyder_error      = accumulated.get("spyder_error")
+        raven_status      = accumulated.get("raven_status")
+        raven_result      = accumulated.get("raven_result")
+        raven_error       = accumulated.get("raven_error")
+
+        # ── Build assistant content (mirrors /send logic) ─────────────────────
+        if guardrail_status == "blocked":
+            assistant_content = (
+                f"⚠️ **Prompt blocked by guardrail** — {blocked_by}\n\n"
+                f"{guardrail_message}\n\n"
+                f"*Please revise your prompt and try again.*"
+            )
+        elif guardrail_status in ("error", None):
+            assistant_content = (
+                f"⚠️ **Guardrail check failed** — {guardrail_message}\n\n"
+                f"*Your prompt could not be processed. Please contact your administrator.*"
+            )
+        elif intent_status == "error":
+            assistant_content = (
+                f"✅ Guardrails passed.\n\n"
+                f"⚠️ **Intent classification failed** — {intent_error}\n\n"
+                f"*Please try again or contact your administrator.*"
+            )
+        else:
+            intents = intent_result.get("intents", []) if intent_result else []
+            total   = intent_result.get("total_intents", len(intents)) if intent_result else 0
+            intent_lines = []
+            for i in (intent_result or {}).get("intents", []):
+                types_str = "/".join(i.get("intent_types", []))
+                intent_lines.append(
+                    f"  {i.get('intent_id', '?')}. [{types_str}·{i.get('data_source','')}] "
+                    f"{i.get('domain','')} › {i.get('sub_domain','')} — {i.get('description','')}"
+                )
+            intent_block = "\n".join(intent_lines) if intent_lines else "  No intents detected."
+
+            if sql_status == "skipped":
+                sql_note = "\n\n*No structured intents — SQL generation skipped.*"
+            elif sql_status in ("success", "partial"):
+                results = (sql_result or {}).get("sql_results", [])
+                n_ok  = sum(1 for r in results if r.get("status") == "success")
+                n_err = sum(1 for r in results if r.get("status") == "error")
+                sql_note = f"\n\n✅ **SAGE generated SQL** — {n_ok} query(ies)"
+                if n_err:
+                    sql_note += f", {n_err} failed"
+                corr_note = f" (after {correction_attempt} correction(s))" if correction_attempt > 0 else ""
+                if valkyrie_status == "pass":
+                    sql_note += f"\n✅ **VALKYRIE validation passed**{corr_note}"
+                elif valkyrie_status == "partial":
+                    n_fail = sum(1 for r in (valkyrie_result or {}).get("validated_results", []) if r.get("status") == "fail")
+                    sql_note += f"\n⚠️ **VALKYRIE: {n_fail} query(ies) still have violations**{corr_note}"
+                elif valkyrie_status == "fail":
+                    sql_note += f"\n⚠️ **VALKYRIE validation failed**{corr_note}"
+                elif valkyrie_status == "error":
+                    sql_note += f"\n⚠️ **VALKYRIE unavailable** — {valkyrie_error or 'validation skipped'}"
+            elif sql_status == "error":
+                sql_note = f"\n\n⚠️ **SQL generation failed** — {sql_error or 'unknown error'}"
+            else:
+                sql_note = ""
+
+            if raven_status == "success":
+                n_inputs = len((raven_result or {}).get("similarity_search_inputs", []))
+                sql_note += f"\n✅ **RAVEN retrieved {n_inputs} RAG input(s)**"
+            elif raven_status == "error":
+                sql_note += f"\n⚠️ **RAVEN retrieval failed** — {raven_error or 'unknown error'}"
+            if spyder_status == "success":
+                sql_note += "\n✅ **SPYDER synthesis complete**"
+            elif spyder_status == "error":
+                sql_note += f"\n⚠️ **SPYDER synthesis failed** — {spyder_error or 'unknown error'}"
+
+            assistant_content = "" if spyder_status == "success" else (
+                f"✅ **Guardrails passed.** ARIA detected **{total} intent(s)**:\n\n"
+                f"{intent_block}{sql_note}"
+            )
+
+        # ── Save to DB ────────────────────────────────────────────────────────
+        if existing_chat_id:
+            chat_id_out = existing_chat_id
+        else:
+            title = payload.prompt[:60] + ("..." if len(payload.prompt) > 60 else "")
+            chat = ChatHistory(user_id=current_user.user_id, title=title, is_active=True)
+            db.add(chat)
+            db.flush()
+            chat_id_out = chat.chat_id
+
+        slm_payload = {
+            "prompt": payload.prompt,
+            "guardrails": guardrails_payload,
+            "security_profile": security_profile,
+            "metadata": metadata,
+            "intent_result": intent_result,
+        }
+        db.add(ChatMessage(chat_id=chat_id_out, role="user",      content=payload.prompt,    payload=slm_payload))
+        db.add(ChatMessage(chat_id=chat_id_out, role="assistant", content=assistant_content,
+                           payload={"spyder_result": spyder_result} if spyder_result else None))
+        db.commit()
+
+        done_payload = {
+            "type": "done", "chat_id": chat_id_out, "request_id": request_id,
+            "guardrail_status": guardrail_status, "blocked_by": blocked_by,
+            "intent_status": intent_status, "intent_result": intent_result,
+            "sql_status": sql_status, "sql_result": sql_result,
+            "valkyrie_status": valkyrie_status, "valkyrie_result": valkyrie_result,
+            "synthesizer_context": synthesizer_context,
+            "correction_attempt": correction_attempt, "correction_history": correction_history,
+            "spyder_status": spyder_status, "spyder_result": spyder_result, "spyder_error": spyder_error,
+            "raven_status": raven_status, "raven_result": raven_result, "raven_error": raven_error,
+            "response": assistant_content,
+        }
+        yield f"data: {json.dumps(done_payload)}\n\n"
+
+    return StreamingResponse(
+        _sse(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.delete("/{chat_id}")

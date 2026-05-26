@@ -7,10 +7,9 @@ Returns updated state with guardrail_status, blocked_by, guardrail_message.
 import logging
 import httpx
 
-logger = logging.getLogger("orchestrator.guardrail_node")
+from app.agents.http_clients import get_heimdall_client
 
-HEIMDALL_URL = "http://localhost:8001/guardrail/check"
-TIMEOUT = 10.0  # seconds
+logger = logging.getLogger("orchestrator.guardrail_node")
 
 
 async def guardrail_node(state: dict) -> dict:
@@ -27,10 +26,10 @@ async def guardrail_node(state: dict) -> dict:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            resp = await client.post(HEIMDALL_URL, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        client = get_heimdall_client()
+        resp = await client.post("/guardrail/check", json=payload)
+        resp.raise_for_status()
+        data = resp.json()
 
         status = data.get("status", "error")
         logger.info(
@@ -44,7 +43,7 @@ async def guardrail_node(state: dict) -> dict:
         }
 
     except httpx.ConnectError:
-        logger.error("Heimdall unreachable at %s", HEIMDALL_URL)
+        logger.error("Heimdall unreachable at http://localhost:8001")
         return {
             "guardrail_status": "error",
             "blocked_by": "system",

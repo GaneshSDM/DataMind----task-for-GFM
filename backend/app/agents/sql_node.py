@@ -10,10 +10,9 @@ Sets sql_status, sql_result, sql_error on state.
 import logging
 import httpx
 
-logger = logging.getLogger("orchestrator.sql_node")
+from app.agents.http_clients import get_sage_client
 
-SAGE_URL     = "http://localhost:8003/sql/generate"
-SAGE_TIMEOUT = 60.0   # LLM call can take a few seconds
+logger = logging.getLogger("orchestrator.sql_node")
 
 
 async def sql_node(state: dict) -> dict:
@@ -45,10 +44,10 @@ async def sql_node(state: dict) -> dict:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=SAGE_TIMEOUT) as client:
-            resp = await client.post(SAGE_URL, json=sage_payload)
-            resp.raise_for_status()
-            data = resp.json()
+        client = get_sage_client()
+        resp = await client.post("/sql/generate", json=sage_payload)
+        resp.raise_for_status()
+        data = resp.json()
 
         status = data.get("status", "error")
         logger.info("SAGE response: request_id=%s status=%s results=%d",
@@ -67,7 +66,7 @@ async def sql_node(state: dict) -> dict:
         }
 
     except httpx.ConnectError:
-        logger.error("SAGE unreachable at %s", SAGE_URL)
+        logger.error("SAGE unreachable at http://localhost:8003")
         return {
             "sql_status": "error",
             "sql_result": None,

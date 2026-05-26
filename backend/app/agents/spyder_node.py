@@ -14,6 +14,8 @@ from collections import defaultdict
 
 import httpx
 
+from app.agents.http_clients import get_spyder_client
+
 logger = logging.getLogger("spyder_node")
 
 
@@ -120,10 +122,6 @@ def _build_rag_sections(intents: list) -> list:
         "source":       "llm",
     })
     return sections
-
-SPYDER_URL = "http://localhost:8005"
-TIMEOUT    = 180.0
-
 
 async def spyder_node(state: dict) -> dict:
     synthesizer_ctx = state.get("synthesizer_context")
@@ -303,30 +301,28 @@ async def spyder_node(state: dict) -> dict:
     )
 
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            async with client.stream(
-                "POST", f"{SPYDER_URL}/api/synthesize", json=spyder_payload
-            ) as resp:
-                resp.raise_for_status()
-                complete_data = None
-                async for line in resp.aiter_lines():
-                    if not line.startswith("data:"):
-                        continue
-                    raw = line[5:].strip()
-                    if not raw:
-                        continue
-                    try:
-                        event = json.loads(raw)
-                        if event.get("event") == "complete":
-                            complete_data = event.get("data")
-                            break
-                        if event.get("event") == "error":
-                            logger.warning(
-                                "SPYDER SSE error step=%s msg=%s",
-                                event.get("step"), event.get("message"),
-                            )
-                    except json.JSONDecodeError:
-                        pass
+        client = get_spyder_client()
+        async with client.stream("POST", "/api/synthesize", json=spyder_payload) as resp:
+            resp.raise_for_status()
+            complete_data = None
+            async for line in resp.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                raw = line[5:].strip()
+                if not raw:
+                    continue
+                try:
+                    event = json.loads(raw)
+                    if event.get("event") == "complete":
+                        complete_data = event.get("data")
+                        break
+                    if event.get("event") == "error":
+                        logger.warning(
+                            "SPYDER SSE error step=%s msg=%s",
+                            event.get("step"), event.get("message"),
+                        )
+                except json.JSONDecodeError:
+                    pass
 
         if not complete_data:
             return _error("No complete event received from SPYDER")
@@ -343,7 +339,7 @@ async def spyder_node(state: dict) -> dict:
         }
 
     except httpx.ConnectError:
-        logger.error("SPYDER not reachable at %s", SPYDER_URL)
+        logger.error("SPYDER not reachable at http://localhost:8005")
         return _error("SPYDER service unavailable")
     except Exception as e:
         logger.error("spyder_node error: %s", e)

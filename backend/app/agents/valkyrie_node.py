@@ -13,10 +13,9 @@ This node only calls VALKYRIE once and returns the result.
 import logging
 import httpx
 
-logger = logging.getLogger("valkyrie_node")
+from app.agents.http_clients import get_valkyrie_client
 
-VALKYRIE_URL = "http://localhost:8004"
-TIMEOUT      = 120.0
+logger = logging.getLogger("valkyrie_node")
 
 
 async def valkyrie_node(state: dict) -> dict:
@@ -42,17 +41,17 @@ async def valkyrie_node(state: dict) -> dict:
     )
 
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            payload = {
-                "request_id":       request_id,
-                "prompt":           prompt,
-                "security_profile": security_profile,
-                "intents":          intents,
-                "sql_results":      sql_results,
-            }
-            resp = await client.post(f"{VALKYRIE_URL}/sql/validate", json=payload)
-            resp.raise_for_status()
-            val_response = resp.json()
+        client = get_valkyrie_client()
+        payload = {
+            "request_id":       request_id,
+            "prompt":           prompt,
+            "security_profile": security_profile,
+            "intents":          intents,
+            "sql_results":      sql_results,
+        }
+        resp = await client.post("/sql/validate", json=payload)
+        resp.raise_for_status()
+        val_response = resp.json()
 
         overall = val_response.get("status", "error")
         logger.info(
@@ -67,7 +66,7 @@ async def valkyrie_node(state: dict) -> dict:
         }
 
     except httpx.ConnectError:
-        logger.error("VALKYRIE not reachable at %s", VALKYRIE_URL)
+        logger.error("VALKYRIE not reachable at http://localhost:8004")
         return {
             "valkyrie_status":     "error",
             "valkyrie_result":     None,

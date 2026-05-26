@@ -17,10 +17,9 @@ State keys set:
 import logging
 import httpx
 
-logger = logging.getLogger("raven_node")
+from app.agents.http_clients import get_raven_client
 
-RAVEN_URL = "http://localhost:8006"
-TIMEOUT   = 120.0
+logger = logging.getLogger("raven_node")
 
 
 async def raven_node(state: dict) -> dict:
@@ -48,17 +47,17 @@ async def raven_node(state: dict) -> dict:
     )
 
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            payload = {
-                "request_id":       request_id,
-                "prompt":           prompt,
-                "intents":          intents,
-                "security_profile": security_profile,
-                "top_k":            5,
-            }
-            resp = await client.post(f"{RAVEN_URL}/rag/query", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        client = get_raven_client()
+        payload = {
+            "request_id":       request_id,
+            "prompt":           prompt,
+            "intents":          intents,
+            "security_profile": security_profile,
+            "top_k":            5,
+        }
+        resp = await client.post("/rag/query", json=payload)
+        resp.raise_for_status()
+        data = resp.json()
 
         status = data.get("status", "error")
         logger.info(
@@ -74,7 +73,7 @@ async def raven_node(state: dict) -> dict:
         }
 
     except httpx.ConnectError:
-        logger.error("RAVEN not reachable at %s", RAVEN_URL)
+        logger.error("RAVEN not reachable at http://localhost:8006")
         return _error("RAVEN service unavailable")
     except Exception as e:
         logger.error("raven_node error: %s", e)
