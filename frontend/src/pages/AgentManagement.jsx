@@ -264,6 +264,13 @@ function ObservabilitySection({ agents, statuses }) {
   return (
     <div style={{ padding: 24, overflowY: 'auto', height: '100%', boxSizing: 'border-box' }}>
 
+      {/* Preview badge */}
+      <div style={{ marginBottom: 20 }}>
+        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: '#fff3cd', color: '#856404', border: '1px solid #ffc107' }}>
+          UI Preview — Backend Pending
+        </span>
+      </div>
+
       {/* KPI row */}
       <SectionLabel>Pipeline Overview</SectionLabel>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -382,6 +389,13 @@ function EvaluationSection() {
 
   return (
     <div style={{ padding: 24, overflowY: 'auto', height: '100%', boxSizing: 'border-box' }}>
+
+      {/* Preview badge */}
+      <div style={{ marginBottom: 20 }}>
+        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: '#fff3cd', color: '#856404', border: '1px solid #ffc107' }}>
+          UI Preview — Backend Pending
+        </span>
+      </div>
 
       {/* Feedback KPIs */}
       <SectionLabel>User Feedback</SectionLabel>
