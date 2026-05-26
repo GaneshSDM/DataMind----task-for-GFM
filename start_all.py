@@ -99,6 +99,37 @@ _procs: list[tuple] = []
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _free_ports(ports: list[int]) -> None:
+    """Kill any processes that currently hold the given ports."""
+    for port in ports:
+        try:
+            if sys.platform == "win32":
+                r = subprocess.run(
+                    ["netstat", "-ano"],
+                    capture_output=True, text=True,
+                )
+                for line in r.stdout.splitlines():
+                    cols = line.split()
+                    if len(cols) >= 5 and f":{port}" in cols[1] and cols[3] == "LISTENING":
+                        pid = cols[4]
+                        subprocess.run(
+                            ["taskkill", "/F", "/PID", pid],
+                            capture_output=True,
+                        )
+                        print(f"  Cleared port {port} (killed PID {pid})")
+                        break
+            else:
+                r = subprocess.run(
+                    ["lsof", "-ti", f"tcp:{port}"],
+                    capture_output=True, text=True,
+                )
+                for pid in r.stdout.strip().splitlines():
+                    subprocess.run(["kill", "-9", pid], capture_output=True)
+                    print(f"  Cleared port {port} (killed PID {pid})")
+        except Exception as e:
+            print(f"  Port {port} cleanup skipped: {e}")
+
+
 def _colour(code: str, text: str) -> str:
     """ANSI colour if terminal supports it."""
     if sys.stdout.isatty():
@@ -199,6 +230,11 @@ def main():
     print(f"  Logs directory : {LOGS}")
     print(f"  Python         : {PYTHON}")
     print("=" * 60)
+
+    # ── Pre-flight: clear any stale processes on agent ports ─────────────────
+    agent_ports = [8001, 8002, 8003, 8004, 8005, 8006, 8000]
+    print(f"\n[Pre-flight] Clearing stale processes on ports {agent_ports}…")
+    _free_ports(agent_ports)
 
     # ── Tier 1: Agents ────────────────────────────────────────────────────────
     print(f"\n[Tier 1] Launching {len(TIER1_AGENTS)} agent(s)…")

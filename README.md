@@ -119,7 +119,7 @@ uvicorn app.main:app --reload --port 8000
 **Option A — single launch script (recommended):**
 
 ```bash
-python C:\GitHub\DataMind\Agents\IntentClassifier\bootstrap_schema.py
+python .\Agents\IntentClassifier\bootstrap_schema.py
 python start_all.py   # starts all agents + backend + frontend in correct order
 ```
 
