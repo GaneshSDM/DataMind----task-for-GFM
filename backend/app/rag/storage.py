@@ -23,6 +23,39 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+# ── Duplicate detection ───────────────────────────────────────────────────────
+
+class DuplicateFileError(Exception):
+    """Raised when identical file bytes are already active in the DB."""
+    pass
+
+
+def _get_active_by_hash(db: Session, file_hash: str) -> Optional[RagFile]:
+    return db.query(RagFile).filter(
+        RagFile.file_hash == file_hash,
+        RagFile.is_active == True,  # noqa: E712
+    ).first()
+
+
+def _get_active_by_name(db: Session, filename: str) -> Optional[RagFile]:
+    return db.query(RagFile).filter(
+        RagFile.original_file_name == filename,
+        RagFile.is_active == True,  # noqa: E712
+    ).first()
+
+
+def _deactivate_file(db: Session, file_id, user_id: int):
+    """Mark a file and all its chunks as inactive (superseded by newer version)."""
+    from datetime import datetime, timezone
+    f = db.query(RagFile).filter(RagFile.file_id == file_id).first()
+    if f:
+        f.is_active    = False
+        f.updated_by   = user_id
+        f.updated_date = datetime.now(timezone.utc)
+    # chunks stay in DB but is_active on RagFile gates all retrieval queries
+    db.flush()
+
+
 # ── RagFile ───────────────────────────────────────────────────────────────────
 
 def create_file_record(
@@ -42,11 +75,39 @@ def create_file_record(
     extraction_method: str,
     user_id: int,
 ) -> RagFile:
+    """
+    Upsert logic:
+      - Same hash + active   → DuplicateFileError (identical bytes, skip)
+      - Same name + active   → deactivate old, bump version_no, insert new
+      - No match             → insert fresh at version_no=1
+    """
+    new_hash   = sha256(file_bytes)
+    version_no = 1
+
+    # Exact same bytes already ingested — reject
+    existing_hash = _get_active_by_hash(db, new_hash)
+    if existing_hash:
+        raise DuplicateFileError(
+            f"'{filename}' already ingested with identical content "
+            f"(file_id={existing_hash.file_id}, version={existing_hash.version_no}). "
+            f"No changes detected — skipping."
+        )
+
+    # Same filename, different content — version bump
+    existing_name = _get_active_by_name(db, filename)
+    if existing_name:
+        version_no = (existing_name.version_no or 1) + 1
+        logger.info(
+            f"[RAG] '{filename}' content changed — deactivating file_id={existing_name.file_id} "
+            f"(v{existing_name.version_no}), ingesting as v{version_no}"
+        )
+        _deactivate_file(db, existing_name.file_id, user_id)
+
     f = RagFile(
         original_file_name  = filename,
         storage_uri         = f"run:{run_id}/{filename}",
         relative_path       = filename,
-        file_hash           = sha256(file_bytes),
+        file_hash           = new_hash,
         file_type           = file_type,
         mime_type           = mime_type,
         file_size_bytes     = len(file_bytes),
@@ -56,7 +117,7 @@ def create_file_record(
         category_id         = category_id,
         sub_category_id     = sub_category_id,
         description         = description,
-        version_no          = 1,
+        version_no          = version_no,
         status              = 'processing',
         extraction_method   = extraction_method,
         embedding_model     = "BAAI/bge-large-en-v1.5",
@@ -65,7 +126,7 @@ def create_file_record(
         created_by          = user_id,
     )
     db.add(f)
-    db.flush()  # get file_id without committing
+    db.flush()
     return f
 
 

@@ -48,10 +48,48 @@ def extract(file_bytes: bytes, filename: str) -> Tuple[str, int, str]:
 
 # ── PDF ───────────────────────────────────────────────────────────────────────
 def _extract_pdf(file_bytes: bytes) -> Tuple[str, int, str]:
+    """
+    Extract text from PDF using Docling.
+    Handles native-text, scanned (OCR), multi-column, and table-heavy PDFs.
+    Falls back to pypdf if Docling is not installed.
+    """
+    try:
+        import tempfile
+        from docling.document_converter import DocumentConverter
+
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+            tmp.write(file_bytes)
+            tmp_path = tmp.name
+
+        try:
+            converter = DocumentConverter()
+            result = converter.convert(tmp_path)
+            doc = result.document
+            text = doc.export_to_markdown()
+            page_count = len(doc.pages) if hasattr(doc, 'pages') and doc.pages else 1
+        finally:
+            import os
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+        if not text.strip():
+            raise ExtractorError("No text extracted from PDF (empty document)")
+
+        return text, page_count, 'docling'
+
+    except ImportError:
+        logger.warning("docling not installed — falling back to pypdf. Run: pip install docling")
+        return _extract_pdf_pypdf(file_bytes)
+
+
+def _extract_pdf_pypdf(file_bytes: bytes) -> Tuple[str, int, str]:
+    """Fallback PDF extractor using pypdf (native text only, no OCR)."""
     try:
         from pypdf import PdfReader
     except ImportError:
-        raise ExtractorError("pypdf not installed. Run: pip install pypdf")
+        raise ExtractorError("Neither docling nor pypdf is installed. Run: pip install docling")
 
     reader = PdfReader(io.BytesIO(file_bytes))
     pages = []
@@ -61,7 +99,7 @@ def _extract_pdf(file_bytes: bytes) -> Tuple[str, int, str]:
 
     text = '\n\n'.join(p for p in pages if p)
     if not text.strip():
-        raise ExtractorError("No text extracted from PDF (possibly scanned image PDF)")
+        raise ExtractorError("No text extracted from PDF (possibly scanned — install docling for OCR support)")
 
     return text, len(reader.pages), 'pypdf'
 

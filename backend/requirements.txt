@@ -14,3 +14,4 @@ reportlab>=4.2.0
 sentence_transformers
 langgraph
 openai
+docling>=2.0.0

@@ -46,6 +46,7 @@ def process_run(
         from app.rag.chunker           import chunk_text
         from app.rag.embedder          import embed
         from app.rag import storage
+        from app.rag.storage           import DuplicateFileError
 
         for file_data in files_data:
             filename     = file_data['filename']
@@ -136,6 +137,16 @@ def process_run(
                 db.commit()
                 processed += 1
                 logger.info(f"[RAG] {filename}: {len(chunks)} chunks stored. run={run_id}")
+
+            except DuplicateFileError as e:
+                invalid += 1
+                logger.info(f"[RAG] Duplicate skipped {filename}: {e}")
+                if job:
+                    storage.complete_job(db, job.job_id, status='skipped', message=str(e), user_id=user_id)
+                try:
+                    db.commit()
+                except Exception:
+                    db.rollback()
 
             except ExtractorError as e:
                 failed += 1
