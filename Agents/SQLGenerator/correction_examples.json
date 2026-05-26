@@ -4,7 +4,7 @@
   "description": "30 SQL correction examples. Each entry is a validation feedback packet from the SQL Validator Agent: contains flawed generated SQL, structured validation errors, and suggested fixes. Used by the SQL Correction tab in the test harness.",
   "error_type_distribution": {
     "SCHEMA": 6,
-    "SYNTAX": 8,
+    "SYNTAX": 9,
     "RLS":    6,
     "CLS":    6,
     "FILTER": 6,
@@ -754,6 +754,30 @@
       "cls_applied": { "enabled": false, "policy_name": null, "columns_excluded": [] },
       "metadata": { "domain": "Sales", "sub_domain": "Cancellation", "tables_in_scope": ["sales_semantic_layer.sales_cancellation"], "model_used": "llama-3.3-70b-versatile", "generated_at": "2026-05-24T06:00:00+00:00" },
       "validation_hints": { "original_prompt": "Fetch sales order details to apply cancellation eligibility rules, refund timelines, refund deductions, escalation rules, and retention process for a sales order", "expected_tables": ["sales_cancellation"] }
+    },
+    {
+      "id": 31,
+      "request_id": "corr-031",
+      "status": "validation_failed",
+      "validation_status": "failed",
+      "error_type": "SYNTAX",
+      "generated_sql": "SELECT mc.campaign_name, mc.campaign_type, mc.total_spend, mc.total_revenue, mc.roi_pct, mc.conversion_rate_pct FROM marketing_semantic_layer.marketing_campaign mc WHERE EXTRACT(YEAR FROM mc.start_date) = 2025 AND mc.conversion_rate_pct > mc.0.05 AND mc.roi_pct > mc.1.0 ORDER BY mc.roi_pct DESC",
+      "validation_errors": [
+        {
+          "type": "SYNTAX",
+          "detail": "Table alias 'mc' incorrectly applied to a numeric literal (e.g. 'mc.0.05'). Numeric literals must not be prefixed with a table alias.",
+          "fix": "Remove the 'mc.' prefix from all numeric literals — use bare numbers (e.g. 0.05 not mc.0.05, 1.0 not mc.1.0)"
+        }
+      ],
+      "suggested_corrections": [
+        "Replace 'mc.0.05' with '0.05' — numeric literals are not columns and must never be prefixed with a table alias",
+        "Replace 'mc.1.0' with '1.0' — same rule applies to all numeric literals in WHERE/HAVING clauses",
+        "General rule: table_alias.value syntax is ONLY valid for column references, never for literal numbers, strings, or expressions"
+      ],
+      "rls_applied": { "enabled": false, "policy_name": null, "where_clause_injected": null, "filters_applied": [] },
+      "cls_applied": { "enabled": false, "policy_name": null, "columns_excluded": [] },
+      "metadata": { "domain": "Marketing", "sub_domain": "Campaign Performance", "tables_in_scope": ["marketing_semantic_layer.marketing_campaign"], "model_used": "llama-3.3-70b-versatile", "generated_at": "2026-05-26T06:00:00+00:00" },
+      "validation_hints": { "original_prompt": "Which marketing campaigns have performed well in 2025?", "expected_tables": ["marketing_campaign"] }
     }
   ]
 }

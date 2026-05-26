@@ -40,9 +40,17 @@ async def intent_node(state: dict) -> dict:
         )
 
         if status == "success":
+            intent_result = data.get("intent_result") or {}
+            # Check if ARIA flagged query as out of scope
+            if intent_result.get("out_of_scope"):
+                return {
+                    "intent_status": "out_of_scope",
+                    "intent_result": intent_result,
+                    "intent_error": intent_result.get("reason", "Query is outside your accessible data domains."),
+                }
             return {
                 "intent_status": "success",
-                "intent_result": data.get("intent_result"),
+                "intent_result": intent_result,
                 "intent_error": None,
             }
         else:

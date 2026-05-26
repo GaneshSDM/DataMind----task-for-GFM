@@ -82,7 +82,7 @@ class IntentProcessor:
         self._client = LLMClient(
             model=llm_cfg.get("model"),
             temperature=llm_cfg.get("temperature", 0.05),
-            max_tokens=llm_cfg.get("max_tokens", 2048),
+            max_tokens=llm_cfg.get("max_tokens", 4096),
         )
         self._schema = _load_schema()  # None → fallback mode
 
@@ -101,6 +101,41 @@ class IntentProcessor:
         prompt = self._build_prompt(query, taxonomy, tables_block, rag_block)
         raw = self._client.generate(prompt)
         result = self._parse(raw)
+
+        # ── out-of-scope guard ─────────────────────────────────
+        if result.get("out_of_scope"):
+            logger.info("ARIA: query out of scope — %s", result.get("reason", ""))
+            return {
+                "out_of_scope": True,
+                "reason": result.get("reason", "This query is outside your accessible data domains."),
+                "intents": [],
+                "total_intents": 0,
+                "original_query": query,
+            }
+
+        # ── post-validate structured tables against allowed scope ──
+        if allowed_domains and result.get("intents"):
+            allowed_lower = {d.lower() for d in allowed_domains}
+            allowed_table_names = {
+                t["table_name"].lower()
+                for t in (self._schema.get("tables", []) if self._schema else [])
+                if t.get("domain", "").lower() in allowed_lower
+            }
+            if allowed_table_names:
+                for intent in result["intents"]:
+                    tbl = (intent.get("structured_table") or "").lower()
+                    if tbl and tbl not in allowed_table_names:
+                        logger.warning(
+                            "ARIA: intent '%s' mapped to out-of-scope table '%s' — marking out_of_scope",
+                            intent.get("description", "")[:60], tbl,
+                        )
+                        return {
+                            "out_of_scope": True,
+                            "reason": f"The data required for this query ('{tbl}') is not within your accessible domains.",
+                            "intents": [],
+                            "total_intents": 0,
+                            "original_query": query,
+                        }
 
         # ── RAG retrieval for Unstructured / Both intents ──────
         if allowed_domain_ids:
@@ -247,6 +282,8 @@ class IntentProcessor:
             "relevant_columns: list column names from that table relevant to this intent, or []\n"
             "unstructured_source: 'filename — brief description' from UNSTRUCTURED DOCUMENTS, or null\n"
             "ONLY classify within provided TAXONOMY — never invent domains or sub-domains\n"
+            "If the query cannot be answered using the available TAXONOMY and STRUCTURED TABLES, "
+            "respond ONLY with: {\"out_of_scope\": true, \"reason\": \"<one sentence why>\", \"intents\": []}\n"
             "Order: Data intents first, Reasoning second, Action last\n"
             "One operation = one intent. Conditional action = separate intent.\n\n"
 

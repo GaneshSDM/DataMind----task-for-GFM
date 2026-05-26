@@ -541,6 +541,13 @@ async def stream_send_prompt(
                 f"⚠️ **Guardrail check failed** — {guardrail_message}\n\n"
                 f"*Your prompt could not be processed. Please contact your administrator.*"
             )
+        elif intent_status == "out_of_scope":
+            assistant_content = (
+                f"✅ Guardrails passed.\n\n"
+                f"🔒 **Data not in your scope** — {intent_error}\n\n"
+                f"*You don't have access to the data required for this query. "
+                f"Contact your administrator to request access.*"
+            )
         elif intent_status == "error":
             assistant_content = (
                 f"✅ Guardrails passed.\n\n"

@@ -34,7 +34,7 @@ _ARIA_SCHEMA = os.path.normpath(
 os.environ.setdefault("SCHEMA_FILE_PATH", _ARIA_SCHEMA)
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger("sage")
@@ -364,6 +364,7 @@ async def generate(request: SAGERequest):
             ))
             logger.info("SAGE intent %d → SQL generated (%d chars)",
                         intent.intent_id, len(output["generated_sql"]))
+            logger.debug("SAGE intent %d SQL:\n%s", intent.intent_id, output["generated_sql"])
         except Exception as e:
             logger.error("SAGE intent %d failed: %s", intent.intent_id, e)
             sql_results.append(SQLResult(
@@ -447,6 +448,7 @@ async def correct(request: CorrectionRequest):
             "SAGE corrected intent_id=%d → %d chars",
             request.intent_id, len(corrected_sql) if corrected_sql else 0,
         )
+        logger.debug("SAGE corrected intent_id=%d SQL:\n%s", request.intent_id, corrected_sql or "")
         return CorrectionResponse(
             request_id=request.request_id,
             intent_id=request.intent_id,

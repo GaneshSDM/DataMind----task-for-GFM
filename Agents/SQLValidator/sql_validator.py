@@ -76,6 +76,16 @@ def _check_syntax(sql: str) -> list[dict]:
     if ";;" in s:
         errors.append({"type": "SYNTAX", "detail": "Double semicolons found", "fix": "Use a single semicolon or remove it"})
 
+    # Table alias applied to a numeric literal (e.g. mc.0.05, t1.3.14)
+    # LLMs sometimes prefix float/int literals with a table alias — always invalid SQL.
+    alias_on_literal = re.findall(r"\b([a-zA-Z_][a-zA-Z0-9_]*)\.(\d)", s)
+    for alias, digit in alias_on_literal:
+        errors.append({
+            "type": "SYNTAX",
+            "detail": f"Table alias '{alias}' incorrectly applied to a numeric literal (e.g. '{alias}.{digit}...'). Numeric literals must not be prefixed with a table alias.",
+            "fix": f"Remove the '{alias}.' prefix from the numeric literal — use the bare number (e.g. 0.05, not {alias}.0.05)",
+        })
+
     # SELECT * FROM with no safety (just a warning, not an error)
     if re.search(r"SELECT\s+\*", s, re.IGNORECASE):
         errors.append({"type": "WARNING", "detail": "SELECT * is discouraged — explicitly list columns for security review", "fix": "Replace * with explicit column names"})

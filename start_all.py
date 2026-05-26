@@ -232,7 +232,7 @@ def main():
     print("=" * 60)
 
     # ── Pre-flight: clear any stale processes on agent ports ─────────────────
-    agent_ports = [8001, 8002, 8003, 8004, 8005, 8006, 8000]
+    agent_ports = [8001, 8002, 8003, 8004, 8005, 8006, 8000,5173]
     print(f"\n[Pre-flight] Clearing stale processes on ports {agent_ports}…")
     _free_ports(agent_ports)
 

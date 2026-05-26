@@ -113,7 +113,7 @@ def _after_guardrail(state: OrchestratorState) -> str:
 def _after_intent(state: OrchestratorState) -> str:
     if state.get("intent_status") == "success":
         return "save_to_queue"
-    return END
+    return END  # covers "error" and "out_of_scope"
 
 
 def _after_sql(state: OrchestratorState) -> str:

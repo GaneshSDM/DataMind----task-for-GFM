@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 _BACKEND_ENV = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../backend/.env")
 )
-load_dotenv(dotenv_path=_BACKEND_ENV)
+load_dotenv(dotenv_path=_BACKEND_ENV, override=True)
 
 # Import lightweight SQL utility functions from existing validator
 from sql_validator import (
@@ -41,13 +41,18 @@ from sql_validator import (
 from groq_client import GroqClient, get_query_fingerprint
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger("valkyrie")
 
 _LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("GROQ_API_KEY", "")
 _LLM_MODEL   = os.getenv("LLM_MODEL")   or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+_LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+
+# Startup diagnostic — shows first/last 4 chars of key so you can verify it's correct
+_key_preview = ((_LLM_API_KEY[:4] + "…" + _LLM_API_KEY[-4:]) if len(_LLM_API_KEY) > 8 else "NOT SET")
+print(f"[VALKYRIE] LLM_API_KEY={_key_preview}  BASE_URL={_LLM_BASE_URL}  MODEL={_LLM_MODEL}", flush=True)
 
 _groq_client: Optional[GroqClient] = None
 
@@ -246,12 +251,16 @@ def _validate_one(
             domain    = (intent or {}).get("domain", "")
             subdomain = (intent or {}).get("sub_domain", "")
 
-            # Allowed columns = those with can_read=True for the table
-            allowed_for_groq = []
+            # Allowed columns = those with can_read=True for the table.
+            # If no CLS policy exists for this table → all columns permitted → send "ALL"
+            # so the LLM doesn't interpret an empty list as "nothing allowed".
+            allowed_for_groq = "ALL"
             if cls_list and target_table:
                 bare = target_table.split(".")[-1].lower()
-                for entry in cls_list:
-                    if entry.get("table", "").split(".")[-1].lower() == bare:
+                table_cls = [e for e in cls_list if e.get("table", "").split(".")[-1].lower() == bare]
+                if table_cls:
+                    allowed_for_groq = []
+                    for entry in table_cls:
                         for col in entry.get("columns", []):
                             if col.get("can_read", True):
                                 allowed_for_groq.append(col["column"])
@@ -271,9 +280,8 @@ def _validate_one(
                 "subdomain":          subdomain,
             }
             user_info = {
-                "user_id":   security_profile.get("user_id", ""),
-                "role":      security_profile.get("role", ""),
-                "tenant_id": "default",
+                "user_id": security_profile.get("user_id", ""),
+                "role":    security_profile.get("role", ""),
             }
 
             groq_result      = groq_client.validate_permissions(sql, user_info, schema_ctx)
@@ -336,6 +344,12 @@ async def validate(request: VALKYRIERequest):
             "VALKYRIE intent %d → %s (%d violation(s))",
             result["intent_id"], result["status"], len(result["violations"]),
         )
+        logger.debug("VALKYRIE intent %d SQL:\n%s", result["intent_id"], result.get("sql", ""))
+        for v in result["violations"]:
+            logger.info(
+                "  VIOLATION [%s] %s | fix: %s",
+                v.get("type", "?"), v.get("detail", "")[:150], v.get("fix", "")[:100],
+            )
         validated.append(result)
 
     # Overall status
