@@ -11,3 +11,6 @@ pydantic-settings>=2.6.0
 httpx>=0.28.0
 python-dotenv>=1.0.1
 reportlab>=4.2.0
+sentence_transformers
+langgraph
+openai

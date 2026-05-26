@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-23T08:49:18.027430+00:00",
+  "generated_at": "2026-05-26T08:09:47.034831+00:00",
   "target_schema": "sales",
   "domains": [
     {
@@ -16,6 +16,11 @@
       "id": 2,
       "name": "HR",
       "db_schema": "hr_semantic_layer"
+    },
+    {
+      "id": 6,
+      "name": "Marketing",
+      "db_schema": "marketing_semantic_layer"
     },
     {
       "id": 4,
@@ -35,6 +40,11 @@
       "domain_id": 1
     },
     {
+      "id": 8,
+      "name": "Campaigns",
+      "domain_id": 6
+    },
+    {
       "id": 7,
       "name": "Cancellation",
       "domain_id": 3
@@ -43,6 +53,11 @@
       "id": 4,
       "name": "CustomerSales",
       "domain_id": 3
+    },
+    {
+      "id": 9,
+      "name": "Lead Generation",
+      "domain_id": 6
     },
     {
       "id": 3,
@@ -1495,6 +1510,444 @@
         },
         {
           "name": "relocation_required",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "marketing_campaign",
+      "schema": "marketing_semantic_layer",
+      "domain": "Marketing",
+      "domain_id": 6,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "campaign_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "campaign_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "campaign_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "campaign_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "channel",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "product_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "product_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "target_audience",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "audience_size",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "impressions",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "clicks",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "conversions",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "leads_generated",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "ctr_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "conversion_rate_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "total_budget",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "spent_budget",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "remaining_budget",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "cost_per_click",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "cost_per_lead",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "cost_per_acquisition",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "revenue_generated",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "roas",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "email_open_rate_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "email_bounce_rate_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "social_engagement_rate_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "campaign_owner_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "campaign_owner_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "agency_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "campaign_duration_days",
+          "type": "integer",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "marketing_leadgeneration",
+      "schema": "marketing_semantic_layer",
+      "domain": "Marketing",
+      "domain_id": 6,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "lead_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "lead_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "lead_source",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "lead_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "lead_score",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "lead_quality",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "prospect_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "prospect_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "prospect_company",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "prospect_industry",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "prospect_title",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "prospect_company_size",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "campaign_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "campaign_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "product_interest",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "estimated_deal_value",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sales_rep_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sales_rep_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sales_team",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "first_contact_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "qualification_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "close_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "time_to_qualify_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "time_to_close_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "conversion_stage",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "lost_reason",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "follow_up_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "meetings_scheduled",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "demos_conducted",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "is_converted",
           "type": "character varying",
           "nullable": true
         }

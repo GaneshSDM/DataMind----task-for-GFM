@@ -3,16 +3,20 @@ orchestrator.py
 ---------------
 LangGraph StateGraph for the prompt pipeline.
 
-Current flow (Phase 6):
+Current flow (Phase 7 — SAGE ∥ RAVEN):
   guardrail_check → [blocked/error → END]
                   → intent_classify → [error → END]
-                  → save_to_queue → sql_generate → [SQL ok  → validate_sql]
-                                                 → [no SQL + unstructured → raven_query]
-                                                 → [no SQL + no unstructured → END]
-                                                     validate_sql:
-                                                       PASS/PARTIAL/WARN → raven_query → spyder_synthesize → END
-                                                       FAIL + attempt<2  → sql_correct → validate_sql
-                                                       FAIL + attempt≥2  → END
+                  → save_to_queue ─┬─ sql_generate → [SQL ok  → validate_sql]
+                  (parallel)       │                          → [no SQL   → END]
+                                   │                 validate_sql:
+                                   │                   PASS/PARTIAL/WARN → spyder_synthesize → END
+                                   │                   FAIL + attempt<2  → sql_correct → validate_sql
+                                   │                   FAIL + attempt≥2  → END
+                                   └─ raven_query → spyder_synthesize → END
+
+  SAGE (sql_generate) and RAVEN (raven_query) run in parallel after save_to_queue.
+  Both converge at spyder_synthesize (fan-in).
+  RAVEN skips automatically when no unstructured intents exist.
 
 State keys:
   prompt, guardrails, security_profile, metadata          — inputs
@@ -102,31 +106,16 @@ def _after_intent(state: OrchestratorState) -> str:
     return END
 
 
-def _after_queue(state: OrchestratorState) -> str:
-    # Always attempt SQL generation if intents exist, even if queue write failed
-    if state.get("intent_result") and state["intent_result"].get("intents"):
-        return "sql_generate"
-    return END
-
-
 def _after_sql(state: OrchestratorState) -> str:
-    sql_result    = state.get("sql_result")
-    intent_result = state.get("intent_result")
+    sql_result = state.get("sql_result")
 
     has_sql = sql_result and any(
         r.get("status") == "success"
         for r in sql_result.get("sql_results", [])
     )
-    has_unstructured = intent_result and any(
-        i.get("data_source") in ("Unstructured", "Both")
-        for i in intent_result.get("intents", [])
-    )
 
     if has_sql:
         return "validate_sql"
-    if has_unstructured:
-        # No SQL results but unstructured intents exist — skip SQL path, go to RAVEN
-        return "raven_query"
     return END
 
 
@@ -149,7 +138,7 @@ def _after_validate(state: OrchestratorState) -> str:
         )
         return "sql_correct"
     if status in ("pass", "partial", "warn"):
-        return "raven_query"
+        return "spyder_synthesize"
     return END
 
 
@@ -178,24 +167,22 @@ def _build_graph():
         _after_intent,
         {"save_to_queue": "save_to_queue", END: END},
     )
-    g.add_conditional_edges(
-        "save_to_queue",
-        _after_queue,
-        {"sql_generate": "sql_generate", END: END},
-    )
+    # Parallel fan-out: SAGE and RAVEN start simultaneously after queue write
+    g.add_edge("save_to_queue", "sql_generate")
+    g.add_edge("save_to_queue", "raven_query")
     g.add_conditional_edges(
         "sql_generate",
         _after_sql,
-        {"validate_sql": "validate_sql", "raven_query": "raven_query", END: END},
+        {"validate_sql": "validate_sql", END: END},
     )
     g.add_conditional_edges(
         "validate_sql",
         _after_validate,
-        {"sql_correct": "sql_correct", "raven_query": "raven_query", END: END},
+        {"sql_correct": "sql_correct", "spyder_synthesize": "spyder_synthesize", END: END},
     )
     # After correction always re-validate
     g.add_edge("sql_correct", "validate_sql")
-    # RAVEN always feeds into SPYDER
+    # RAVEN fan-in: converges with SQL path at SPYDER
     g.add_edge("raven_query", "spyder_synthesize")
     # After synthesis always end
     g.add_edge("spyder_synthesize", END)

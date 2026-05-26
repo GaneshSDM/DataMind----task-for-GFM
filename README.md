@@ -94,7 +94,15 @@ Agent `.env` files are empty stubs — all agents load from `backend/.env`.
 
 > **Note:** The backend Pydantic Settings model uses `extra = "ignore"`, so agent-only keys in the same file (`DB_HOST`, `GROQ_API_KEY`, `DB_SSLMODE`, etc.) are safe and will not cause backend startup errors.
 
-### 2. Backend
+### 2.1 Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev                  # :5173
+```
+
+### 2.2 Backend
 
 ```bash
 cd backend
@@ -111,6 +119,7 @@ uvicorn app.main:app --reload --port 8000
 **Option A — single launch script (recommended):**
 
 ```bash
+python C:\GitHub\DataMind\Agents\IntentClassifier\bootstrap_schema.py
 python start_all.py   # starts all agents + backend + frontend in correct order
 ```
 
@@ -149,13 +158,7 @@ pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8005 --reload     # :8005
 ```
 
-### 4. Frontend
 
-```bash
-cd frontend
-npm install
-npm run dev                  # :5173
-```
 
 ---
 
