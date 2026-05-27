@@ -193,7 +193,7 @@ export default function AgentSkills() {
       <div style={{
         height: 52, minHeight: 52, background: 'var(--bg-header)',
         borderBottom: '1px solid var(--border-default)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center',
         padding: '0 16px', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -206,32 +206,28 @@ export default function AgentSkills() {
             UI Preview — Backend Pending
           </span>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={handleNew}>
-          <Plus size={12} /> New Skill
-        </button>
       </div>
 
       {/* ── Body ──────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
 
-        {/* Left panel */}
+        {/* ── Skill selector bar ───────────────────────────────────────────────── */}
         <div style={{
-          width: 246, minWidth: 246, borderRight: '1px solid var(--border-default)',
-          overflowY: 'auto', background: 'var(--bg-sidebar, var(--bg-surface))',
-          display: 'flex', flexDirection: 'column',
+          padding: '8px 16px', flexShrink: 0,
+          borderBottom: '1px solid var(--border-default)',
+          background: 'var(--bg-surface)',
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
         }}>
           {/* Search */}
-          <div style={{ padding: '10px 10px 6px' }}>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search skills…"
-              style={{ ...INPUT, fontSize: 12 }}
-            />
-          </div>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search skills…"
+            style={{ ...INPUT, width: 180, flexShrink: 0 }}
+          />
 
           {/* Filter pills */}
-          <div style={{ display: 'flex', gap: 4, padding: '4px 10px 8px' }}>
+          <div style={{ display: 'flex', gap: 4 }}>
             {[
               { key: 'all',      label: `All (${skills.length})` },
               { key: 'view',     label: `View (${countByType('view')})` },
@@ -241,8 +237,8 @@ export default function AgentSkills() {
                 key={f.key}
                 onClick={() => setFilter(f.key)}
                 style={{
-                  flex: 1, padding: '3px 0', fontSize: 9.5, fontWeight: 600,
-                  borderRadius: 12, cursor: 'pointer',
+                  padding: '3px 10px', fontSize: 9.5, fontWeight: 600,
+                  borderRadius: 12, cursor: 'pointer', whiteSpace: 'nowrap',
                   border: `1px solid ${filter === f.key ? 'var(--brand-orange, #F47920)' : 'var(--border-default)'}`,
                   background: filter === f.key ? 'var(--brand-orange-subtle, #fff7ed)' : 'transparent',
                   color: filter === f.key ? 'var(--brand-orange, #F47920)' : 'var(--text-tertiary)',
@@ -253,41 +249,33 @@ export default function AgentSkills() {
             ))}
           </div>
 
-          {/* Skill list */}
-          {filtered.length === 0 && (
-            <div style={{ padding: '28px 10px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 12 }}>
-              No skills found.
-            </div>
-          )}
-          {filtered.map(s => (
-            <div
-              key={s.id}
-              onClick={() => selectSkill(s)}
-              style={{
-                padding: '9px 10px', cursor: 'pointer',
-                borderLeft: `3px solid ${s.id === selectedId && !isNew ? 'var(--brand-orange, #F47920)' : 'transparent'}`,
-                background: s.id === selectedId && !isNew ? 'var(--bg-subtle)' : 'transparent',
+          {/* Skill dropdown */}
+          {filtered.length > 0 && (
+            <select
+              value={isNew ? '' : (selectedId || '')}
+              onChange={e => {
+                const s = skills.find(x => x.id === e.target.value)
+                if (s) selectSkill(s)
               }}
+              style={{ ...INPUT, minWidth: 200, maxWidth: 320, flex: '1 1 auto' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-                <span style={{
-                  fontSize: 11.5, fontWeight: 700,
-                  color: 'var(--brand-blue, #1A4FA0)', fontFamily: 'monospace',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-                }}>
-                  @{s.name || 'untitled'}
-                </span>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.is_active ? '#16a34a' : '#9ca3af', flexShrink: 0 }} title={s.is_active ? 'Active' : 'Inactive'} />
-              </div>
-              <div style={{ marginBottom: 3 }}><TypeBadge type={s.type} /></div>
-              <div style={{ fontSize: 10, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {s.description}
-              </div>
-            </div>
-          ))}
+              {isNew && <option value="">— New Skill —</option>}
+              {filtered.map(s => (
+                <option key={s.id} value={s.id}>
+                  @{s.name || 'untitled'} · {TYPE_STYLE[s.type]?.label || s.type} · {s.is_active ? 'Active' : 'Inactive'}
+                </option>
+              ))}
+            </select>
+          )}
+          {filtered.length === 0 && !isNew && (
+            <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', flex: 1 }}>No skills match filter</span>
+          )}
+
+          <button className="btn btn-primary btn-sm" onClick={handleNew} style={{ marginLeft: 'auto', flexShrink: 0 }}>
+            <Plus size={12} /> New Skill
+          </button>
         </div>
 
-        {/* Right panel */}
         {draft ? (
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 

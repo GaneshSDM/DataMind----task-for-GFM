@@ -279,91 +279,52 @@ export default function AppMapping() {
       </div>
 
       {/* ── Body ────────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
 
-        {/* Left: App list */}
+        {/* ── App selector bar ─────────────────────────────────────────────────── */}
         <div style={{
-          width: 236, minWidth: 236,
-          borderRight: '1px solid var(--border-default)',
-          overflowY: 'auto',
-          background: 'var(--bg-sidebar, var(--bg-surface))',
-          display: 'flex', flexDirection: 'column',
+          padding: '10px 16px', flexShrink: 0,
+          borderBottom: '1px solid var(--border-default)',
+          background: 'var(--bg-surface)',
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
         }}>
-          <div style={{
-            padding: '10px 12px 6px',
-            fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)',
-            textTransform: 'uppercase', letterSpacing: '0.06em',
-          }}>
-            Applications ({apps.length})
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>Application:</span>
+            <select
+              value={selected || ''}
+              onChange={e => { setSelected(Number(e.target.value)); setDirty(false) }}
+              style={{ ...INPUT, minWidth: 200, maxWidth: 300 }}
+            >
+              {apps.length === 0 && <option value="">No applications</option>}
+              {apps.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.name} · {AUTH_STYLE[a.auth_type]?.label || a.auth_type} · {a.apis.length} APIs
+                </option>
+              ))}
+            </select>
           </div>
 
-          {apps.map(a => (
-            <div
-              key={a.id}
-              onClick={() => { setSelected(a.id); setDirty(false) }}
-              style={{
-                padding: '10px 12px', cursor: 'pointer',
-                borderLeft: `3px solid ${a.id === selected ? 'var(--brand-orange, #F47920)' : 'transparent'}`,
-                background: a.id === selected ? 'var(--bg-subtle)' : 'transparent',
-                display: 'flex', alignItems: 'center', gap: 9,
-              }}
-            >
-              <span style={{ fontSize: 20, flexShrink: 0 }}>{a.icon}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {a.name}
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>
-                  {AUTH_STYLE[a.auth_type]?.label || a.auth_type} · {a.apis.length} API{a.apis.length !== 1 ? 's' : ''}
-                </div>
-              </div>
-              <span
-                style={{ width: 7, height: 7, borderRadius: '50%', background: a.is_active ? '#16a34a' : '#9ca3af', flexShrink: 0 }}
-                title={a.is_active ? 'Active' : 'Inactive'}
-              />
-            </div>
-          ))}
-
-          {apps.length === 0 && (
-            <div style={{ padding: '28px 12px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 12 }}>
-              No applications. Click "+ New Application".
-            </div>
-          )}
-        </div>
-
-        {/* Right: Detail */}
-        {app ? (
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-
-            {/* App header bar */}
-            <div style={{
-              padding: '14px 20px',
-              borderBottom: '1px solid var(--border-default)',
-              background: 'var(--bg-surface)',
-              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-            }}>
-              <span style={{ fontSize: 26, flexShrink: 0 }}>{app.icon}</span>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{app.name}</div>
-                <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)', fontFamily: 'monospace', marginTop: 1 }}>{app.base_url}</div>
-              </div>
+          {app && (
+            <>
               <AuthBadge type={app.auth_type} />
               <button
                 onClick={toggleActive}
                 style={{
-                  fontSize: 10.5, fontWeight: 600, padding: '3px 10px', borderRadius: 12,
+                  fontSize: 10.5, fontWeight: 600, padding: '3px 10px', borderRadius: 12, cursor: 'pointer',
                   border: `1px solid ${app.is_active ? '#86efac' : 'var(--border-default)'}`,
                   background: app.is_active ? '#f0fdf4' : 'var(--bg-subtle)',
                   color: app.is_active ? '#16a34a' : 'var(--text-tertiary)',
-                  cursor: 'pointer',
                 }}
               >
                 {app.is_active ? '● Active' : '○ Inactive'}
               </button>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{
+                fontSize: 10.5, color: 'var(--text-tertiary)', fontFamily: 'monospace',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: 0,
+              }}>
+                {app.base_url}
+              </div>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexShrink: 0 }}>
                 <button className="btn btn-sm" onClick={() => setAddApiOpen(true)}>
                   <Plus size={11} /> Add API
                 </button>
@@ -376,7 +337,17 @@ export default function AppMapping() {
                   <Trash2 size={11} />
                 </button>
               </div>
-            </div>
+            </>
+          )}
+          {!app && apps.length === 0 && (
+            <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)' }}>
+              No applications yet — click "+ New Application" to add one.
+            </span>
+          )}
+        </div>
+
+        {app ? (
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
             {/* Content */}
             <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -560,7 +531,7 @@ export default function AppMapping() {
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
-            Select an application to manage user mappings.
+            Select an application from the dropdown above to manage user mappings.
           </div>
         )}
       </div>

@@ -72,12 +72,12 @@ export default function UserProfile() {
         <span style={{ fontSize: 14, fontWeight: 700 }}>My Profile</span>
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'flex-start' }}>
+      {/* Content — two-column on wide screens */}
+      <div style={{ flex: 1, overflow: 'auto', padding: 24, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
 
-        {/* ── Profile card ── */}
+        {/* ── Profile card (left) ── */}
         <div style={{
-          width: '100%', maxWidth: 480,
+          flex: '1 1 340px', maxWidth: 480,
           background: 'var(--bg-surface)',
           border: '1px solid var(--border-default)',
           borderRadius: 10, padding: 24,
@@ -137,9 +137,9 @@ export default function UserProfile() {
           </div>
         </div>
 
-        {/* ── Change Password card ── */}
+        {/* ── Change Password card (right) ── */}
         <div style={{
-          width: '100%', maxWidth: 480,
+          flex: '1 1 280px', maxWidth: 420,
           background: 'var(--bg-surface)',
           border: '1px solid var(--border-default)',
           borderRadius: 10, padding: 24,

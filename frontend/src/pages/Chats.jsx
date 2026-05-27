@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { Plus, Trash2, Send, MessageSquare, ChevronDown, ChevronUp, Download, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { Plus, Trash2, Send, MessageSquare, ChevronLeft, ChevronRight, X, Download, ThumbsUp, ThumbsDown, Copy, Check } from 'lucide-react'
 import { getChats, getChatMessages, sendPrompt, streamSendPrompt, deleteChat, getSecurityGroups, getMe, exportReport } from '../api/client'
 import { useSkills } from '../contexts/SkillsContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -623,6 +623,7 @@ export default function Chats() {
   const [userSGIds, setUserSGIds]       = useState([])
   const [selectedSGIds, setSelectedSGIds] = useState([])
   const [recentOpen, setRecentOpen]     = useState(true)
+  const [copiedId,   setCopiedId]       = useState(null)
   const { user } = useAuth()
   const bottomRef = useRef()
   const textareaRef = useRef()
@@ -762,6 +763,57 @@ export default function Chats() {
     toast.success('Chat deleted')
   }
 
+  const copyMessage = async (msg) => {
+    let text = ''
+    if (msg.Content) {
+      text = msg.Content
+    } else if (msg.SpyderResult) {
+      const llm = msg.SpyderResult.llm_response || {}
+      text = llm.synthesized_answer || ''
+      if (!text) {
+        const recs = Array.isArray(llm.recommendations) ? llm.recommendations : []
+        text = recs.join('\n')
+      }
+      const sqlRes = (msg.SpyderResult.sql_results || []).filter(r => r.rows?.length)
+      if (sqlRes.length) {
+        const tables = sqlRes.map(sr => {
+          const cols = sr.columns || (sr.rows[0] ? Object.keys(sr.rows[0]) : [])
+          const header = cols.join('\t')
+          const rows   = sr.rows.slice(0, 200).map(r => cols.map(c => r[c] ?? '').join('\t')).join('\n')
+          return `[${sr.label || sr.query_id}]\n${header}\n${rows}`
+        })
+        text = [text, ...tables].filter(Boolean).join('\n\n')
+      }
+    }
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedId(msg.MessageID)
+      setTimeout(() => setCopiedId(id => id === msg.MessageID ? null : id), 2000)
+    } catch {
+      toast.error('Copy failed')
+    }
+  }
+
+  const handleClearChat = () => {
+    setMessages([])
+    toast.success('Chat cleared')
+  }
+
+  const handleDeleteAll = async () => {
+    if (!chats.length) { toast('No chats to delete'); return }
+    if (!window.confirm(`Delete all ${chats.length} chat(s)? This cannot be undone.`)) return
+    try {
+      await Promise.all(chats.map(c => deleteChat(c.ChatID)))
+      setChats([])
+      setActiveChatId(null)
+      setMessages([])
+      toast.success('All chats deleted')
+    } catch {
+      toast.error('Failed to delete all chats')
+    }
+  }
+
   const visibleSGs = allSGs.filter(sg => userSGIds.includes(sg.SecurityGroupID))
 
   return (
@@ -824,27 +876,51 @@ export default function Chats() {
                 : isError
                   ? { borderLeft: '3px solid var(--color-warning, #f59e0b)', background: 'var(--bg-warning-subtle, #fffbeb)' }
                   : {}
+              const isCopied   = copiedId === m.MessageID
+              const canCopy    = m.Role === 'assistant' && !m._streaming && (m.Content || m.SpyderResult)
               return (
                 <div key={m.MessageID || i} className={`message ${m.Role}`}>
-                  <div className="message-bubble" style={bubbleStyle}>
-                    {isBlocked && m.BlockedBy && (
-                      <div style={{ marginBottom: 6 }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em',
-                          padding: '2px 8px', borderRadius: 'var(--radius-pill)',
-                          background: 'var(--color-error, #ef4444)', color: '#fff',
-                        }}>🚫 {m.BlockedBy}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                    <div className="message-bubble" style={bubbleStyle}>
+                      {isBlocked && m.BlockedBy && (
+                        <div style={{ marginBottom: 6 }}>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em',
+                            padding: '2px 8px', borderRadius: 'var(--radius-pill)',
+                            background: 'var(--color-error, #ef4444)', color: '#fff',
+                          }}>🚫 {m.BlockedBy}</span>
+                        </div>
+                      )}
+                      {m._streaming
+                        ? <PipelineProgress steps={m._steps || []} />
+                        : m.SpyderResult
+                          ? <SpyderPanel result={m.SpyderResult} prompt={prevPrompt} />
+                          : m.Content
+                            ? <MarkdownText text={m.Content} />
+                            : null
+                      }
+                    </div>
+                    {canCopy && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                        <button
+                          onClick={() => copyMessage(m)}
+                          title="Copy response"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: '2px 6px', borderRadius: 4, fontSize: 10.5,
+                            color: isCopied ? '#16a34a' : 'var(--text-tertiary)',
+                            transition: 'color 0.15s',
+                          }}
+                          onMouseEnter={e => { if (!isCopied) e.currentTarget.style.color = 'var(--text-primary)' }}
+                          onMouseLeave={e => { if (!isCopied) e.currentTarget.style.color = 'var(--text-tertiary)' }}
+                        >
+                          {isCopied ? <Check size={11} /> : <Copy size={11} />}
+                          {isCopied ? 'Copied' : 'Copy'}
+                        </button>
                       </div>
                     )}
-                    {m._streaming
-                      ? <PipelineProgress steps={m._steps || []} />
-                      : m.SpyderResult
-                        ? <SpyderPanel result={m.SpyderResult} prompt={prevPrompt} />
-                        : m.Content
-                          ? <MarkdownText text={m.Content} />
-                          : null
-                    }
                   </div>
                 </div>
               )
@@ -922,34 +998,52 @@ export default function Chats() {
           </div>
         </div>
 
-        {/* Recent chats strip */}
-        {chats.length > 0 && (
-          <div className="chat-recent">
-            <div className="chat-recent-header" onClick={() => setRecentOpen(o => !o)}>
-              <span className="chat-recent-label">Recent Chats ({chats.length})</span>
-              {recentOpen
-                ? <ChevronDown size={12} style={{ color: 'var(--text-tertiary)' }} />
-                : <ChevronUp size={12} style={{ color: 'var(--text-tertiary)' }} />}
-            </div>
-            {recentOpen && (
-              <div className="chat-recent-list">
-                {chats.map(c => (
+        {/* Right sidebar — sibling to chat-main inside chat-shell */}
+        <div className={`chat-sidebar-right${recentOpen ? '' : ' collapsed'}`}>
+          <div className="chat-sidebar-toggle" onClick={() => setRecentOpen(o => !o)}>
+            {recentOpen ? (
+              <>
+                <span className="chat-sidebar-label">Chats ({chats.length})</span>
+                <ChevronRight size={13} />
+              </>
+            ) : (
+              <ChevronLeft size={13} />
+            )}
+          </div>
+
+          {recentOpen && (
+            <>
+              <div className="chat-sidebar-list">
+                {chats.length === 0 ? (
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '14px 8px', textAlign: 'center' }}>
+                    No chats yet
+                  </div>
+                ) : chats.map(c => (
                   <div
                     key={c.ChatID}
-                    className={`chat-item ${activeChatId === c.ChatID ? 'active' : ''}`}
+                    className={`chat-sidebar-item${activeChatId === c.ChatID ? ' active' : ''}`}
                     onClick={() => setActiveChatId(c.ChatID)}
                   >
                     <MessageSquare size={11} style={{ flexShrink: 0, opacity: 0.6 }} />
-                    <span className="chat-item-text">{c.Title || 'Untitled'}</span>
+                    <span className="chat-item-text" style={{ flex: 1 }}>{c.Title || 'Untitled'}</span>
                     <button className="chat-item-del" onClick={e => handleDelete(e, c.ChatID)}>
                       <Trash2 size={10} />
                     </button>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        )}
+
+              <div className="chat-sidebar-actions">
+                <button className="chat-sidebar-action-btn" onClick={handleClearChat}>
+                  <X size={11} /> Clear Chat
+                </button>
+                <button className="chat-sidebar-action-btn danger" onClick={handleDeleteAll}>
+                  <Trash2 size={11} /> Delete All History
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
