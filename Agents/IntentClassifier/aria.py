@@ -59,6 +59,7 @@ class ARIARequest(BaseModel):
     security_profile: SecurityProfile
     metadata: dict = {}
     llm_config: Optional[dict] = None   # per-request overrides: model/temperature/max_tokens
+    conversation_context: Optional[str] = None  # compact prior-turn context for pronoun resolution
 
 
 class ARIAResponse(BaseModel):
@@ -118,6 +119,7 @@ async def classify(request: ARIARequest):
                 allowed_domains=allowed_domains or None,
                 allowed_subdomains=allowed_subdomains or None,
                 allowed_domain_ids=allowed_domain_ids or None,
+                conversation_context=request.conversation_context or "",
             )
         )
         return ARIAResponse(

@@ -100,6 +100,8 @@ class OrchestratorState(TypedDict):
     raven_status: Optional[str]
     raven_result: Optional[dict]
     raven_error: Optional[str]
+    # conversation memory
+    conversation_context: Optional[str]
 
 
 # ── routers ──────────────────────────────────────────────────
@@ -236,9 +238,10 @@ def _make_initial_state(
         "spyder_status":      None,
         "spyder_result":      None,
         "spyder_error":       None,
-        "raven_status":       None,
-        "raven_result":       None,
-        "raven_error":        None,
+        "raven_status":          None,
+        "raven_result":          None,
+        "raven_error":           None,
+        "conversation_context":  metadata.get("conversation_context", ""),
     }
 
 

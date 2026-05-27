@@ -19,10 +19,11 @@ async def intent_node(state: dict) -> dict:
     On error    → intent_status = 'error', intent_error = '...'
     """
     payload = {
-        "request_id": state["metadata"].get("request_id", ""),
-        "prompt": state["prompt"],
-        "security_profile": state["security_profile"],
-        "metadata": state["metadata"],
+        "request_id":           state["metadata"].get("request_id", ""),
+        "prompt":               state["prompt"],
+        "security_profile":     state["security_profile"],
+        "metadata":             state["metadata"],
+        "conversation_context": state.get("conversation_context", ""),
     }
 
     try:

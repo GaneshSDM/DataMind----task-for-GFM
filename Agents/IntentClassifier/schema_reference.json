@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-26T12:45:09.265586+00:00",
+  "generated_at": "2026-05-27T08:01:42.330370+00:00",
   "target_schema": "sales",
   "domains": [
     {
@@ -16,6 +16,16 @@
       "id": 2,
       "name": "HR",
       "db_schema": "hr_semantic_layer"
+    },
+    {
+      "id": 7,
+      "name": "IT",
+      "db_schema": "it_semantic_layer"
+    },
+    {
+      "id": 8,
+      "name": "Legal",
+      "db_schema": "legal_semantic_layer"
     },
     {
       "id": 6,
@@ -35,8 +45,8 @@
   ],
   "subdomains": [
     {
-      "id": 1,
-      "name": "Accounts",
+      "id": 2,
+      "name": "Asset Management",
       "domain_id": 1
     },
     {
@@ -50,9 +60,19 @@
       "domain_id": 3
     },
     {
-      "id": 4,
-      "name": "CustomerSales",
-      "domain_id": 3
+      "id": 1,
+      "name": "Finance Accounting",
+      "domain_id": 1
+    },
+    {
+      "id": 10,
+      "name": "IT Infrastructure",
+      "domain_id": 7
+    },
+    {
+      "id": 11,
+      "name": "IT Service Desk",
+      "domain_id": 7
     },
     {
       "id": 9,
@@ -60,19 +80,34 @@
       "domain_id": 6
     },
     {
-      "id": 3,
-      "name": "Recruitment",
+      "id": 12,
+      "name": "Legal Compliance",
+      "domain_id": 8
+    },
+    {
+      "id": 13,
+      "name": "Legal Contracts",
+      "domain_id": 8
+    },
+    {
+      "id": 14,
+      "name": "Operations Logistics",
+      "domain_id": 4
+    },
+    {
+      "id": 15,
+      "name": "Operations Procurement",
+      "domain_id": 4
+    },
+    {
+      "id": 16,
+      "name": "Payroll",
       "domain_id": 2
     },
     {
-      "id": 2,
-      "name": "Revenue",
-      "domain_id": 1
-    },
-    {
-      "id": 5,
-      "name": "RiskCompliance",
-      "domain_id": 5
+      "id": 3,
+      "name": "Recruitment",
+      "domain_id": 2
     },
     {
       "id": 6,
@@ -1516,6 +1551,877 @@
       ]
     },
     {
+      "table_name": "it_infrastructure",
+      "schema": "it_semantic_layer",
+      "domain": "IT",
+      "domain_id": 7,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "resource_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "resource_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "monitoring_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "resource_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "environment",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "operating_system",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "cpu_utilization_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "memory_utilization_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "disk_utilization_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "network_bandwidth_mbps",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "network_latency_ms",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "uptime_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "downtime_minutes_annual",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "incident_count_monthly",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "alert_count_monthly",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "critical_alert_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "patch_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "last_patch_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "next_patch_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "backup_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "last_backup_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "vendor",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "model",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "purchase_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "end_of_life_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "monthly_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "annual_cost",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "datacenter_location",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "rack_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "virtualization",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "redundancy_type",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "it_servicedesk",
+      "schema": "it_semantic_layer",
+      "domain": "IT",
+      "domain_id": 7,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "ticket_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "created_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "resolved_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "closed_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "ticket_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "priority",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_category",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "reporter_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "reporter_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "assignee_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "assignee_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "team",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "resolution_time_hours",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "sla_target_hours",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "sla_breached",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "customer_satisfaction_score",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "first_call_resolution",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "impact",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "urgency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "root_cause",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "escalation_level",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "escalation_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "reopen_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "cost_of_downtime_usd",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "affected_users_count",
+          "type": "integer",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "legal_compliance",
+      "schema": "legal_semantic_layer",
+      "domain": "Legal",
+      "domain_id": 8,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "compliance_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "assessment_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "completion_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "regulation_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "regulation_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "compliance_area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "compliance_owner_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "compliance_owner_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "compliance_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "risk_level",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "total_finding_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "critical_finding_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "open_finding_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "closed_finding_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "remediation_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "remediation_due_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "audit_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "auditor_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "penalty_amount_paid",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "estimated_fine_risk",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "training_completion_pct",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "policy_updated",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "last_review_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "next_review_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "regulatory_body",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "certification_status",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
+      "table_name": "legal_contracts",
+      "schema": "legal_semantic_layer",
+      "domain": "Legal",
+      "domain_id": 8,
+      "object_type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "contract_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "effective_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "expiry_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "sub_domain",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "country",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "state",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "city",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "area",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "region",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "day",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "contract_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_status",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "counterparty_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "counterparty_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "counterparty_type",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "department",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "business_unit",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_owner_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_owner_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "legal_counsel_id",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "legal_counsel_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "contract_value",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "currency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "payment_terms",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "payment_frequency",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "auto_renewal",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "renewal_notice_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "contract_term_years",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "governing_law",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "jurisdiction",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "risk_rating",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "risk_flags",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "key_clause_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "amendment_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "approval_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "approver_name",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "termination_notice_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "liability_cap",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "is_regulated",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "dispute_resolution",
+          "type": "character varying",
+          "nullable": true
+        },
+        {
+          "name": "signatory_name",
+          "type": "character varying",
+          "nullable": true
+        }
+      ]
+    },
+    {
       "table_name": "marketing_campaign",
       "schema": "marketing_semantic_layer",
       "domain": "Marketing",
@@ -2898,7 +3804,7 @@
       "page_count": 18,
       "file_type": "pdf",
       "domain": "Finance",
-      "subdomain": "Accounts",
+      "subdomain": "Finance Accounting",
       "category": "Bookings",
       "sub_category": "SOP"
     },

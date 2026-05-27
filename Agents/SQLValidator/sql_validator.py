@@ -43,9 +43,9 @@ def _check_syntax(sql: str) -> list[dict]:
         errors.append({"type": "SYNTAX", "detail": "Empty query", "fix": "Provide a SQL statement"})
         return errors
 
-    # Must start with SELECT
-    if not re.match(r"^\s*SELECT\b", s, re.IGNORECASE):
-        errors.append({"type": "SYNTAX", "detail": "Query must start with SELECT", "fix": "Only SELECT statements are supported"})
+    # Must start with SELECT or WITH (CTE)
+    if not re.match(r"^\s*(SELECT|WITH)\b", s, re.IGNORECASE):
+        errors.append({"type": "SYNTAX", "detail": "Query must start with SELECT or WITH (CTE)", "fix": "Only SELECT/CTE statements are supported"})
 
     # Must have FROM
     if not re.search(r"\bFROM\b", s, re.IGNORECASE):

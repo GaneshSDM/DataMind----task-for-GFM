@@ -1,7 +1,10 @@
 import json
 import uuid
 import time
-from fastapi import APIRouter, Depends, HTTPException, Request
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+
+logger = logging.getLogger(__name__)
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -163,6 +166,170 @@ def build_security_payload(db, user_id, security_group_id=None, security_group_i
     }
 
 
+# ── Conversation context (persistent via assistant message payload) ────────────
+_MAX_CONTEXT_TURNS = 3
+
+
+def _context_block_with_summary(snapshot: list, summary: str) -> str:
+    """Build full context string for ARIA: summary + recent turns."""
+    parts = []
+    if summary and summary.strip():
+        parts.append(f"[SUMMARY] {summary.strip()}")
+    if snapshot:
+        lines = []
+        for e in snapshot[-_MAX_CONTEXT_TURNS:]:
+            # Skip failed pipeline turns — only inject context from successful runs
+            if not e.get("pipeline_success", True):
+                continue
+            domain      = e.get("domain", "")
+            table       = e.get("table", "")
+            cols        = ", ".join(e.get("columns", [])[:5])
+            description = e.get("description", "")
+            user_prompt = e.get("user_prompt", "")
+            line = f"  [{domain}] {table}"
+            if cols:
+                line += f" | cols: {cols}"
+            if description:
+                line += f" | computed: {description[:80]}"
+            if user_prompt:
+                line += f" | Q: \"{user_prompt[:80]}\""
+            lines.append(line)
+        if lines:
+            parts.append(f"[RECENT TURNS]\n" + "\n".join(lines))
+    return "\n\n".join(parts)
+
+
+def _load_context_data(db, chat_id: int) -> tuple[list, str]:
+    """Load context_snapshot and chat_summary from the most recent assistant message."""
+    if not chat_id:
+        return [], ""
+    last_asst = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.chat_id == chat_id, ChatMessage.role == "assistant")
+        .order_by(ChatMessage.created_date.desc())
+        .first()
+    )
+    if not last_asst or not isinstance(last_asst.payload, dict):
+        return [], ""
+    snapshot = last_asst.payload.get("context_snapshot", [])
+    summary  = last_asst.payload.get("chat_summary", "")
+    return snapshot, summary
+
+
+def _build_context_snapshot(
+    prior_snapshot: list, intent_result: dict, user_prompt: str, pipeline_success: bool = False
+) -> list:
+    """Append current turn to snapshot and trim to _MAX_CONTEXT_TURNS.
+    Stores user_prompt (already Heimdall-checked) + ARIA intent metadata.
+    pipeline_success=True only when SPYDER synthesis succeeded.
+    Failed turns stored but excluded from ARIA context (prevents bad-turn context pollution).
+    No synthesis output stored — prevents guardrail bypass on follow-up turns.
+    """
+    intents = (intent_result or {}).get("intents", [])
+    if not intents:
+        return list(prior_snapshot or [])
+    first = intents[0]
+    entry = {
+        "domain":           first.get("domain", ""),
+        "table":            first.get("structured_table", ""),
+        "columns":          first.get("relevant_columns", [])[:5],
+        "description":      first.get("description", "")[:120],
+        "user_prompt":      user_prompt[:100],
+        "pipeline_success": pipeline_success,
+    }
+    updated = list(prior_snapshot or [])
+    updated.append(entry)
+    return updated[-_MAX_CONTEXT_TURNS:]
+
+
+async def _generate_summary(existing_summary: str, turns: list) -> str:
+    """Call LLM to produce updated rolling summary. Metadata only — no data values."""
+    import os
+    from openai import AsyncOpenAI
+
+    api_key  = os.getenv("LLM_API_KEY") or os.getenv("GROQ_API_KEY", "")
+    base_url = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+    model    = os.getenv("LLM_MODEL") or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    if not api_key:
+        logger.warning("SUMMARY_SKIP no LLM_API_KEY set")
+        return existing_summary
+
+    turns_text = "\n".join(
+        f"  [{e.get('domain','')}] {e.get('table','')} | {e.get('description','')} | Q: {e.get('user_prompt','')}"
+        for e in turns
+    )
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    t0 = time.time()
+    try:
+        resp = await client.chat.completions.create(
+            model=model,
+            temperature=0.1,
+            max_tokens=150,
+            messages=[
+                {"role": "system", "content": (
+                    "Summarise a data analyst's conversation context in 1-2 sentences. "
+                    "Cover: domains accessed, tables queried, analysis focus. "
+                    "Never include data values, result numbers, or sensitive content. "
+                    "Plain text only, no markdown."
+                )},
+                {"role": "user", "content": (
+                    f"Existing summary: {existing_summary or 'None yet'}\n\n"
+                    f"Turns to incorporate:\n{turns_text}\n\n"
+                    f"Output updated summary:"
+                )},
+            ],
+        )
+        latency_ms = int((time.time() - t0) * 1000)
+        tokens_in  = resp.usage.prompt_tokens if resp.usage else 0
+        tokens_out = resp.usage.completion_tokens if resp.usage else 0
+        logger.info(
+            "SUMMARY_GEN_OK latency_ms=%d tokens_in=%d tokens_out=%d model=%s",
+            latency_ms, tokens_in, tokens_out, model,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        latency_ms = int((time.time() - t0) * 1000)
+        logger.warning("SUMMARY_GEN_FAIL latency_ms=%d error=%s", latency_ms, e)
+        return existing_summary
+
+
+async def _background_summary_update(
+    chat_id: int, message_id: int, prior_snapshot: list, existing_summary: str
+) -> None:
+    """Background task: generate rolling summary and persist it on the just-saved assistant message."""
+    from app.db.session import SessionLocal
+    t0 = time.time()
+    logger.info(
+        "SUMMARY_START chat_id=%d msg_id=%d turns_to_summarise=%d had_existing=%s",
+        chat_id, message_id, len(prior_snapshot), bool(existing_summary),
+    )
+    db = SessionLocal()
+    try:
+        new_summary = await _generate_summary(existing_summary, prior_snapshot)
+        if not new_summary:
+            logger.warning("SUMMARY_EMPTY chat_id=%d msg_id=%d — skipping DB write", chat_id, message_id)
+            return
+        msg = db.query(ChatMessage).filter(ChatMessage.message_id == message_id).first()
+        if msg and isinstance(msg.payload, dict):
+            updated = dict(msg.payload)
+            updated["chat_summary"] = new_summary
+            msg.payload = updated
+            db.commit()
+            logger.info(
+                "SUMMARY_SAVED chat_id=%d msg_id=%d total_ms=%d summary_len=%d",
+                chat_id, message_id, int((time.time() - t0) * 1000), len(new_summary),
+            )
+        else:
+            logger.warning("SUMMARY_MSG_NOT_FOUND chat_id=%d msg_id=%d", chat_id, message_id)
+    except Exception as exc:
+        logger.warning(
+            "SUMMARY_ERROR chat_id=%d msg_id=%d total_ms=%d error=%s",
+            chat_id, message_id, int((time.time() - t0) * 1000), exc,
+        )
+    finally:
+        db.close()
+
+
 async def run_guardrail_pipeline(prompt, guardrails_list, security_profile, metadata):
     """
     Calls the LangGraph orchestrator → Heimdall guardrail microservice.
@@ -212,7 +379,7 @@ def get_messages(chat_id: int, current_user=Depends(get_current_user), db: Sessi
 
 
 @router.post("/send")
-async def send_prompt(request: Request, payload: SendPromptRequest, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+async def send_prompt(request: Request, payload: SendPromptRequest, background_tasks: BackgroundTasks, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     request_id = str(uuid.uuid4())
 
     # Build security profile — use provided SG list, single SG, or all assigned
@@ -225,11 +392,27 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
     else:
         security_profile = get_cached_user_profile(db, current_user.user_id)
 
+    # Load persistent context snapshot + rolling summary from last assistant message
+    prior_snapshot, existing_summary = _load_context_data(db, payload.chat_id)
+    logger.info(
+        "CONTEXT_LOAD chat_id=%s snapshot_turns=%d summary_present=%s summary_len=%d",
+        payload.chat_id, len(prior_snapshot), bool(existing_summary), len(existing_summary or ""),
+    )
+
+    conversation_context = _context_block_with_summary(prior_snapshot, existing_summary)
+    if conversation_context:
+        successful_turns = sum(1 for e in prior_snapshot if e.get("pipeline_success", True))
+        logger.debug(
+            "CONTEXT_INJECT chat_id=%s context_len=%d successful_turns=%d/%d",
+            payload.chat_id, len(conversation_context), successful_turns, len(prior_snapshot),
+        )
+
     metadata = {
         "domain": payload.domain,
         "sub_domain": payload.subdomain,
         "geography": payload.geography,
         "request_id": request_id,
+        "conversation_context": conversation_context,
     }
 
     # ── Phase 2: run full pipeline (guardrail → intent classifier via LangGraph) ──
@@ -307,6 +490,13 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
             f"⚠️ **Guardrail check failed** — {guardrail_message}\n\n"
             f"*Your prompt could not be processed. Please contact your administrator.*"
         )
+    elif intent_status == "out_of_scope":
+        assistant_content = (
+            f"✅ Guardrails passed.\n\n"
+            f"🔒 **Data not in your scope** — {intent_error}\n\n"
+            f"*You don't have access to the data required for this query. "
+            f"Contact your administrator to request access.*"
+        )
     elif intent_status == "error":
         assistant_content = (
             f"✅ Guardrails passed.\n\n"
@@ -377,9 +567,47 @@ async def send_prompt(request: Request, payload: SendPromptRequest, current_user
                 f"{sql_note}"
             )
 
-    assistant_payload = {"spyder_result": spyder_result} if spyder_result else None
-    db.add(ChatMessage(chat_id=chat.chat_id, role="assistant", content=assistant_content, payload=assistant_payload))
+    # Build updated context snapshot (only on successful intent classification)
+    context_snapshot = None
+    if intent_status == "success" and intent_result:
+        context_snapshot = _build_context_snapshot(
+            prior_snapshot, intent_result, payload.prompt,
+            pipeline_success=(spyder_status == "success"),
+        )
+
+    assistant_payload = {}
+    if spyder_result:
+        assistant_payload["spyder_result"] = spyder_result
+    if context_snapshot:
+        assistant_payload["context_snapshot"] = context_snapshot
+    # Carry forward existing summary until background task updates it
+    if existing_summary:
+        assistant_payload["chat_summary"] = existing_summary
+    if not assistant_payload:
+        assistant_payload = None
+
+    asst_msg = ChatMessage(chat_id=chat.chat_id, role="assistant", content=assistant_content, payload=assistant_payload)
+    db.add(asst_msg)
+    db.flush()   # get message_id before commit
+    asst_msg_id = asst_msg.message_id
     db.commit()
+
+    if context_snapshot:
+        logger.info(
+            "CONTEXT_SAVE chat_id=%d snapshot_turns=%d pipeline_success=%s",
+            chat.chat_id, len(context_snapshot),
+            context_snapshot[-1].get("pipeline_success", False) if context_snapshot else False,
+        )
+
+    # Trigger summary update when snapshot was full (eviction happened)
+    if context_snapshot and len(prior_snapshot) >= _MAX_CONTEXT_TURNS:
+        logger.info(
+            "SUMMARY_TRIGGER chat_id=%d msg_id=%d evicting=%d turns",
+            chat.chat_id, asst_msg_id, len(prior_snapshot),
+        )
+        background_tasks.add_task(
+            _background_summary_update, chat.chat_id, asst_msg_id, prior_snapshot, existing_summary
+        )
 
     return {
         "chat_id":             chat.chat_id,
@@ -466,11 +694,27 @@ async def stream_send_prompt(
     else:
         security_profile = get_cached_user_profile(db, current_user.user_id)
 
+    # Load persistent context snapshot + rolling summary from last assistant message
+    prior_snapshot_stream, existing_summary_stream = _load_context_data(db, payload.chat_id)
+    logger.info(
+        "CONTEXT_LOAD chat_id=%s snapshot_turns=%d summary_present=%s summary_len=%d",
+        payload.chat_id, len(prior_snapshot_stream), bool(existing_summary_stream), len(existing_summary_stream or ""),
+    )
+
+    conversation_context_stream = _context_block_with_summary(prior_snapshot_stream, existing_summary_stream)
+    if conversation_context_stream:
+        successful_turns_stream = sum(1 for e in prior_snapshot_stream if e.get("pipeline_success", True))
+        logger.debug(
+            "CONTEXT_INJECT chat_id=%s context_len=%d successful_turns=%d/%d",
+            payload.chat_id, len(conversation_context_stream), successful_turns_stream, len(prior_snapshot_stream),
+        )
+
     metadata = {
-        "domain":     payload.domain,
-        "sub_domain": payload.subdomain,
-        "geography":  payload.geography,
-        "request_id": request_id,
+        "domain":               payload.domain,
+        "sub_domain":           payload.subdomain,
+        "geography":            payload.geography,
+        "request_id":           request_id,
+        "conversation_context": conversation_context_stream,
     }
 
     prompt_guardrails = [
@@ -622,10 +866,50 @@ async def stream_send_prompt(
             "metadata": metadata,
             "intent_result": intent_result,
         }
-        db.add(ChatMessage(chat_id=chat_id_out, role="user",      content=payload.prompt,    payload=slm_payload))
-        db.add(ChatMessage(chat_id=chat_id_out, role="assistant", content=assistant_content,
-                           payload={"spyder_result": spyder_result} if spyder_result else None))
+        db.add(ChatMessage(chat_id=chat_id_out, role="user", content=payload.prompt, payload=slm_payload))
+
+        # Build updated context snapshot (only on successful intent classification)
+        stream_context_snapshot = None
+        if intent_status == "success" and intent_result:
+            stream_context_snapshot = _build_context_snapshot(
+                prior_snapshot_stream, intent_result, payload.prompt,
+                pipeline_success=(spyder_status == "success"),
+            )
+
+        stream_asst_payload = {}
+        if spyder_result:
+            stream_asst_payload["spyder_result"] = spyder_result
+        if stream_context_snapshot:
+            stream_asst_payload["context_snapshot"] = stream_context_snapshot
+        # Carry forward existing summary until background task updates it
+        if existing_summary_stream:
+            stream_asst_payload["chat_summary"] = existing_summary_stream
+        if not stream_asst_payload:
+            stream_asst_payload = None
+
+        stream_asst_msg = ChatMessage(chat_id=chat_id_out, role="assistant", content=assistant_content, payload=stream_asst_payload)
+        db.add(stream_asst_msg)
+        db.flush()
+        stream_asst_msg_id = stream_asst_msg.message_id
         db.commit()
+
+        if stream_context_snapshot:
+            logger.info(
+                "CONTEXT_SAVE chat_id=%d snapshot_turns=%d pipeline_success=%s",
+                chat_id_out, len(stream_context_snapshot),
+                stream_context_snapshot[-1].get("pipeline_success", False) if stream_context_snapshot else False,
+            )
+
+        # Trigger summary update when snapshot was full (eviction happened)
+        if stream_context_snapshot and len(prior_snapshot_stream) >= _MAX_CONTEXT_TURNS:
+            logger.info(
+                "SUMMARY_TRIGGER chat_id=%d msg_id=%d evicting=%d turns",
+                chat_id_out, stream_asst_msg_id, len(prior_snapshot_stream),
+            )
+            import asyncio
+            asyncio.create_task(
+                _background_summary_update(chat_id_out, stream_asst_msg_id, prior_snapshot_stream, existing_summary_stream)
+            )
 
         done_payload = {
             "type": "done", "chat_id": chat_id_out, "request_id": request_id,

@@ -96,9 +96,10 @@ class IntentProcessor:
         allowed_domains: Optional[list[str]] = None,
         allowed_subdomains: Optional[list[str]] = None,
         allowed_domain_ids: Optional[list[int]] = None,
+        conversation_context: str = "",
     ) -> dict:
         taxonomy, tables_block, rag_block = self._build_scope(allowed_domains, allowed_subdomains)
-        prompt = self._build_prompt(query, taxonomy, tables_block, rag_block)
+        prompt = self._build_prompt(query, taxonomy, tables_block, rag_block, conversation_context)
         raw = self._client.generate(prompt)
         result = self._parse(raw)
 
@@ -257,12 +258,28 @@ class IntentProcessor:
 
     # ── prompt builder ─────────────────────────────────────────
 
-    def _build_prompt(self, query: str, taxonomy: str, tables_block: str, rag_block: str) -> str:
+    def _build_prompt(self, query: str, taxonomy: str, tables_block: str, rag_block: str, conversation_context: str = "") -> str:
+        context_block = ""
+        if conversation_context and conversation_context.strip():
+            context_block = (
+                f"CONVERSATION CONTEXT (chat summary + recent turns):\n"
+                f"{conversation_context}\n"
+                f"CONTEXT RULE:\n"
+                f"  1. Use context ONLY when the query contains explicit back-references "
+                f"(e.g. 'from the above', 'those', 'same', 'filter further', 'compare with previous', 'that table').\n"
+                f"  2. When back-references are present: LOCK domain and structured_table to the values shown in context. "
+                f"Do NOT reclassify to a different domain.\n"
+                f"  3. Words that match domain or sub-domain names (e.g. 'Sales', 'Operations', 'HR') appearing "
+                f"in the query after a back-reference are DATA FILTER VALUES (e.g. WHERE department IN ('Sales','Operations')), "
+                f"NOT signals to switch domain. Keep the same domain and table from context.\n"
+                f"  4. For independent questions with no back-references, ignore context entirely and classify fresh.\n\n"
+            )
         return (
             "You are ARIA, an enterprise data analyst. "
             "Decompose the QUERY into atomic intents. "
             "Your entire response must begin with { and end with } — no markdown, no text outside JSON.\n\n"
 
+            f"{context_block}"
             f"TAXONOMY (only classify within these domains/sub-domains):\n{taxonomy}\n\n"
 
             f"STRUCTURED TABLES (schema.table with columns — pick exact table name):\n{tables_block}\n\n"
