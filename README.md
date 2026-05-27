@@ -216,13 +216,38 @@ slm-app/
 └── frontend/
     └── src/
         ├── pages/
-        │   ├── Chats.jsx             ← SpyderPanel synthesis + error bubbles
-        │   ├── UserProfile.jsx       ← read-only profile + change password
-        │   ├── AgentManagement.jsx   ← admin: edit agent personas, LLM config, behavior
+        │   ├── Chats.jsx             ← SpyderPanel synthesis; right sidebar (chats/clear/delete); copy response
+        │   ├── UserProfile.jsx       ← two-column: profile info + change password
+        │   ├── AgentManagement.jsx   ← admin: agent config + observability + evaluation
+        │   ├── AppMapping.jsx        ← admin: app user mapping (top dropdown + full-width detail)
+        │   ├── AgentSkills.jsx       ← admin: custom skills (top selector bar + editor)
         │   └── ...                   ← admin CRUD pages
-        ├── contexts/AuthContext.jsx  ← auth + dark mode
-        └── components/layout/AppShell.jsx ← role-based nav
+        ├── contexts/AuthContext.jsx  ← auth + dark mode (theme/toggleTheme)
+        └── components/layout/AppShell.jsx ← role-based nav (User: Chats+Profile; Admin: all)
 ```
+
+---
+
+## Frontend UI
+
+### Chat Window (`Chats.jsx`)
+- **Right collapsible sidebar** — chat list (240px expanded / 40px collapsed); toggle with chevron
+- **Clear Chat** — clears current chat messages from view
+- **Delete All History** — bulk deletes all chats (with confirmation)
+- **Copy response** — Copy/Check button below each assistant bubble; copies synthesis text + SQL rows as TSV; 2s "Copied" feedback
+- **User message bubble** — subtle background (removed blue fill for readability)
+- **SpyderPanel** — Recharts charts (bar/line/pie) + KPI tiles + data table; export CSV/Excel/PDF/Branded Report
+
+### My Profile (`UserProfile.jsx`)
+- Two-column layout: read-only profile info (left) + change password form (right)
+
+### App User Mapping (`AppMapping.jsx`)
+- Top dropdown selector bar replaces left sidebar: app dropdown + auth badge + active toggle + Add API / Delete
+- Full-width detail panel: user selector, API permissions (Read/Write), credentials by auth type
+
+### Agent Skills (`AgentSkills.jsx`)
+- Top selector bar replaces left panel: search + filter pills (All/View/Template) + skill dropdown + New Skill
+- Full-width editor: name/type/domain, SQL template, parameters, invocation preview
 
 ---
 
