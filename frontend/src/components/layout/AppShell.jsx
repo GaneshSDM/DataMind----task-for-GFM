@@ -50,18 +50,24 @@ export default function AppShell() {
       <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
         {/* Logo / header row — always visible */}
         <div className="sidebar-logo">
-          {!collapsed && <div className="logo-mark">M</div>}
-          {!collapsed && (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="logo-text">MANTHAN.AI</div>
-              <div className="logo-sub">Where data is churned into wisdom.</div>
-            </div>
+          {collapsed ? (
+            <img
+              src="/manthan-logo.png"
+              alt="Manthan"
+              style={{ width: 80, height: 80, objectFit: 'contain', margin: '0 auto', display: 'block' }}
+            />
+          ) : (
+            <img
+              src="/manthan-logo.png"
+              alt="Manthan"
+              style={{ height: 100, maxWidth: 260, objectFit: 'contain', flex: 1, minWidth: 0 }}
+            />
           )}
           <button
             className="btn btn-ghost btn-icon btn-sm"
             onClick={() => setCollapsed(c => !c)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            style={collapsed ? { margin: '0 auto' } : {}}
+            style={collapsed ? { margin: '0 auto', marginTop: 8 } : {}}
           >
             <Menu size={15} />
           </button>

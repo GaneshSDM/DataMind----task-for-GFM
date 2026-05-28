@@ -181,18 +181,32 @@ def _context_block_with_summary(snapshot: list, summary: str) -> str:
             # Skip failed pipeline turns — only inject context from successful runs
             if not e.get("pipeline_success", True):
                 continue
-            domain      = e.get("domain", "")
-            table       = e.get("table", "")
-            cols        = ", ".join(e.get("columns", [])[:5])
-            description = e.get("description", "")
-            user_prompt = e.get("user_prompt", "")
-            line = f"  [{domain}] {table}"
+            domain               = e.get("domain", "")
+            table                = e.get("table", "")
+            cols                 = ", ".join(e.get("columns", [])[:5])
+            description          = e.get("description", "")
+            user_prompt          = e.get("user_prompt", "")
+            unstructured_source  = e.get("unstructured_source", "")
+            # Infer data_source: use saved value if present; else infer from table presence
+            if "data_source" in e:
+                data_source = e["data_source"]
+            elif table:
+                data_source = "Structured"
+            elif unstructured_source:
+                data_source = "Unstructured"
+            else:
+                data_source = "Unknown"
+            line = f"  [{domain}] data_source:{data_source}"
+            if table:
+                line += f" | table:{table}"
+            if unstructured_source:
+                line += f" | source:{unstructured_source}"
             if cols:
-                line += f" | cols: {cols}"
+                line += f" | cols:{cols}"
             if description:
-                line += f" | computed: {description[:80]}"
+                line += f" | computed:{description[:80]}"
             if user_prompt:
-                line += f" | Q: \"{user_prompt[:80]}\""
+                line += f" | Q:\"{user_prompt[:80]}\""
             lines.append(line)
         if lines:
             parts.append(f"[RECENT TURNS]\n" + "\n".join(lines))
@@ -230,12 +244,14 @@ def _build_context_snapshot(
         return list(prior_snapshot or [])
     first = intents[0]
     entry = {
-        "domain":           first.get("domain", ""),
-        "table":            first.get("structured_table", ""),
-        "columns":          first.get("relevant_columns", [])[:5],
-        "description":      first.get("description", "")[:120],
-        "user_prompt":      user_prompt[:100],
-        "pipeline_success": pipeline_success,
+        "domain":               first.get("domain", ""),
+        "table":                first.get("structured_table", ""),
+        "columns":              first.get("relevant_columns", [])[:5],
+        "description":          first.get("description", "")[:120],
+        "user_prompt":          user_prompt[:100],
+        "pipeline_success":     pipeline_success,
+        "data_source":          first.get("data_source", "Structured"),
+        "unstructured_source":  (first.get("unstructured_source") or "")[:120],
     }
     updated = list(prior_snapshot or [])
     updated.append(entry)

@@ -186,6 +186,24 @@ async def semantic_node(state: WatchmanState) -> dict:
     return {}
 
 
+# Back-reference phrases — prompts using these refer to prior approved turns.
+# Domain similarity check is skipped for back-references (already cleared in prior turn).
+# Geo + CLS checks still run. RLS enforced downstream by SAGE + VALKYRIE.
+_BACKREF_PATTERNS = re.compile(
+    r"\b("
+    r"from (the )?above|the above|as above|same as above"
+    r"|same (stats|data|results|figures|numbers|metrics|report|summary|breakdown|analysis)"
+    r"|those (results|numbers|figures|stats|records)"
+    r"|that (table|report|document|data|file|result)"
+    r"|filter (further|more|by)"
+    r"|drill.?down|break.?(it.?)?down"
+    r"|do the same for|repeat (for|this)|give me (the )?same"
+    r"|as before|like before|compare (with |to )?(the )?previous"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
 async def context_node(state: WatchmanState) -> dict:
     guardrails = [
         g for g in state["guardrails"]["prompt_guardrails"]
@@ -208,10 +226,23 @@ async def context_node(state: WatchmanState) -> dict:
             "message": "No domain context defined in your security profile. All prompts are out of scope.",
         }
 
+    # Back-reference detection — skip domain similarity for follow-up prompts.
+    # Back-ref phrases carry no domain vocabulary so similarity always fails,
+    # but the underlying domain was already approved in the prior turn.
+    # ARIA still validates domain/table scope; SAGE still injects RLS WHERE clause.
+    prompt_text = state["prompt"]
+    is_backref = bool(_BACKREF_PATTERNS.search(prompt_text))
+    if is_backref:
+        logger.info("context BACKREF detected — skipping domain similarity for: '%s'", prompt_text[:80])
+
     loop = asyncio.get_running_loop()
-    domain_embeddings = await loop.run_in_executor(None, embed_batch, domain_terms)
     prompt_emb = state["prompt_embedding"]
-    max_similarity = max(cosine_similarity(prompt_emb, de) for de in domain_embeddings)
+
+    if not is_backref:
+        domain_embeddings = await loop.run_in_executor(None, embed_batch, domain_terms)
+        max_similarity = max(cosine_similarity(prompt_emb, de) for de in domain_embeddings)
+    else:
+        max_similarity = None  # not evaluated
 
     for g in guardrails:
         policy = policies.get(g["id"])
@@ -223,14 +254,16 @@ async def context_node(state: WatchmanState) -> dict:
         else:
             min_threshold = float(cv) if cv else 0.30
 
-        logger.info("context %s max_similarity=%.4f min_threshold=%.2f", g["name"], max_similarity, min_threshold)
-
-        if max_similarity < min_threshold:
-            return {
-                "status": "blocked",
-                "blocked_by": g["name"],
-                "message": "Prompt is out of context for your access scope",
-            }
+        if max_similarity is not None:
+            logger.info("context %s max_similarity=%.4f min_threshold=%.2f", g["name"], max_similarity, min_threshold)
+            if max_similarity < min_threshold:
+                return {
+                    "status": "blocked",
+                    "blocked_by": g["name"],
+                    "message": "Prompt is out of context for your access scope",
+                }
+        else:
+            logger.info("context %s BACKREF skip similarity — threshold=%.2f", g["name"], min_threshold)
 
         bypass_patterns = cv.get("bypass_patterns", []) if isinstance(cv, dict) else []
         prompt_lower_bypass = state["prompt"].lower()
