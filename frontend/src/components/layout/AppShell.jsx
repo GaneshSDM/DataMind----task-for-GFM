@@ -48,26 +48,20 @@ export default function AppShell() {
   return (
     <div className="app-shell">
       <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
-        {/* Logo / header row — always visible */}
+        {/* Logo / header row */}
         <div className="sidebar-logo">
-          {collapsed ? (
+          {!collapsed && (
             <img
-              src="/manthan-logo.png"
+              src="/manthanlogo.png"
               alt="Manthan"
-              style={{ width: 80, height: 80, objectFit: 'contain', margin: '0 auto', display: 'block' }}
-            />
-          ) : (
-            <img
-              src="/manthan-logo.png"
-              alt="Manthan"
-              style={{ height: 100, maxWidth: 260, objectFit: 'contain', flex: 1, minWidth: 0 }}
+              style={{ height: 44, maxWidth: 160, objectFit: 'contain', flex: 1, minWidth: 0 }}
             />
           )}
           <button
             className="btn btn-ghost btn-icon btn-sm"
             onClick={() => setCollapsed(c => !c)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            style={collapsed ? { margin: '0 auto', marginTop: 8 } : {}}
+            style={collapsed ? { margin: '0 auto' } : {}}
           >
             <Menu size={15} />
           </button>
@@ -118,7 +112,8 @@ export default function AppShell() {
         )}
       </aside>
 
-      <div className="main-area">
+
+<div className="main-area">
         <Outlet />
       </div>
     </div>

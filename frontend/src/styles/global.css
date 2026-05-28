@@ -174,16 +174,13 @@ a { color: inherit; text-decoration: none; }
 .user-name  { font-size: 12px; font-weight: 600; color: var(--text-primary); truncate: ellipsis; white-space: nowrap; overflow: hidden; }
 .user-role  { font-size: 10.5px; color: var(--text-tertiary); }
 
-/* Collapsed sidebar — Menu button + icon-only nav */
+/* Collapsed sidebar — icon-only mode */
 .sidebar--collapsed {
   width: 52px;
 }
 .sidebar--collapsed .sidebar-logo {
-  flex-direction: column;
   justify-content: center;
-  align-items: center;
   padding: 10px 6px;
-  gap: 6px;
 }
 .nav-item--collapsed {
   justify-content: center;

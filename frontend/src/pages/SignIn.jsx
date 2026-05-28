@@ -33,14 +33,6 @@ export default function SignIn() {
     <div className="signin-page">
       {/* Left panel — branding */}
       <div className="signin-left">
-        <div className="signin-brand">
-          <img
-            src="/manthan-logo.png"
-            alt="Manthan"
-            style={{ height: 160, objectFit: 'contain', display: 'block' }}
-          />
-        </div>
-
         <div className="signin-headline">
           <h2>Secure Intelligence.<br />Governed Access.</h2>
           <p>Enterprise-grade data query platform with built-in security, governance, and AI guardrails.</p>
@@ -64,12 +56,10 @@ export default function SignIn() {
         <div className="signin-card">
           <div className="signin-card-header">
             <img
-              src="/manthan-logo.png"
+              src="/manthanlogo.png"
               alt="Manthan"
-              style={{ height: 120, objectFit: 'contain', display: 'block', margin: '0 auto 12px' }}
+              style={{ height: 72, objectFit: 'contain', display: 'block', margin: '0 auto 16px' }}
             />
-            <h1>Welcome back</h1>
-            <p>Sign in to your MANTHAN.AI account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="signin-form">
