@@ -1,0 +1,24 @@
+# Dockerfile.backend — FastAPI backend (orchestrator + API) on :8000
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HOME=/models \
+    TRANSFORMERS_CACHE=/models
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir -r /tmp/requirements.txt
+
+WORKDIR /app
+COPY . /app
+
+# entrypoint runs DB migrations (+ optional seed) then starts uvicorn
+RUN chmod +x /app/docker/entrypoint-backend.sh
+WORKDIR /app/backend
+EXPOSE 8000
+ENTRYPOINT ["/app/docker/entrypoint-backend.sh"]

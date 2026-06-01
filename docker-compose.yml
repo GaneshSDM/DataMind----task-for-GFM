@@ -1,0 +1,162 @@
+# DataMind — full stack via Docker Compose
+# Services: nginx(frontend) + backend + 6 agents. PostgreSQL is external (Supabase),
+# supplied through backend/.env (DATABASE_URL / DB_* vars).
+#
+# Build & run:   docker compose up -d --build
+# First run:     set SEED_DB=true in backend/.env to create the admin user, then set it back to false.
+#
+# Only nginx is published to the host (port 80). The backend and all six agents
+# talk to each other on the private "datamind" network by service name.
+
+name: datamind
+
+x-agent-common: &agent-common
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.agents
+  image: datamind-agents:latest      # built once, reused by all six agents
+  env_file:
+    - ./backend/.env
+  restart: unless-stopped
+  networks: [datamind]
+  volumes:
+    - hf_models:/models               # cache embedding models across restarts
+
+services:
+
+  # ───────────────────────── Agents (Tier 1) ─────────────────────────
+  heimdall:
+    <<: *agent-common
+    working_dir: /app/Agents/Guardrail
+    command: ["python", "watchman.py"]          # :8001
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  aria:
+    <<: *agent-common
+    working_dir: /app/Agents/IntentClassifier
+    entrypoint: ["/app/docker/entrypoint-aria.sh"]   # bootstrap schema -> /shared, then :8002
+    volumes:
+      - hf_models:/models
+      - schema_data:/shared
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  sage:
+    <<: *agent-common
+    working_dir: /app/Agents/SQLGenerator
+    entrypoint: ["/app/docker/entrypoint-sage.sh"]   # waits for /shared schema, then :8003
+    environment:
+      SCHEMA_FILE_PATH: /shared/schema_reference.json
+    volumes:
+      - hf_models:/models
+      - schema_data:/shared
+    depends_on:
+      aria:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8003/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  valkyrie:
+    <<: *agent-common
+    working_dir: /app/Agents/SQLValidator
+    command: ["python", "valkyrie.py"]          # :8004
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8004/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  raven:
+    <<: *agent-common
+    working_dir: /app/Agents/VectorDBagent
+    command: ["uvicorn", "raven:app", "--host", "0.0.0.0", "--port", "8006"]
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8006/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  spyder:
+    <<: *agent-common
+    working_dir: /app/Agents/Synthesizer/backend
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8005"]
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8005/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ───────────────────────── Backend (Tier 2) ─────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    image: datamind-backend:latest
+    env_file:
+      - ./backend/.env
+    environment:
+      # Reach each agent by its compose service name (read by patched http_clients.py)
+      HEIMDALL_URL: http://heimdall:8001
+      ARIA_URL:     http://aria:8002
+      SAGE_URL:     http://sage:8003
+      VALKYRIE_URL: http://valkyrie:8004
+      SPYDER_URL:   http://spyder:8005
+      RAVEN_URL:    http://raven:8006
+      # SEED_DB: "true"   # uncomment on first boot only (also settable in backend/.env)
+    networks: [datamind]
+    restart: unless-stopped
+    volumes:
+      - hf_models:/models
+      - pipeline_queue:/app/Agents/pipeline_queue
+    depends_on:
+      heimdall:  { condition: service_healthy }
+      aria:      { condition: service_healthy }
+      sage:      { condition: service_healthy }
+      valkyrie:  { condition: service_healthy }
+      raven:     { condition: service_healthy }
+      spyder:    { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ───────────────────────── Frontend / nginx (Tier 3) ────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    image: datamind-frontend:latest
+    ports:
+      - "80:80"          # the only port exposed to the host (add 443 when you add TLS)
+    networks: [datamind]
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+networks:
+  datamind:
+    driver: bridge
+
+volumes:
+  hf_models:        # cached sentence-transformers / bge models
+  schema_data:      # schema_reference.json shared ARIA -> SAGE
+  pipeline_queue:   # backend audit trail

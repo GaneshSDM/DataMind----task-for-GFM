@@ -1,0 +1,14 @@
+# Keep build context small and avoid copying local cruft into images
+.git
+node_modules
+frontend/node_modules
+frontend/dist
+**/__pycache__/
+**/*.pyc
+**/venv/
+**/.venv/
+logs/
+Agents/pipeline_queue/*.json
+Agents/IntentClassifier/schema_reference.json
+*.log
+.env.local
