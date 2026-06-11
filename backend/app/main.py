@@ -17,6 +17,7 @@ from app.api.routes.config import slm_router, db_router
 from app.api.routes.rag import router as rag_router
 from app.api.routes.agents import router as agents_router
 from app.api.routes.reports import router as reports_router
+from app.api.routes.dataflow import router as dataflow_router
 
 app = FastAPI(title="SLM Application API", version="1.0.0")
 
@@ -66,6 +67,7 @@ app.include_router(db_router,         prefix="/api/db-connections",  tags=["DB C
 app.include_router(rag_router,        prefix="/api/rag",             tags=["RAG"])
 app.include_router(agents_router,     prefix="/api/agents",          tags=["Agents"])
 app.include_router(reports_router,    prefix="/api/reports",         tags=["Reports"])
+app.include_router(dataflow_router,   prefix="/api/dataflow",         tags=["DataFlow"])
 
 
 @app.get("/")

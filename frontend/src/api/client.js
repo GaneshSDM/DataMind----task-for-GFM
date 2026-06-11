@@ -174,3 +174,24 @@ export const createRagRun = (formData) =>
 export const getRagJobs    = runId => api.get(`/rag/runs/${runId}/jobs`).then(r => r.data)
 export const getRagErrors  = runId => api.get(`/rag/runs/${runId}/errors`).then(r => r.data)
 export const getRagFiles   = p     => api.get('/rag/files', { params: p }).then(r => r.data)
+
+// ── DataFlow API ───────────────────────────────────────────────
+export const dataflowDiscover = (connection) =>
+  api.post('/dataflow/discover', connection).then(r => r.data)
+
+export const dataflowPlan = (data) =>
+  api.post('/dataflow/plan', data).then(r => r.data)
+
+export const dataflowRun = (data) =>
+  api.post('/dataflow/run', data).then(r => r.data)
+
+export const dataflowGetRun = (requestId) =>
+  api.get(`/dataflow/runs/${requestId}`).then(r => r.data)
+
+export const dataflowUploadCsv = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post('/dataflow/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data)
+}

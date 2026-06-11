@@ -15,6 +15,7 @@ import UserProfile from './pages/UserProfile'
 import AgentManagement from './pages/AgentManagement'
 import AppMapping from './pages/AppMapping'
 import AgentSkills from './pages/AgentSkills'
+import DataPipeline from './pages/DataPipeline'
 import { SkillsProvider } from './contexts/SkillsContext'
 import './styles/global.css'
 
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="agent-management"   element={<AgentManagement />} />
             <Route path="app-mapping"        element={<AppMapping />} />
             <Route path="agent-skills"       element={<AgentSkills />} />
+            <Route path="data-pipeline"      element={<DataPipeline />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

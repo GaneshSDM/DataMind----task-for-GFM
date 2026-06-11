@@ -20,27 +20,30 @@ where each agent is reached by its service name:
     VALKYRIE_URL=http://valkyrie:8004
     SPYDER_URL=http://spyder:8005
     RAVEN_URL=http://raven:8006
+    DATAFLOW_URL=http://dataflow:8007
 """
 import os
 from typing import Optional
 import httpx
 
-_heimdall: Optional[httpx.AsyncClient] = None
-_aria:     Optional[httpx.AsyncClient] = None
-_sage:     Optional[httpx.AsyncClient] = None
-_valkyrie: Optional[httpx.AsyncClient] = None
-_spyder:   Optional[httpx.AsyncClient] = None
-_raven:    Optional[httpx.AsyncClient] = None
+_heimdall:  Optional[httpx.AsyncClient] = None
+_aria:      Optional[httpx.AsyncClient] = None
+_sage:      Optional[httpx.AsyncClient] = None
+_valkyrie:  Optional[httpx.AsyncClient] = None
+_spyder:    Optional[httpx.AsyncClient] = None
+_raven:     Optional[httpx.AsyncClient] = None
+_dataflow:  Optional[httpx.AsyncClient] = None
 
 _LIMITS = httpx.Limits(max_keepalive_connections=5, max_connections=10)
 
 # Base URLs — overridable via env; default to localhost for non-container runs.
-HEIMDALL_URL = os.getenv("HEIMDALL_URL", "http://localhost:8001")
-ARIA_URL     = os.getenv("ARIA_URL",     "http://localhost:8002")
-SAGE_URL     = os.getenv("SAGE_URL",     "http://localhost:8003")
-VALKYRIE_URL = os.getenv("VALKYRIE_URL", "http://localhost:8004")
-SPYDER_URL   = os.getenv("SPYDER_URL",   "http://localhost:8005")
-RAVEN_URL    = os.getenv("RAVEN_URL",    "http://localhost:8006")
+HEIMDALL_URL  = os.getenv("HEIMDALL_URL",  "http://localhost:8001")
+ARIA_URL      = os.getenv("ARIA_URL",      "http://localhost:8002")
+SAGE_URL      = os.getenv("SAGE_URL",      "http://localhost:8003")
+VALKYRIE_URL  = os.getenv("VALKYRIE_URL",  "http://localhost:8004")
+SPYDER_URL    = os.getenv("SPYDER_URL",    "http://localhost:8005")
+RAVEN_URL     = os.getenv("RAVEN_URL",     "http://localhost:8006")
+DATAFLOW_URL  = os.getenv("DATAFLOW_URL",  "http://localhost:8007")
 
 
 def get_heimdall_client() -> httpx.AsyncClient:
@@ -95,3 +98,12 @@ def get_raven_client() -> httpx.AsyncClient:
             base_url=RAVEN_URL, timeout=120.0, limits=_LIMITS
         )
     return _raven
+
+
+def get_dataflow_client() -> httpx.AsyncClient:
+    global _dataflow
+    if _dataflow is None:
+        _dataflow = httpx.AsyncClient(
+            base_url=DATAFLOW_URL, timeout=300.0, limits=_LIMITS
+        )
+    return _dataflow

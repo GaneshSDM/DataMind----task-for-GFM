@@ -52,6 +52,7 @@ _HEALTH_URLS = {
     "valkyrie": "http://localhost:8004/health",
     "spyder":   "http://localhost:8005/api/health",
     "raven":    "http://localhost:8006/health",
+    "dataflow": "http://localhost:8007/health",
 }
 
 

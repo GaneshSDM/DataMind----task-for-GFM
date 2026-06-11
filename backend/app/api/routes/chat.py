@@ -461,6 +461,9 @@ async def send_prompt(request: Request, payload: SendPromptRequest, background_t
     raven_status        = pipeline_result.get("raven_status")
     raven_result        = pipeline_result.get("raven_result")
     raven_error         = pipeline_result.get("raven_error")
+    dataflow_status     = pipeline_result.get("dataflow_status")
+    dataflow_result     = pipeline_result.get("dataflow_result")
+    dataflow_error      = pipeline_result.get("dataflow_error")
 
     # Get or create chat
     if payload.chat_id:
@@ -645,6 +648,9 @@ async def send_prompt(request: Request, payload: SendPromptRequest, background_t
         "raven_status":        raven_status,
         "raven_result":        raven_result,
         "raven_error":         raven_error,
+        "dataflow_status":     dataflow_status,
+        "dataflow_result":     dataflow_result,
+        "dataflow_error":      dataflow_error,
         "response":            assistant_content,
     }
 
@@ -687,6 +693,15 @@ def _node_to_sse(node: str, delta: dict, accumulated: dict) -> dict:
         return {**base, "label": "Synthesis",
                 "status": delta.get("spyder_status", "error"),
                 "error": delta.get("spyder_error")}
+    if node == "dataflow_run":
+        df_status = delta.get("dataflow_status")
+        df_result = delta.get("dataflow_result") or {}
+        plan = df_result.get("plan") or delta.get("dataflow_plan") or {}
+        n_steps = len(plan.get("steps", [])) if isinstance(plan, dict) else 0
+        return {**base, "label": "Data pipeline",
+                "status": df_status or "skipped",
+                "steps_planned": n_steps,
+                "error": delta.get("dataflow_error")}
     return base
 
 
@@ -788,6 +803,9 @@ async def stream_send_prompt(
         raven_status      = accumulated.get("raven_status")
         raven_result      = accumulated.get("raven_result")
         raven_error       = accumulated.get("raven_error")
+        dataflow_status   = accumulated.get("dataflow_status")
+        dataflow_result   = accumulated.get("dataflow_result")
+        dataflow_error    = accumulated.get("dataflow_error")
 
         # ── Build assistant content (mirrors /send logic) ─────────────────────
         if guardrail_status == "blocked":
@@ -937,6 +955,7 @@ async def stream_send_prompt(
             "correction_attempt": correction_attempt, "correction_history": correction_history,
             "spyder_status": spyder_status, "spyder_result": spyder_result, "spyder_error": spyder_error,
             "raven_status": raven_status, "raven_result": raven_result, "raven_error": raven_error,
+            "dataflow_status": dataflow_status, "dataflow_result": dataflow_result, "dataflow_error": dataflow_error,
             "response": assistant_content,
         }
         yield f"data: {json.dumps(done_payload)}\n\n"

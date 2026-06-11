@@ -1,24 +1,17 @@
 import uuid
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, BigInteger
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, BigInteger
+from sqlalchemy import ForeignKey as SA_ForeignKey
+from app.db.compat import UUID, JSONB, Vector
+from app.db.schema_helper import SCHEMA, fk, table_args
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.session import Base
-
-try:
-    from pgvector.sqlalchemy import Vector
-    PGVECTOR_AVAILABLE = True
-except ImportError:
-    Vector = None
-    PGVECTOR_AVAILABLE = False
-
-SCHEMA = "tracopp"
 
 
 # ── RAG_CATEGORY ──────────────────────────────────────────────────────────────
 class RagCategory(Base):
     __tablename__ = "rag_category"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
 
     category_id   = Column(Integer, primary_key=True, autoincrement=True)
     category_name = Column(String, nullable=False)
@@ -35,7 +28,7 @@ class RagCategory(Base):
 # ── RAG_SUB_CATEGORY ──────────────────────────────────────────────────────────
 class RagSubCategory(Base):
     __tablename__ = "rag_sub_category"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
 
     sub_category_id   = Column(Integer, primary_key=True, autoincrement=True)
     sub_category_name = Column(String, nullable=False)
@@ -52,7 +45,7 @@ class RagSubCategory(Base):
 # ── RAG_INGESTION_RUNS ────────────────────────────────────────────────────────
 class RagIngestionRun(Base):
     __tablename__ = "rag_ingestion_runs"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
 
     run_id            = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     run_name          = Column(String, nullable=True)
@@ -79,7 +72,7 @@ class RagIngestionRun(Base):
 # ── RAG_FILES ─────────────────────────────────────────────────────────────────
 class RagFile(Base):
     __tablename__ = "rag_files"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
 
     file_id             = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     original_file_name  = Column(String, nullable=False)
@@ -90,10 +83,10 @@ class RagFile(Base):
     mime_type           = Column(String, nullable=True)
     file_size_bytes     = Column(BigInteger, nullable=False)
     page_count          = Column(Integer, nullable=True)
-    domain_id           = Column(Integer, ForeignKey(f"{SCHEMA}.domain.domain_id"), nullable=False)
-    sub_domain_id       = Column(Integer, ForeignKey(f"{SCHEMA}.sub_domain.sub_domain_id"), nullable=False)
-    category_id         = Column(Integer, ForeignKey(f"{SCHEMA}.rag_category.category_id"), nullable=False)
-    sub_category_id     = Column(Integer, ForeignKey(f"{SCHEMA}.rag_sub_category.sub_category_id"), nullable=True)
+    domain_id           = Column(Integer, fk("domain.domain_id"), nullable=False)
+    sub_domain_id       = Column(Integer, fk("sub_domain.sub_domain_id"), nullable=False)
+    category_id         = Column(Integer, fk("rag_category.category_id"), nullable=False)
+    sub_category_id     = Column(Integer, fk("rag_sub_category.sub_category_id"), nullable=True)
     description         = Column(Text, nullable=True)
     subcategory_path    = Column(Text, nullable=True)             # raw nested path e.g. Internal_Audit/FY2026
     version_no          = Column(Integer, nullable=False, default=1)
@@ -122,11 +115,11 @@ class RagFile(Base):
 # ── RAG_INGESTION_JOBS ────────────────────────────────────────────────────────
 class RagIngestionJob(Base):
     __tablename__ = "rag_ingestion_jobs"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
 
     job_id       = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    run_id       = Column(UUID(as_uuid=True), ForeignKey(f"{SCHEMA}.rag_ingestion_runs.run_id"), nullable=False)
-    file_id      = Column(UUID(as_uuid=True), ForeignKey(f"{SCHEMA}.rag_files.file_id"), nullable=True)
+    run_id       = Column(UUID(as_uuid=True), fk("rag_ingestion_runs.run_id"), nullable=False)
+    file_id      = Column(UUID(as_uuid=True), fk("rag_files.file_id"), nullable=True)
     storage_uri  = Column(Text, nullable=False)
     job_type     = Column(String, nullable=False)
     # new_file | replacement | duplicate | missing | invalid_path | unsupported
@@ -148,11 +141,11 @@ class RagIngestionJob(Base):
 # ── RAG_INGESTION_ERRORS ──────────────────────────────────────────────────────
 class RagIngestionError(Base):
     __tablename__ = "rag_ingestion_errors"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
 
     error_id      = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    run_id        = Column(UUID(as_uuid=True), ForeignKey(f"{SCHEMA}.rag_ingestion_runs.run_id"), nullable=False)
-    job_id        = Column(UUID(as_uuid=True), ForeignKey(f"{SCHEMA}.rag_ingestion_jobs.job_id"), nullable=True)
+    run_id        = Column(UUID(as_uuid=True), fk("rag_ingestion_runs.run_id"), nullable=False)
+    job_id        = Column(UUID(as_uuid=True), fk("rag_ingestion_jobs.job_id"), nullable=True)
     file_path     = Column(Text, nullable=False)
     error_type    = Column(String, nullable=False)
     # validation | pdf | db | embedding | extractor | unsupported | duplicate | path_structure
@@ -169,16 +162,16 @@ class RagIngestionError(Base):
 # ── RAG_DOCUMENT_CHUNKS ───────────────────────────────────────────────────────
 class RagDocumentChunk(Base):
     __tablename__ = "rag_document_chunks"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
 
     chunk_id       = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    file_id        = Column(UUID(as_uuid=True), ForeignKey(f"{SCHEMA}.rag_files.file_id"), nullable=False)
+    file_id        = Column(UUID(as_uuid=True), fk("rag_files.file_id"), nullable=False)
     chunk_index    = Column(Integer, nullable=False)              # sequential order within file
     page_number    = Column(Integer, nullable=True)               # source page / sheet / slide
     chunk_text     = Column(Text, nullable=False)
     token_count    = Column(Integer, nullable=True)
     content_type   = Column(String, nullable=True)                # paragraph / table / header / footer / image_ocr
-    embedding      = Column(Vector(1024) if Vector else JSONB, nullable=True)
+    embedding      = Column(JSONB, nullable=True)  # JSONB array for SQLite compat
     chunk_metadata = Column(JSONB, nullable=True)
     created_by     = Column(Integer, nullable=False)
     created_date   = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

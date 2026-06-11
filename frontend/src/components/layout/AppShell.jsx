@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   MessageSquare, Database, Globe, Layers, GitBranch,
   Lock, Shield, Users, LogOut,
-  Sliders, Server, Key, Moon, Sun, Menu, Cpu, UserCircle, Bot, Plug, Wand2
+  Sliders, Server, Key, Moon, Sun, Menu, Cpu, UserCircle, Bot, Plug, Wand2, ArrowLeftRight
 } from 'lucide-react'
 
 const NAV = [
@@ -26,6 +26,7 @@ const NAV = [
     { path: '/guardrails', label: 'Guard Rails', icon: Sliders, adminOnly: true },
   ]},
   { section: 'Admin', items: [
+    { path: '/data-pipeline',     label: 'Data Pipeline',        icon: ArrowLeftRight, adminOnly: true },
     { path: '/slm-config',         label: 'LLM API Config',       icon: Server,     adminOnly: true },
     { path: '/agent-management',   label: 'Agent Management',     icon: Bot,        adminOnly: true },
     { path: '/app-mapping',        label: 'App User Mapping',     icon: Plug,       adminOnly: true },

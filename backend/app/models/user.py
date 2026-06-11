@@ -1,16 +1,16 @@
 import uuid
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, JSON, BigInteger
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, BigInteger
+from sqlalchemy import ForeignKey as SA_ForeignKey
+from app.db.compat import UUID, JSONB, Vector
+from app.db.schema_helper import SCHEMA, fk, table_args
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.session import Base
 
-SCHEMA = "tracopp"
-
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     user_id = Column(Integer, primary_key=True)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
@@ -29,9 +29,9 @@ class User(Base):
 
 class UserSession(Base):
     __tablename__ = "user_sessions"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     session_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey(f"{SCHEMA}.users.user_id"), nullable=False)
+    user_id = Column(Integer, fk("users.user_id"), nullable=False)
     login_time = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     logout_time = Column(DateTime(timezone=True), nullable=True)
     ip_address = Column(String, nullable=True)
@@ -46,7 +46,7 @@ class UserSession(Base):
 
 class Role(Base):
     __tablename__ = "roles"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     role_id = Column(Integer, primary_key=True)
     role_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
@@ -61,7 +61,7 @@ class Role(Base):
 
 class Permission(Base):
     __tablename__ = "permissions"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     permission_id = Column(Integer, primary_key=True)
     action = Column(String, nullable=False)
     resource = Column(String, nullable=False)
@@ -74,9 +74,9 @@ class Permission(Base):
 
 class UserRole(Base):
     __tablename__ = "user_roles"
-    __table_args__ = {'schema': SCHEMA}
-    user_id = Column(Integer, ForeignKey(f"{SCHEMA}.users.user_id"), primary_key=True)
-    role_id = Column(Integer, ForeignKey(f"{SCHEMA}.roles.role_id"), primary_key=True)
+    __table_args__ = table_args()
+    user_id = Column(Integer, fk("users.user_id"), primary_key=True)
+    role_id = Column(Integer, fk("roles.role_id"), primary_key=True)
     is_active = Column(Boolean, nullable=False)
     created_by = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), server_default=func.now())
@@ -88,9 +88,9 @@ class UserRole(Base):
 
 class RolePermission(Base):
     __tablename__ = "role_permissions"
-    __table_args__ = {'schema': SCHEMA}
-    role_id = Column(Integer, ForeignKey(f"{SCHEMA}.roles.role_id"), primary_key=True)
-    permission_id = Column(Integer, ForeignKey(f"{SCHEMA}.permissions.permission_id"), primary_key=True)
+    __table_args__ = table_args()
+    role_id = Column(Integer, fk("roles.role_id"), primary_key=True)
+    permission_id = Column(Integer, fk("permissions.permission_id"), primary_key=True)
     is_active = Column(Boolean, nullable=False)
     created_by = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -100,7 +100,7 @@ class RolePermission(Base):
 
 class SecurityGroup(Base):
     __tablename__ = "security_group"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     security_group_id = Column(Integer, primary_key=True)
     security_group_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
@@ -119,9 +119,9 @@ class SecurityGroup(Base):
 
 class UserSecurityGroup(Base):
     __tablename__ = "user_security_group"
-    __table_args__ = {'schema': SCHEMA}
-    user_id = Column(Integer, ForeignKey(f"{SCHEMA}.users.user_id"), primary_key=True)
-    security_group_id = Column(Integer, ForeignKey(f"{SCHEMA}.security_group.security_group_id"), primary_key=True)
+    __table_args__ = table_args()
+    user_id = Column(Integer, fk("users.user_id"), primary_key=True)
+    security_group_id = Column(Integer, fk("security_group.security_group_id"), primary_key=True)
     is_active = Column(Boolean, nullable=False)
     created_by = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), server_default=func.now())
@@ -133,7 +133,7 @@ class UserSecurityGroup(Base):
 
 class Domain(Base):
     __tablename__ = "domain"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     domain_id = Column(Integer, primary_key=True)
     domain_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
@@ -149,9 +149,9 @@ class Domain(Base):
 
 class SubDomain(Base):
     __tablename__ = "sub_domain"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     sub_domain_id = Column(Integer, primary_key=True)
-    domain_id = Column(Integer, ForeignKey(f"{SCHEMA}.domain.domain_id"), nullable=False)
+    domain_id = Column(Integer, fk("domain.domain_id"), nullable=False)
     sub_domain_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, nullable=False)
@@ -165,7 +165,7 @@ class SubDomain(Base):
 
 class Geography(Base):
     __tablename__ = "geography"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     geo_id = Column(Integer, primary_key=True)
     geo_name = Column(String, nullable=False)
     geo_type = Column(String, nullable=True)
@@ -180,9 +180,9 @@ class Geography(Base):
 
 class SecurityGroupDomain(Base):
     __tablename__ = "security_group_domain"
-    __table_args__ = {'schema': SCHEMA}
-    security_group_id = Column(Integer, ForeignKey(f"{SCHEMA}.security_group.security_group_id"), primary_key=True)
-    domain_id = Column(Integer, ForeignKey(f"{SCHEMA}.domain.domain_id"), primary_key=True)
+    __table_args__ = table_args()
+    security_group_id = Column(Integer, fk("security_group.security_group_id"), primary_key=True)
+    domain_id = Column(Integer, fk("domain.domain_id"), primary_key=True)
     is_active = Column(Boolean, nullable=False)
     created_by = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), server_default=func.now())
@@ -194,9 +194,9 @@ class SecurityGroupDomain(Base):
 
 class SecurityGroupSubDomain(Base):
     __tablename__ = "security_group_sub_domain"
-    __table_args__ = {'schema': SCHEMA}
-    security_group_id = Column(Integer, ForeignKey(f"{SCHEMA}.security_group.security_group_id"), primary_key=True)
-    sub_domain_id = Column(Integer, ForeignKey(f"{SCHEMA}.sub_domain.sub_domain_id"), primary_key=True)
+    __table_args__ = table_args()
+    security_group_id = Column(Integer, fk("security_group.security_group_id"), primary_key=True)
+    sub_domain_id = Column(Integer, fk("sub_domain.sub_domain_id"), primary_key=True)
     is_active = Column(Boolean, nullable=False)
     created_by = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), server_default=func.now())
@@ -208,9 +208,9 @@ class SecurityGroupSubDomain(Base):
 
 class SecurityGroupGeography(Base):
     __tablename__ = "security_group_geography"
-    __table_args__ = {'schema': SCHEMA}
-    security_group_id = Column(Integer, ForeignKey(f"{SCHEMA}.security_group.security_group_id"), primary_key=True)
-    geo_id = Column(Integer, ForeignKey(f"{SCHEMA}.geography.geo_id"), primary_key=True)
+    __table_args__ = table_args()
+    security_group_id = Column(Integer, fk("security_group.security_group_id"), primary_key=True)
+    geo_id = Column(Integer, fk("geography.geo_id"), primary_key=True)
     is_active = Column(Boolean, nullable=False)
     created_by = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), server_default=func.now())
@@ -222,10 +222,10 @@ class SecurityGroupGeography(Base):
 
 class RowLevelSecurity(Base):
     __tablename__ = "row_level_security"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     rls_id = Column(Integer, primary_key=True)
-    domain_id = Column(Integer, ForeignKey(f"{SCHEMA}.domain.domain_id"), nullable=False)
-    sub_domain_id = Column(Integer, ForeignKey(f"{SCHEMA}.sub_domain.sub_domain_id"), nullable=True)
+    domain_id = Column(Integer, fk("domain.domain_id"), nullable=False)
+    sub_domain_id = Column(Integer, fk("sub_domain.sub_domain_id"), nullable=True)
     rls_name = Column(String, nullable=False)
     target_table = Column(String, nullable=False)
     filter_expression = Column(Text, nullable=True)
@@ -241,9 +241,9 @@ class RowLevelSecurity(Base):
 
 class RLSCondition(Base):
     __tablename__ = "rls_conditions"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     condition_id = Column(Integer, primary_key=True)
-    rls_id = Column(Integer, ForeignKey(f"{SCHEMA}.row_level_security.rls_id"), nullable=False)
+    rls_id = Column(Integer, fk("row_level_security.rls_id"), nullable=False)
     column_name = Column(String, nullable=False)
     operator = Column(String, nullable=False)
     value = Column(Text, nullable=False)
@@ -255,10 +255,10 @@ class RLSCondition(Base):
 
 class ColumnLevelSecurity(Base):
     __tablename__ = "column_level_security"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     cls_id = Column(Integer, primary_key=True)
-    domain_id = Column(Integer, ForeignKey(f"{SCHEMA}.domain.domain_id"), nullable=False)
-    sub_domain_id = Column(Integer, ForeignKey(f"{SCHEMA}.sub_domain.sub_domain_id"), nullable=True)
+    domain_id = Column(Integer, fk("domain.domain_id"), nullable=False)
+    sub_domain_id = Column(Integer, fk("sub_domain.sub_domain_id"), nullable=True)
     cls_name = Column(String, nullable=False)
     target_table = Column(String, nullable=False)
     is_active = Column(Boolean, nullable=False)
@@ -272,9 +272,9 @@ class ColumnLevelSecurity(Base):
 
 class ColumnSecurityMapping(Base):
     __tablename__ = "column_security_mapping"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     mapping_id = Column(Integer, primary_key=True)
-    cls_id = Column(Integer, ForeignKey(f"{SCHEMA}.column_level_security.cls_id"), nullable=False)
+    cls_id = Column(Integer, fk("column_level_security.cls_id"), nullable=False)
     column_name = Column(String, nullable=False)
     can_read = Column(Boolean, nullable=False)
     can_write = Column(Boolean, nullable=False)
@@ -288,9 +288,9 @@ class ColumnSecurityMapping(Base):
 
 class SecurityGroupRLS(Base):
     __tablename__ = "security_group_rls"
-    __table_args__ = {'schema': SCHEMA}
-    security_group_id = Column(Integer, ForeignKey(f"{SCHEMA}.security_group.security_group_id"), primary_key=True)
-    rls_id = Column(Integer, ForeignKey(f"{SCHEMA}.row_level_security.rls_id"), primary_key=True)
+    __table_args__ = table_args()
+    security_group_id = Column(Integer, fk("security_group.security_group_id"), primary_key=True)
+    rls_id = Column(Integer, fk("row_level_security.rls_id"), primary_key=True)
     is_active = Column(Boolean, nullable=False)
     created_by = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -302,9 +302,9 @@ class SecurityGroupRLS(Base):
 
 class SecurityGroupCLS(Base):
     __tablename__ = "security_group_cls"
-    __table_args__ = {'schema': SCHEMA}
-    security_group_id = Column(Integer, ForeignKey(f"{SCHEMA}.security_group.security_group_id"), primary_key=True)
-    cls_id = Column(Integer, ForeignKey(f"{SCHEMA}.column_level_security.cls_id"), primary_key=True)
+    __table_args__ = table_args()
+    security_group_id = Column(Integer, fk("security_group.security_group_id"), primary_key=True)
+    cls_id = Column(Integer, fk("column_level_security.cls_id"), primary_key=True)
     is_active = Column(Boolean, nullable=False)
     created_by = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -316,7 +316,7 @@ class SecurityGroupCLS(Base):
 
 class AuditLog(Base):
     __tablename__ = "audit_log"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     audit_id = Column(BigInteger, primary_key=True)
     user_id = Column(Integer, nullable=True)
     session_id = Column(Integer, nullable=True)
@@ -333,7 +333,7 @@ class AuditLog(Base):
 
 class PromptPolicy(Base):
     __tablename__ = "prompt_policies"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     policy_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
@@ -352,10 +352,10 @@ class PromptPolicy(Base):
 
 class PromptPolicyCheck(Base):
     __tablename__ = "prompt_policy_checks"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     request_id = Column(UUID(as_uuid=True), nullable=False)
-    policy_id = Column(UUID(as_uuid=True), ForeignKey(f"{SCHEMA}.prompt_policies.id"), nullable=True)
+    policy_id = Column(UUID(as_uuid=True), fk("prompt_policies.id"), nullable=True)
     matched = Column(Boolean, nullable=False)
     action_taken = Column(String, nullable=True)
     reason = Column(Text, nullable=True)
@@ -366,9 +366,9 @@ class PromptPolicyCheck(Base):
 
 class ChatHistory(Base):
     __tablename__ = "chat_history"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     chat_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey(f"{SCHEMA}.users.user_id"), nullable=False)
+    user_id = Column(Integer, fk("users.user_id"), nullable=False)
     title = Column(String, nullable=True)
     created_date = Column(DateTime(timezone=True), nullable=True, server_default=func.now())
     updated_date = Column(DateTime(timezone=True), nullable=True)
@@ -378,9 +378,9 @@ class ChatHistory(Base):
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     message_id = Column(Integer, primary_key=True)
-    chat_id = Column(Integer, ForeignKey(f"{SCHEMA}.chat_history.chat_id"), nullable=False)
+    chat_id = Column(Integer, fk("chat_history.chat_id"), nullable=False)
     role = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     payload = Column(JSON, nullable=True)
@@ -390,7 +390,7 @@ class ChatMessage(Base):
 
 class SLMConfig(Base):
     __tablename__ = "slm_config"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     config_id = Column(Integer, primary_key=True)
     base_url = Column(String, nullable=False)
     api_key = Column(String, nullable=True)
@@ -406,7 +406,7 @@ class SLMConfig(Base):
 
 class DBConnection(Base):
     __tablename__ = "db_connections"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     connection_id = Column(Integer, primary_key=True)
     connection_name = Column(String, nullable=False)
     host = Column(String, nullable=False)
@@ -423,7 +423,7 @@ class DBConnection(Base):
 
 class AgentConfig(Base):
     __tablename__ = "agent_config"
-    __table_args__ = {'schema': SCHEMA}
+    __table_args__ = table_args()
     agent_id     = Column(Integer, primary_key=True)
     agent_name   = Column(String(50),  nullable=False, unique=True)   # heimdall, aria, …
     display_name = Column(String(100), nullable=False)
@@ -433,5 +433,5 @@ class AgentConfig(Base):
     is_active    = Column(Boolean, nullable=False, default=True)
     created_by   = Column(Integer, nullable=True)
     created_date = Column(DateTime(timezone=True), server_default=func.now())
-    updated_by   = Column(Integer, ForeignKey(f"{SCHEMA}.users.user_id"), nullable=True)
+    updated_by   = Column(Integer, fk("users.user_id"), nullable=True)
     updated_date = Column(DateTime(timezone=True), nullable=True)
