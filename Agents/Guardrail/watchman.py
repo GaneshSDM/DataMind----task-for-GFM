@@ -33,12 +33,11 @@ from dotenv import load_dotenv
 _BACKEND_ENV = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../backend/.env")
 )
+load_dotenv(dotenv_path=_BACKEND_ENV)
 
 from models import WatchmanState, WatchmanRequest
 from db import fetch_policies
 from embedder import embed, embed_batch, cosine_similarity, _get_model
-
-load_dotenv(dotenv_path=_BACKEND_ENV)
 
 
 logging.basicConfig(
