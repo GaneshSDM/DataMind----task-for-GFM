@@ -38,19 +38,29 @@ app.state.guardrails = []
 @app.on_event("startup")
 async def startup():
     # Load guardrails cache
-    db = SessionLocal()
     try:
-        app.state.guardrails = db.query(PromptPolicy).filter(
-            PromptPolicy.is_active == True
-        ).order_by(PromptPolicy.priority).all()
-    finally:
-        db.close()
+        db = SessionLocal()
+        try:
+            app.state.guardrails = db.query(PromptPolicy).filter(
+                PromptPolicy.is_active == True
+            ).order_by(PromptPolicy.priority).all()
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Guardrails cache load failed (non-fatal): {e}")
 
-    # Pre-warm embedding model (runs in thread pool so it doesn't block event loop)
+    # Pre-warm embedding model in background (non-blocking)
     import asyncio
     from app.rag.embedder import warmup
     loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, warmup)
+    loop.create_task(_background_warmup(loop, warmup))
+
+async def _background_warmup(loop, warmup_fn):
+    """Run warmup in executor without blocking startup."""
+    try:
+        await loop.run_in_executor(None, warmup_fn)
+    except Exception as e:
+        print(f"Embedder warmup failed (non-fatal): {e}")
 
 app.include_router(auth_router,       prefix="/api/auth",            tags=["Auth"])
 app.include_router(users_router,      prefix="/api/users",           tags=["Users"])
