@@ -281,19 +281,32 @@ class SLMConfigOut(BaseModel):
 # ── DB Connection ─────────────────────────────────────────────────────────────
 class DBConnectionCreate(BaseModel):
     ConnectionName: str
+    DbType: str = "postgres"          # 'postgres' | 'snowflake'
     Host: str
     Port: int = 5432
     DatabaseName: str
     Username: str
     Password: Optional[str] = None
+    # Snowflake-specific fields (ignored for postgres)
+    Account: Optional[str] = None
+    Warehouse: Optional[str] = None
+    Role: Optional[str] = None
+    Schema: Optional[str] = None
+    Authenticator: Optional[str] = None  # 'externalbrowser' | 'snowflake' | 'oauth'
 
 class DBConnectionOut(BaseModel):
     ConnectionID: int
     ConnectionName: str
+    DbType: str
     Host: str
-    Port: int
+    Port: Optional[int] = None
     DatabaseName: str
     Username: str
+    Warehouse: Optional[str] = None
+    Role: Optional[str] = None
+    Schema: Optional[str] = None
+    Authenticator: Optional[str] = None
+    Account: Optional[str] = None
     IsActive: bool
     CreatedDate: Optional[datetime] = None
 

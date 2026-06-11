@@ -69,35 +69,115 @@ async def test_slm(payload: SLMConfigCreate, current_user=Depends(get_current_us
 @db_router.get("/")
 def list_connections(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     conns = db.query(DBConnection).filter(DBConnection.is_active == True).all()
-    return [{"ConnectionID": c.connection_id, "ConnectionName": c.connection_name, "Host": c.host,
-             "Port": c.port, "DatabaseName": c.database_name, "Username": c.username,
-             "IsActive": c.is_active, "CreatedDate": c.created_date} for c in conns]
+    out = []
+    for c in conns:
+        extra = c.extra_config or {}
+        out.append({
+            "ConnectionID": c.connection_id,
+            "ConnectionName": c.connection_name,
+            "DbType": c.db_type or "postgres",
+            "Host": c.host,
+            "Port": c.port,
+            "DatabaseName": c.database_name,
+            "Username": c.username,
+            "Account": extra.get("account"),
+            "Warehouse": extra.get("warehouse"),
+            "Role": extra.get("role"),
+            "Schema": extra.get("schema"),
+            "Authenticator": extra.get("authenticator"),
+            "IsActive": c.is_active,
+            "CreatedDate": c.created_date,
+        })
+    return out
+
+
+def _serialize_connection(c: DBConnection):
+    extra = c.extra_config or {}
+    return {
+        "ConnectionID": c.connection_id,
+        "ConnectionName": c.connection_name,
+        "DbType": c.db_type or "postgres",
+        "Host": c.host,
+        "Port": c.port,
+        "DatabaseName": c.database_name,
+        "Username": c.username,
+        "Account": extra.get("account"),
+        "Warehouse": extra.get("warehouse"),
+        "Role": extra.get("role"),
+        "Schema": extra.get("schema"),
+        "Authenticator": extra.get("authenticator"),
+        "IsActive": c.is_active,
+        "CreatedDate": c.created_date,
+    }
+
 
 @db_router.post("/")
 def create_connection(payload: DBConnectionCreate, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     check_admin(current_user, db)
+    db_type = (payload.DbType or "postgres").lower()
+    extra = {}
+    if db_type == "snowflake":
+        extra = {
+            "account":       payload.Account,
+            "warehouse":     payload.Warehouse,
+            "role":          payload.Role,
+            "schema":        payload.Schema,
+            "authenticator": payload.Authenticator or "externalbrowser",
+        }
     conn = DBConnection(
-        connection_name=payload.ConnectionName, host=payload.Host, port=payload.Port,
-        database_name=payload.DatabaseName, username=payload.Username,
-        password_encrypted=payload.Password, is_active=True, created_by=current_user.user_id
+        connection_name=payload.ConnectionName,
+        db_type=db_type,
+        host=payload.Host, port=payload.Port,
+        database_name=payload.DatabaseName,
+        username=payload.Username,
+        password_encrypted=payload.Password,
+        extra_config=extra,
+        is_active=True, created_by=current_user.user_id,
     )
     db.add(conn)
     db.commit()
     db.refresh(conn)
-    return {"ConnectionID": conn.connection_id, "ConnectionName": conn.connection_name,
-            "Host": conn.host, "Port": conn.port, "DatabaseName": conn.database_name,
-            "Username": conn.username, "IsActive": conn.is_active, "CreatedDate": conn.created_date}
+    return _serialize_connection(conn)
+
 
 @db_router.post("/test")
 async def test_connection(payload: DBConnectionCreate):
+    db_type = (payload.DbType or "postgres").lower()
     try:
+        if db_type == "snowflake":
+            import snowflake.connector
+            kwargs = {
+                "account":   payload.Account,
+                "user":      payload.Username,
+                "database":  payload.DatabaseName,
+                "warehouse": payload.Warehouse,
+                "role":      payload.Role,
+                "schema":    payload.Schema,
+            }
+            if payload.Authenticator:
+                kwargs["authenticator"] = payload.Authenticator
+            elif payload.Password:
+                kwargs["password"] = payload.Password
+            # externalbrowser / oauth flows still need account; connect_timeout limits wait
+            conn = snowflake.connector.connect(**kwargs)
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT 1")
+                cur.fetchall()
+            finally:
+                conn.close()
+            return {"status": "ok", "db_type": "snowflake"}
+
+        # default: postgres
         import psycopg2
-        conn = psycopg2.connect(host=payload.Host, port=payload.Port, dbname=payload.DatabaseName,
-                                 user=payload.Username, password=payload.Password, connect_timeout=5)
+        conn = psycopg2.connect(
+            host=payload.Host, port=payload.Port, dbname=payload.DatabaseName,
+            user=payload.Username, password=payload.Password, connect_timeout=5,
+        )
         conn.close()
-        return {"status": "ok"}
+        return {"status": "ok", "db_type": "postgres"}
     except Exception as e:
-        return {"status": "error", "detail": str(e)}
+        return {"status": "error", "db_type": db_type, "detail": str(e)}
 
 @db_router.delete("/{conn_id}", response_model=MessageResponse)
 def delete_connection(conn_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):

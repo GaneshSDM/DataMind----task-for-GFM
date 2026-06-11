@@ -661,27 +661,87 @@ export function SLMConfigPage() {
 
 
 // ── DB Connections ────────────────────────────────────────────────────────────
+const EMPTY_PG_FORM = {
+  ConnectionName: '', DbType: 'postgres',
+  Host: 'localhost', Port: 5432, DatabaseName: '', Username: '', Password: '',
+}
+const EMPTY_SF_FORM = {
+  ConnectionName: '', DbType: 'snowflake',
+  Host: '', Port: 443, DatabaseName: '', Username: '', Password: '',
+  Account: '', Warehouse: '', Role: '', Schema: '', Authenticator: 'externalbrowser',
+}
+
 export function DBConnectionsPage() {
   const [conns, setConns] = useState([])
   const [modal, setModal] = useState(false)
-  const [form, setForm] = useState({ ConnectionName: '', Host: 'localhost', Port: 5432, DatabaseName: '', Username: '', Password: '' })
+  const [form, setForm] = useState(EMPTY_PG_FORM)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
 
   useEffect(() => { getDBConnections().then(setConns).catch(() => {}) }, [])
 
+  const openAdd = () => {
+    setForm(EMPTY_PG_FORM)
+    setModal(true)
+  }
+
+  const switchType = (newType) => {
+    setForm(f => {
+      // preserve ConnectionName + Username across switch, reset type-specific fields
+      if (newType === 'snowflake') {
+        return {
+          ...EMPTY_SF_FORM,
+          ConnectionName: f.ConnectionName,
+          Username: f.Username,
+          Password: f.Password,
+        }
+      }
+      return {
+        ...EMPTY_PG_FORM,
+        ConnectionName: f.ConnectionName,
+        Username: f.Username,
+        Password: f.Password,
+      }
+    })
+  }
+
   const handleSave = async () => {
     setSaving(true)
-    try { await createDBConnection(form); toast.success('Connection saved'); getDBConnections().then(setConns); setModal(false) }
-    catch (err) { toast.error(err.response?.data?.detail || 'Failed') }
+    try {
+      const payload = form.DbType === 'snowflake'
+        ? {
+            ConnectionName: form.ConnectionName, DbType: 'snowflake',
+            Host: form.Account || form.Host,            // SF connects by account, not host
+            Port: 443,
+            DatabaseName: form.DatabaseName,
+            Username: form.Username, Password: form.Password,
+            Account: form.Account, Warehouse: form.Warehouse,
+            Role: form.Role, Schema: form.Schema, Authenticator: form.Authenticator,
+          }
+        : { ...form }
+      await createDBConnection(payload)
+      toast.success('Connection saved')
+      getDBConnections().then(setConns)
+      setModal(false)
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed') }
     finally { setSaving(false) }
   }
 
   const handleTest = async () => {
     setTesting(true)
     try {
-      const r = await testDBConnection(form)
-      if (r.status === 'ok') toast.success('Connection successful!')
+      const payload = form.DbType === 'snowflake'
+        ? {
+            ConnectionName: form.ConnectionName, DbType: 'snowflake',
+            Host: form.Account || form.Host, Port: 443,
+            DatabaseName: form.DatabaseName,
+            Username: form.Username, Password: form.Password,
+            Account: form.Account, Warehouse: form.Warehouse,
+            Role: form.Role, Schema: form.Schema, Authenticator: form.Authenticator,
+          }
+        : { ...form }
+      const r = await testDBConnection(payload)
+      if (r.status === 'ok') toast.success(`Connection successful! (${r.db_type})`)
       else toast.error(r.detail || 'Connection failed')
     } catch { toast.error('Test failed') }
     finally { setTesting(false) }
@@ -696,9 +756,26 @@ export function DBConnectionsPage() {
         placeholder={type === 'password' ? '••••••••' : placeholder}
         autoComplete="off"
         onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
-        value={form[fkey] || ''}
-        onChange={e => setForm(p => ({ ...p, [fkey]: type === 'number' ? parseInt(e.target.value) : e.target.value }))}
+        value={form[fkey] ?? ''}
+        onChange={e => setForm(p => ({ ...p, [fkey]: type === 'number' ? (parseInt(e.target.value) || '') : e.target.value }))}
       />
+    </div>
+  )
+
+  const Sel = ({ label, fkey, options }) => (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      <select
+        className="form-input"
+        value={form[fkey] || ''}
+        onChange={e => {
+          const v = e.target.value
+          if (fkey === 'DbType') { switchType(v); return }
+          setForm(p => ({ ...p, [fkey]: v }))
+        }}
+      >
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
     </div>
   )
 
@@ -706,19 +783,22 @@ export function DBConnectionsPage() {
     <>
       <PageHeader
         title="Database Connections"
-        subtitle="Manage PostgreSQL database connections"
-        actions={<button className="btn btn-primary btn-sm" onClick={() => { setForm({ ConnectionName: '', Host: 'localhost', Port: 5432, DatabaseName: '', Username: '', Password: '' }); setModal(true) }}><Plus size={12} /> Add Connection</button>}
+        subtitle="Manage PostgreSQL and Snowflake database connections"
+        actions={<button className="btn btn-primary btn-sm" onClick={openAdd}><Plus size={12} /> Add Connection</button>}
       />
       <div className="page-content">
         <div className="card">
           {conns.length === 0 ? <div className="empty-state"><div className="empty-state-title">No database connections</div></div> : (
             <table className="data-table">
-              <thead><tr><th>Name</th><th>Host</th><th>Database</th><th>User</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Name</th><th>Type</th><th>Host / Account</th><th>Database</th><th>User</th><th>Actions</th></tr></thead>
               <tbody>
                 {conns.map(c => (
                   <tr key={c.ConnectionID}>
                     <td style={{ fontWeight: 600 }}>{c.ConnectionName}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{c.Host}:{c.Port}</td>
+                    <td><span className="tag" style={{ textTransform: 'uppercase' }}>{c.DbType || 'postgres'}</span></td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                      {c.DbType === 'snowflake' ? (c.Account || c.Host) : `${c.Host}:${c.Port}`}
+                    </td>
                     <td><span className="tag">{c.DatabaseName}</span></td>
                     <td>{c.Username}</td>
                     <td>
@@ -740,16 +820,54 @@ export function DBConnectionsPage() {
             <button className="btn btn-primary btn-sm" type="button" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
           </>}
         >
+          <Sel
+            label="Database Type"
+            fkey="DbType"
+            options={[
+              { value: 'postgres',  label: 'PostgreSQL' },
+              { value: 'snowflake', label: 'Snowflake' },
+            ]}
+          />
           <F label="Connection Name" fkey="ConnectionName" placeholder="My Database" />
-          <div className="grid-2">
-            <F label="Host" fkey="Host" placeholder="localhost" />
-            <F label="Port" fkey="Port" type="number" />
-          </div>
-          <F label="Database Name" fkey="DatabaseName" placeholder="my_db" />
-          <div className="grid-2">
-            <F label="Username" fkey="Username" />
-            <F label="Password" fkey="Password" type="password" />
-          </div>
+
+          {form.DbType === 'postgres' ? (
+            <>
+              <div className="grid-2">
+                <F label="Host" fkey="Host" placeholder="localhost" />
+                <F label="Port" fkey="Port" type="number" />
+              </div>
+              <F label="Database Name" fkey="DatabaseName" placeholder="my_db" />
+              <div className="grid-2">
+                <F label="Username" fkey="Username" />
+                <F label="Password" fkey="Password" type="password" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid-2">
+                <F label="Account"     fkey="Account"       placeholder="xy12345.ap-south-1" />
+                <F label="Warehouse"   fkey="Warehouse"     placeholder="COMPUTE_WH" />
+              </div>
+              <div className="grid-2">
+                <F label="Role"   fkey="Role"   placeholder="SYSADMIN" />
+                <F label="Schema" fkey="Schema" placeholder="PUBLIC" />
+              </div>
+              <F label="Database Name" fkey="DatabaseName" placeholder="MY_DB" />
+              <div className="grid-2">
+                <F label="Username" fkey="Username" />
+                <F label="Password" fkey="Password" type="password" placeholder="leave blank for SSO" />
+              </div>
+              <Sel
+                label="Authenticator"
+                fkey="Authenticator"
+                options={[
+                  { value: 'externalbrowser', label: 'External Browser (SSO)' },
+                  { value: 'snowflake',       label: 'Username + Password' },
+                  { value: 'oauth',           label: 'OAuth' },
+                ]}
+              />
+            </>
+          )}
         </Modal>
       )}
     </>

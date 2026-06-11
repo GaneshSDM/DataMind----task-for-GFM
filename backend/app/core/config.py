@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     LLM_API_KEY: str = ""
-    LLM_BASE_URL: str = "https://api.groq.com/openai/v1/chat/completions"
+    LLM_BASE_URL: str = "https://api.groq.com/openai/v1"
     LLM_MODEL: str = "llama-3.3-70b-versatile"
 
     class Config:
