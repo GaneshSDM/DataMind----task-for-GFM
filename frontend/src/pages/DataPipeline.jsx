@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 import {
   Play, Download, Eye, EyeOff, RefreshCw,
   Database, Target, Shield, CheckCircle, AlertTriangle,
   ArrowRight, Loader2, Cpu, Upload
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { dataflowRun, dataflowPlan, dataflowDiscover, dataflowGetRun, dataflowUploadCsv } from '../../api/client'
+import { dataflowRun, dataflowPlan, dataflowDiscover, dataflowGetRun, dataflowUploadCsv } from '../api/client'
 
 // ── Status Badge ─────────────────────────────────────────────────
 function StatusBadge({ status }) {
