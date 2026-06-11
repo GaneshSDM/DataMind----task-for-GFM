@@ -143,7 +143,7 @@ RUN  = _colour("36", "🚀")
 STOP = _colour("35", "⛔")
 
 
-def _poll_health(url: str, name: str, timeout: int = 120, interval: int = 2) -> bool:
+def _poll_health(url: str, name: str, timeout: int = 1200, interval: int = 2) -> bool:
     """
     Poll url until the server responds (any HTTP status < 500 counts as 'up').
     Returns True on success, False on timeout.
