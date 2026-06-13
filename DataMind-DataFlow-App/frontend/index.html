@@ -1,0 +1,121 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DataMind — DataFlow</title><style>
+:root{--brand:#1A4FA0;--brand-hover:#153E82;--orange:#F47920;--orange-hover:#D9660D;--bg:#eef1f7;--card:#fff;--ink:#16223b;--muted:#5b6b80;--line:#e2e7f1;--ok:#16a34a;--okbg:#e8f6ee;--run:#2563eb;--runbg:#e7effd;--code:#0f1d36;--codeink:#d7e3fb}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+.topbar{background:var(--brand);color:#fff;display:flex;align-items:center;gap:14px;padding:10px 18px}
+.logo{display:flex;align-items:center;gap:10px}.logo .mark{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#fff,#cfe0ff);display:flex;align-items:center;justify-content:center;color:var(--brand);font-weight:800}.logo b{font-size:17px}.logo .sub{font-size:11px;opacity:.85}
+.pilltag{margin-left:6px;background:var(--orange);color:#fff;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pill{font-size:11px;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3)}
+.pill.ok{background:#1f7a44;border-color:#2e9d5b}.pill.bad{background:#9b2c2c}
+.top-right button{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);padding:6px 12px;border-radius:7px;cursor:pointer;font-size:12px}
+.app{display:grid;grid-template-columns:288px 1fr;gap:16px;max-width:1280px;margin:16px auto;padding:0 16px;align-items:start}
+.rail{display:flex;flex-direction:column;gap:14px;position:sticky;top:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.conninfo{font-size:12px;line-height:1.4}.conninfo small{color:var(--muted)}
+.upbtn{display:block;text-align:center;margin-top:10px;border:1px dashed #b9c6e0;border-radius:9px;padding:9px;color:var(--brand);font-size:12.5px;cursor:pointer;background:#f7f9fd}.upbtn:hover{background:#eef3fb}.upbtn input{display:none}
+.catgroup{margin-bottom:10px}.catgroup .lbl{font-size:11px;font-weight:700;color:var(--brand);margin-bottom:5px;display:flex;justify-content:space-between}
+.tbl-chip{display:inline-flex;align-items:center;gap:6px;background:#f3f6fc;border:1px solid var(--line);border-radius:7px;padding:4px 8px;margin:0 5px 5px 0;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.tbl-chip.new{background:#fff5ec;border-color:#f7d9bd}.tbl-chip .rc{color:var(--muted);font-size:11px}
+.empty{color:var(--muted);font-size:12px;font-style:italic}
+.legend{display:flex;flex-wrap:wrap;gap:6px}.legend span{font-size:11px;color:var(--muted);background:#f3f6fc;border:1px solid var(--line);border-radius:20px;padding:3px 9px}
+.chat{display:flex;flex-direction:column;min-height:78vh}.messages{flex:1;display:flex;flex-direction:column;gap:14px;padding:4px 2px 10px}
+.msg{display:flex;gap:10px;max-width:94%}.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.avatar{width:30px;height:30px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.msg.user .avatar{background:#33405c}.msg.agent .avatar{background:var(--brand)}
+.bubble{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;line-height:1.5}.msg.user .bubble{background:#e9eefb;border-color:#d6e0f8}
+.bubble h4{margin:0 0 4px;font-size:14px}.agentname{color:var(--brand);font-weight:700}
+.steps{margin:10px 0 4px;display:flex;flex-direction:column;gap:6px}
+.step{display:flex;align-items:center;gap:9px;font-size:13px;padding:6px 9px;border-radius:8px;background:#f7f9fd;border:1px solid var(--line)}
+.step .sd{width:8px;height:8px;border-radius:50%;background:#c4ccda;flex:none}
+.step.running{background:var(--runbg);border-color:#cfe0fb}.step.running .sd{background:var(--run);animation:pulse 1s infinite}
+.step.done{background:var(--okbg);border-color:#cdeccc}.step.done .sd{background:var(--ok)}
+.step .ag{font-weight:700;color:var(--brand);min-width:104px}.step.done .ag{color:#15803d}.step .stat{margin-left:auto;font-size:11px;color:var(--muted)}
+@keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
+.out{margin:10px 0 2px}.out .cap{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
+pre.sql{background:var(--code);color:var(--codeink);border-radius:9px;padding:11px 13px;margin:0;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre}
+pre.sql .kw{color:#7fb0ff;font-weight:600}
+table.grid{border-collapse:collapse;width:100%;font-size:12.5px;border-radius:9px;overflow:hidden;border:1px solid var(--line)}
+table.grid th{background:#eef3fb;color:#33405c;text-align:left;padding:7px 10px;font-weight:700;border-bottom:1px solid var(--line)}
+table.grid td{padding:6px 10px;border-bottom:1px solid #eef1f6}table.grid tr:last-child td{border-bottom:0}table.grid tr:nth-child(even) td{background:#fafbfe}
+.rowcap{font-size:11px;color:var(--muted);margin-top:4px}.pii{background:#fdecec;color:#c0392b;border-radius:5px;padding:1px 6px;font-size:10.5px;font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:10px 0}.kpi{background:#f7f9fd;border:1px solid var(--line);border-radius:10px;padding:10px}.kpi .v{font-size:19px;font-weight:800;color:var(--brand)}.kpi .k{font-size:11px;color:var(--muted);margin-top:2px}
+.chart{margin:8px 0 2px;display:flex;flex-direction:column;gap:7px}.bar{display:grid;grid-template-columns:140px 1fr 64px;align-items:center;gap:9px;font-size:12.5px}.bar .track{background:#eef2f9;border-radius:6px;height:18px;overflow:hidden}.bar .fill{height:100%;background:linear-gradient(90deg,var(--brand),#2f73d9);border-radius:6px}.bar .val{text-align:right;font-weight:700;color:#33405c}
+.synth{margin-top:10px;padding:10px 12px;background:#fff8f1;border:1px solid #f6dcc1;border-radius:9px;font-size:13px;line-height:1.55}.synth b{color:var(--orange-hover)}
+.note{font-size:11.5px;color:var(--muted);margin-top:7px}
+.composer{border-top:1px solid var(--line);padding-top:12px;margin-top:6px}.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.chip{background:#fff;border:1px solid #cdd8ec;color:var(--brand);border-radius:20px;padding:7px 13px;font-size:12.5px;cursor:pointer}.chip:hover{background:var(--brand);color:#fff}.chip.accent{border-color:#f6c79c;color:var(--orange-hover)}.chip.accent:hover{background:var(--orange);color:#fff;border-color:var(--orange)}
+.inputrow{display:flex;gap:9px}.inputrow input{flex:1;border:1px solid #cdd8ec;border-radius:9px;padding:11px 13px;font-size:14px;outline:none}.inputrow input:focus{border-color:var(--brand)}
+.inputrow button{background:var(--brand);color:#fff;border:0;border-radius:9px;padding:0 20px;font-weight:600;cursor:pointer}
+@media(max-width:920px){.app{grid-template-columns:1fr}.rail{position:static}}
+</style></head><body>
+<div class="topbar"><div class="logo"><div class="mark">DM</div><div><b>DataMind</b><div class="sub">Powered by Decision Minds</div></div></div>
+<span class="pilltag">Agentic Data Engineering</span>
+<div class="top-right"><span id="dbpill" class="pill">connecting…</span><button id="reset">Reset</button></div></div>
+<div class="app">
+<aside class="rail">
+<div class="card"><h3>Connection</h3><div id="conninfo" class="conninfo"><small>checking…</small></div>
+<label class="upbtn">+ Upload CSV files<input id="file" type="file" accept=".csv" multiple></label></div>
+<div class="card"><h3>Data Catalog</h3>
+<div class="catgroup"><div class="lbl"><span>Source CSVs</span><span id="srcCount"></span></div><div id="srcTables"></div></div>
+<div class="catgroup"><div class="lbl"><span>Warehouse (Supabase)</span><span id="whCount"></span></div><div id="whTables"></div></div></div>
+<div class="card"><h3>DataFlow Pipeline</h3><div class="legend"><span>Discovery</span><span>Ingestion</span><span>Transformation</span><span>Quality</span><span>Publish</span></div></div>
+</aside>
+<main class="chat card" style="padding:16px"><div class="messages" id="messages"></div>
+<div class="composer"><div class="chips" id="chips"></div>
+<div class="inputrow"><input id="prompt" placeholder="Ask in plain English…  e.g. “load the product table”" autocomplete="off"><button id="send">Send</button></div></div>
+</main></div>
+<script>
+"use strict";
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const fmt=n=>'$'+Number(n).toLocaleString('en-US');
+const $=s=>document.querySelector(s);
+const esc=s=>(s===null||s===undefined)?'':String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const messages=$('#messages');
+function scrollB(){messages.scrollTop=messages.scrollHeight;}
+async function api(path,body){const o=body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{};const r=await fetch(path,o);if(!r.ok)throw new Error((await r.text()).slice(0,300));return r.json();}
+function userMsg(t){const m=document.createElement('div');m.className='msg user';m.innerHTML=`<div class="avatar">You</div><div class="bubble">${esc(t)}</div>`;messages.appendChild(m);scrollB();}
+function agentCard(title){const m=document.createElement('div');m.className='msg agent';m.innerHTML=`<div class="avatar">DM</div><div class="bubble"><h4><span class="agentname">DataFlow agent</span> · ${esc(title)}</h4><div class="steps"></div><div class="body"></div></div>`;messages.appendChild(m);scrollB();return{steps:m.querySelector('.steps'),body:m.querySelector('.body')};}
+async function animateSteps(el,steps){const els=steps.map(s=>{const e=document.createElement('div');e.className='step';e.innerHTML=`<span class="sd"></span><span class="ag">${esc(s.agent)}</span><span>${esc(s.label)}</span><span class="stat">queued</span>`;el.appendChild(e);return e;});scrollB();for(const e of els){e.classList.add('running');e.querySelector('.stat').textContent='running…';scrollB();await sleep(340);e.classList.remove('running');e.classList.add('done');e.querySelector('.stat').textContent='done';await sleep(90);}}
+function kw(s){return s.replace(/\b(SELECT|FROM|JOIN|ON|WHERE|GROUP BY|ORDER BY|CREATE TABLE|AS|CASE|WHEN|THEN|ELSE|END|SUM|COUNT|INSERT INTO|DESC|IF NOT EXISTS|DROP TABLE|CASCADE)\b/g,'<span class="kw">$1</span>');}
+function outSQL(b,cap,sql){const d=document.createElement('div');d.className='out';d.innerHTML=`<div class="cap">${cap}</div><pre class="sql">${kw(esc(sql))}</pre>`;b.appendChild(d);scrollB();}
+function outTable(b,cap,rows){const d=document.createElement('div');d.className='out';if(!rows||!rows.length){d.innerHTML=`<div class="cap">${cap}</div><div class="rowcap">0 rows</div>`;b.appendChild(d);return;}const cols=Object.keys(rows[0]);const h='<tr>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr>';const bd=rows.slice(0,6).map(r=>'<tr>'+cols.map(c=>`<td>${esc(r[c])}</td>`).join('')+'</tr>').join('');d.innerHTML=`<div class="cap">${cap}</div><table class="grid">${h}${bd}</table><div class="rowcap">${rows.length>6?'showing 6 of '+rows.length+' rows':rows.length+' rows'}</div>`;b.appendChild(d);scrollB();}
+function outProfile(b,name,prof,rows){const r=prof.map(c=>`<tr><td style="font-family:ui-monospace,monospace">${esc(c.column)}</td><td>${esc(c.type)}</td><td>${c.pii?'<span class="pii">PII</span>':'<span style="color:#9aa3b5">—</span>'}</td></tr>`).join('');const d=document.createElement('div');d.className='out';d.innerHTML=`<div class="cap">Discovery profile · ${esc(name)} (${rows} rows)</div><table class="grid"><tr><th>column</th><th>type</th><th>classification</th></tr>${r}</table>`;b.appendChild(d);scrollB();}
+function outKPIs(b,items){const d=document.createElement('div');d.className='kpis';d.innerHTML=items.map(i=>`<div class="kpi"><div class="v">${i.v}</div><div class="k">${i.k}</div></div>`).join('');b.appendChild(d);scrollB();}
+function outChart(b,title,rows,key){const max=Math.max(...rows.map(r=>+r.revenue));const bars=rows.map(r=>`<div class="bar"><span>${esc(r[key])}</span><div class="track"><div class="fill" style="width:${(r.revenue/max*100).toFixed(1)}%"></div></div><span class="val">${fmt(r.revenue)}</span></div>`).join('');const d=document.createElement('div');d.className='out';d.innerHTML=`<div class="cap">${title}</div><div class="chart">${bars}</div>`;b.appendChild(d);scrollB();}
+function synth(b,html,note){const d=document.createElement('div');d.className='synth';d.innerHTML=html;b.appendChild(d);if(note){const n=document.createElement('div');n.className='note';n.textContent='✓ Executed against the live Supabase Postgres — tables, SQL and numbers above were read back from the database.';b.appendChild(n);}scrollB();}
+function synthErr(b,e){const d=document.createElement('div');d.className='synth';d.style.background='#fdecec';d.style.borderColor='#f3c5c5';d.innerHTML='<b>Pipeline error:</b> '+esc(e.message);b.appendChild(d);scrollB();}
+let busy=false;
+async function health(){try{const h=await api('/api/health');const p=$('#dbpill');if(h.connected){p.className='pill ok';p.textContent='Supabase · '+h.schema;$('#conninfo').innerHTML=`<b>${esc(h.project)}</b> · ${esc(h.server)}<br><small>target schema: ${esc(h.schema)}</small>`;}else{p.className='pill bad';p.textContent='DB not connected';$('#conninfo').innerHTML=`<small style="color:#c0392b">${esc(h.error||'')}</small>`;}}catch(e){}}
+async function refreshSources(){try{const s=await api('/api/sources');$('#srcCount').textContent=s.length+' files';$('#srcTables').innerHTML=s.length?s.map(t=>`<span class="tbl-chip">${esc(t.table)}.csv <span class="rc">${t.rows}</span></span>`).join(''):'<div class="empty">No CSVs yet.</div>';}catch(e){}}
+async function refreshCatalog(){try{const c=await api('/api/catalog');$('#whCount').textContent=c.tables.length+' tables';$('#whTables').innerHTML=c.tables.length?c.tables.map(x=>`<span class="tbl-chip new">${esc(x.table)} <span class="rc">${x.rows}</span></span>`).join(''):'<div class="empty">No tables yet — ask me to load data.</div>';}catch(e){}}
+async function cmdConnections(){const{steps,body}=agentCard('Inspect connections');await animateSteps(steps,[{agent:'Discovery',label:'scan registered connections'}]);const h=await api('/api/health');const s=await api('/api/sources');outTable(body,'Connections',[{name:'DataMind Warehouse',engine:'Supabase '+(h.server||''),target_schema:h.schema,status:h.connected?'connected':'down'}]);outTable(body,'Source CSV files',s.map(x=>({file:x.table+'.csv',origin:x.origin,rows:x.rows})));synth(body,`Connected to <b>${esc(h.project)}</b>; ${s.length} CSV source(s) ready and reused automatically — no credentials prompted. Try <b>load the product table</b>.`);}
+async function ingestOne(table){const{steps,body}=agentCard('Ingest '+table+' → warehouse');let d;try{d=await api('/api/ingest',{table});}catch(e){await animateSteps(steps,[{agent:'Ingestion',label:'load '+table}]);synthErr(body,e);return;}await animateSteps(steps,d.steps);outProfile(body,table,d.profile,d.rows);outSQL(body,'Generated DDL + load · warehouse.'+table,d.ddl);outTable(body,'warehouse.'+table+' (read back from Supabase)',d.preview);await refreshCatalog();synth(body,`Loaded <b>${d.rows} rows</b> into <b>${esc(d.table)}</b> — schema inferred (${d.profile.length} columns${d.nulls?', '+d.nulls+' nulls':''}). Next: <b>clean &amp; transform</b>.`,true);}
+function tablesMentioned(t){t=t.toLowerCase();const o=[];if(/\bproduct/.test(t))o.push('products');if(/\bcategor|lookup/.test(t))o.push('categories');if(/\bcustomer/.test(t))o.push('customers');if(/\btransaction|\borders?\b/.test(t))o.push('transactions');return[...new Set(o)];}
+async function cmdIngest(t){let tb=tablesMentioned(t);if(/\ball\b|everything|every table|source data|the data\b/.test(t))tb=['products','categories','customers','transactions'];if(!tb.length)tb=['products','categories','customers','transactions'];for(const x of tb)await ingestOne(x);}
+async function cmdTransform(){const{steps,body}=agentCard('Transform & standardize');let d;try{d=await api('/api/transform',{});}catch(e){await animateSteps(steps,[{agent:'Transformation',label:'transform'}]);synthErr(body,e);return;}await animateSteps(steps,d.steps);d.sql.forEach((q,i)=>outSQL(body,i===0?'Generated SQL · lookup join':'Generated SQL · value mapping',q));outTable(body,'warehouse.dim_product (from Supabase)',d.previews.dim_product);outTable(body,'warehouse.dim_customer (from Supabase)',d.previews.dim_customer);await refreshCatalog();synth(body,'Standardized dimensions built in Supabase: <b>dim_product</b> carries readable <b>category_name</b>; <b>dim_customer</b> maps <b>1/2 → Male/Female</b>. Next: <b>aggregate sales by category</b>.',true);}
+async function cmdAggregate(by){const{steps,body}=agentCard('Aggregate · sales by '+by);let d;try{d=await api('/api/aggregate',{by});}catch(e){await animateSteps(steps,[{agent:'Transformation',label:'aggregate'}]);synthErr(body,e);return;}await animateSteps(steps,d.steps);d.sql.forEach((q,i)=>outSQL(body,i<d.sql.length-1?'Generated SQL · fact build':'Generated SQL · aggregation',q));outTable(body,'warehouse.agg_sales_by_'+by+' (from Supabase)',d.rows);outKPIs(body,[{v:fmt(d.kpis.revenue),k:'total revenue'},{v:d.kpis.units,k:'units sold'},{v:d.kpis.txns,k:'transactions'},{v:d.kpis.groups,k:by+' groups'}]);outChart(body,'Revenue by '+by,d.rows,by);const top=d.rows[0];await refreshCatalog();synth(body,`Pipeline complete — all in Supabase. <b>${fmt(d.kpis.revenue)}</b> across <b>${d.kpis.txns}</b> transactions. Top ${by}: <b>${esc(top[by])}</b> at <b>${fmt(top.revenue)}</b>.`,true);}
+async function cmdFull(){await cmdIngest('load all');await cmdTransform();await cmdAggregate('category');}
+async function cmdReset(){const{steps,body}=agentCard('Reset warehouse');await animateSteps(steps,[{agent:'Publish',label:'drop & recreate demo schema'}]);await api('/api/reset',{});await refreshCatalog();synth(body,'Warehouse schema reset — demo tables dropped. Ready for a fresh run.');}
+function helpMsg(){const{body}=agentCard('How to drive this');synth(body,'I am the <b>DataMind DataFlow agent</b>, wired to your <b>Supabase</b> warehouse. Say <b>load the product table</b>, <b>clean &amp; transform</b>, <b>aggregate sales by category</b>, or <b>run the full pipeline</b>. Upload your own CSVs with the button on the left.');}
+async function route(text){if(busy)return;busy=true;$('#send').disabled=true;try{const t=text.toLowerCase().trim();
+if(/^(hi|hello|hey|help|what can|who are you|start)/.test(t)||t===''){helpMsg();}
+else if(/reset|clear (the )?(warehouse|tables|schema)|drop (all|everything)/.test(t)){await cmdReset();}
+else if(/(full|whole|entire|end[- ]?to[- ]?end)\s*(pipeline|flow)|run (it )?all|do everything|complete pipeline/.test(t)){await cmdFull();}
+else if(/connection|connect|data source|what sources|which database/.test(t)&&!/load|bring|ingest|from /.test(t)){await cmdConnections();}
+else if(/load|ingest|bring|extract|import|copy|pull|upload/.test(t)){await cmdIngest(t);}
+else if(/transform|clean|standardi|map |mapping|gender|replace|description|lookup|join|enrich|cleanse/.test(t)){await cmdTransform();}
+else if(/aggregate|aggreg|sum|total|sales by|revenue by|group by|roll ?up|report|summary|by customer|by category/.test(t)){await cmdAggregate(/customer/.test(t)?'customer':'category');}
+else{const{body}=agentCard('Let me help');synth(body,'I can <b>load</b> CSVs into Supabase, <b>transform</b> them (lookup joins + value mapping), and <b>aggregate</b> the result. Pick a suggestion below.');}
+}finally{busy=false;$('#send').disabled=false;}}
+const CHIPS=[{t:'Show my connections'},{t:'Load the product table'},{t:'Clean it up: map gender codes & replace category IDs with names'},{t:'Aggregate total sales by category',a:1},{t:'Aggregate sales by customer'},{t:'Run the full pipeline end-to-end',a:1},{t:'Reset warehouse'}];
+function renderChips(){$('#chips').innerHTML=CHIPS.map((c,i)=>`<span class="chip${c.a?' accent':''}" data-i="${i}">${c.t}</span>`).join('');document.querySelectorAll('.chip').forEach(e=>e.onclick=()=>send(CHIPS[e.dataset.i].t));}
+function send(t){if(busy)return;userMsg(t);route(t);}
+$('#send').onclick=()=>{const v=$('#prompt').value.trim();if(v){send(v);$('#prompt').value='';}};
+$('#prompt').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=$('#prompt').value.trim();if(v){send(v);$('#prompt').value='';}}});
+$('#reset').onclick=()=>send('reset warehouse');
+$('#file').addEventListener('change',async e=>{const files=e.target.files;if(!files.length)return;const fd=new FormData();for(const f of files)fd.append('files',f);try{const r=await fetch('/api/upload',{method:'POST',body:fd});const d=await r.json();await refreshSources();const{body}=agentCard('Uploaded CSV');synth(body,'Registered '+d.uploaded.map(u=>`<b>${esc(u.table)}.csv</b> (${u.rows} rows)`).join(', ')+`. Say <b>load the ${d.uploaded[0]?esc(d.uploaded[0].table):''} table</b> to ingest it into Supabase.`);}catch(err){alert('upload failed');}e.target.value='';});
+function greet(){const{body}=agentCard('Welcome');synth(body,'Hi — I am the <b>DataMind DataFlow agent</b>, connected to your <b>Supabase</b> warehouse. I turn plain-English requests into real pipelines: discover → ingest → transform → aggregate, executed as SQL in the database. Click a suggestion below, or upload a CSV.');}
+health();refreshSources();refreshCatalog();renderChips();greet();
+</script></body></html>
