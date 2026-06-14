@@ -87,13 +87,36 @@ function outChart(b,title,rows,key){const max=Math.max(...rows.map(r=>+r.revenue
 function synth(b,html,note){const d=document.createElement('div');d.className='synth';d.innerHTML=html;b.appendChild(d);if(note){const n=document.createElement('div');n.className='note';n.textContent='✓ Executed against the live Supabase Postgres — tables, SQL and numbers above were read back from the database.';b.appendChild(n);}scrollB();}
 function synthErr(b,e){const d=document.createElement('div');d.className='synth';d.style.background='#fdecec';d.style.borderColor='#f3c5c5';d.innerHTML='<b>Pipeline error:</b> '+esc(e.message);b.appendChild(d);scrollB();}
 let busy=false;
-async function health(){try{const h=await api('/api/health');const p=$('#dbpill');if(h.connected){p.className='pill ok';p.textContent='Supabase · '+h.schema;$('#conninfo').innerHTML=`<b>${esc(h.project)}</b> · ${esc(h.server)}<br><small>target schema: ${esc(h.schema)}</small>`;}else{p.className='pill bad';p.textContent='DB not connected';$('#conninfo').innerHTML=`<small style="color:#c0392b">${esc(h.error||'')}</small>`;}}catch(e){}}
-async function refreshSources(){try{const s=await api('/api/sources');$('#srcCount').textContent=s.length+' files';$('#srcTables').innerHTML=s.length?s.map(t=>`<span class="tbl-chip">${esc(t.table)}.csv <span class="rc">${t.rows}</span></span>`).join(''):'<div class="empty">No CSVs yet.</div>';}catch(e){}}
-async function refreshCatalog(){try{const c=await api('/api/catalog');$('#whCount').textContent=c.tables.length+' tables';$('#whTables').innerHTML=c.tables.length?c.tables.map(x=>`<span class="tbl-chip new">${esc(x.table)} <span class="rc">${x.rows}</span></span>`).join(''):'<div class="empty">No tables yet — ask me to load data.</div>';}catch(e){}}
+async function health(){try{const h=await api('/api/health');const p=$('#dbpill');if(h.connected){p.className='pill ok';p.textContent='Supabase · '+h.schema;$('#conninfo').innerHTML=`<b>${esc(h.project)}</b> · ${esc(h.server)}<br><small>target schema: ${esc(h.schema)}</small>`;}else{p.className='pill bad';p.textContent='DB not connected';$('#conninfo').innerHTML=`<small style="color:#c0392b">${esc(h.error||'')}</small>`;}}catch(e){console.error('health check failed',e);const p=$('#dbpill');p.className='pill bad';p.textContent='DB not connected';$('#conninfo').textContent=e.message||String(e);}}
+async function refreshSources(){try{const s=await api('/api/sources');$('#srcCount').textContent=s.length+' files';$('#srcTables').innerHTML=s.length?s.map(t=>`<span class="tbl-chip">${esc(t.table)}.csv <span class="rc">${t.rows}</span></span>`).join(''):'<div class="empty">No CSVs yet.</div>';}catch(e){console.error('refreshSources failed',e);$('#srcCount').textContent='error';$('#srcTables').innerHTML='<div class="empty">Error loading sources: '+esc(e.message||String(e))+'</div>';}}
+async function refreshCatalog(){try{const c=await api('/api/catalog');$('#whCount').textContent=c.tables.length+' tables';$('#whTables').innerHTML=c.tables.length?c.tables.map(x=>`<span class="tbl-chip new">${esc(x.table)} <span class="rc">${x.rows}</span></span>`).join(''):'<div class="empty">No tables yet — ask me to load data.</div>';}catch(e){console.error('refreshCatalog failed',e);$('#whCount').textContent='error';$('#whTables').innerHTML='<div class="empty">Error loading catalog: '+esc(e.message||String(e))+'</div>';}}
 async function cmdConnections(){const{steps,body}=agentCard('Inspect connections');await animateSteps(steps,[{agent:'Discovery',label:'scan registered connections'}]);const h=await api('/api/health');const s=await api('/api/sources');outTable(body,'Connections',[{name:'DataMind Warehouse',engine:'Supabase '+(h.server||''),target_schema:h.schema,status:h.connected?'connected':'down'}]);outTable(body,'Source CSV files',s.map(x=>({file:x.table+'.csv',origin:x.origin,rows:x.rows})));synth(body,`Connected to <b>${esc(h.project)}</b>; ${s.length} CSV source(s) ready and reused automatically — no credentials prompted. Try <b>load the product table</b>.`);}
 async function ingestOne(table){const{steps,body}=agentCard('Ingest '+table+' → warehouse');let d;try{d=await api('/api/ingest',{table});}catch(e){await animateSteps(steps,[{agent:'Ingestion',label:'load '+table}]);synthErr(body,e);return;}await animateSteps(steps,d.steps);outProfile(body,table,d.profile,d.rows);outSQL(body,'Generated DDL + load · warehouse.'+table,d.ddl);outTable(body,'warehouse.'+table+' (read back from Supabase)',d.preview);await refreshCatalog();synth(body,`Loaded <b>${d.rows} rows</b> into <b>${esc(d.table)}</b> — schema inferred (${d.profile.length} columns${d.nulls?', '+d.nulls+' nulls':''}). Next: <b>clean &amp; transform</b>.`,true);}
+const FALLBACK_TABLES=['products','categories','customers','transactions'];
 function tablesMentioned(t){t=t.toLowerCase();const o=[];if(/\bproduct/.test(t))o.push('products');if(/\bcategor|lookup/.test(t))o.push('categories');if(/\bcustomer/.test(t))o.push('customers');if(/\btransaction|\borders?\b/.test(t))o.push('transactions');return[...new Set(o)];}
-async function cmdIngest(t){let tb=tablesMentioned(t);if(/\ball\b|everything|every table|source data|the data\b/.test(t))tb=['products','categories','customers','transactions'];if(!tb.length)tb=['products','categories','customers','transactions'];for(const x of tb)await ingestOne(x);}
+async function cmdIngest(t){
+  const tl=t.toLowerCase();
+  if(/\ball\b|everything|every table|source data|the data\b/.test(tl)){for(const x of FALLBACK_TABLES)await ingestOne(x);return;}
+  // try to match against live sources first
+  let matched=[];
+  try{
+    const sources=await api('/api/sources');
+    const names=sources.map(s=>s.table);
+    // build aliases: stem, lowercase, singular (strip trailing s)
+    const aliases=new Map();
+    for(const n of names){
+      aliases.set(n,n);
+      aliases.set(n.replace(/s$/,''),n);
+    }
+    for(const[alias,canonical]of aliases){
+      const rx=new RegExp('\\b'+alias.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'s?\\b','i');
+      if(rx.test(tl)&&!matched.includes(canonical))matched.push(canonical);
+    }
+  }catch(e){/* fall through to static matching */}
+  if(!matched.length)matched=tablesMentioned(t);
+  if(!matched.length)matched=FALLBACK_TABLES;
+  for(const x of matched)await ingestOne(x);
+}
 async function cmdTransform(){const{steps,body}=agentCard('Transform & standardize');let d;try{d=await api('/api/transform',{});}catch(e){await animateSteps(steps,[{agent:'Transformation',label:'transform'}]);synthErr(body,e);return;}await animateSteps(steps,d.steps);d.sql.forEach((q,i)=>outSQL(body,i===0?'Generated SQL · lookup join':'Generated SQL · value mapping',q));outTable(body,'warehouse.dim_product (from Supabase)',d.previews.dim_product);outTable(body,'warehouse.dim_customer (from Supabase)',d.previews.dim_customer);await refreshCatalog();synth(body,'Standardized dimensions built in Supabase: <b>dim_product</b> carries readable <b>category_name</b>; <b>dim_customer</b> maps <b>1/2 → Male/Female</b>. Next: <b>aggregate sales by category</b>.',true);}
 async function cmdAggregate(by){const{steps,body}=agentCard('Aggregate · sales by '+by);let d;try{d=await api('/api/aggregate',{by});}catch(e){await animateSteps(steps,[{agent:'Transformation',label:'aggregate'}]);synthErr(body,e);return;}await animateSteps(steps,d.steps);d.sql.forEach((q,i)=>outSQL(body,i<d.sql.length-1?'Generated SQL · fact build':'Generated SQL · aggregation',q));outTable(body,'warehouse.agg_sales_by_'+by+' (from Supabase)',d.rows);outKPIs(body,[{v:fmt(d.kpis.revenue),k:'total revenue'},{v:d.kpis.units,k:'units sold'},{v:d.kpis.txns,k:'transactions'},{v:d.kpis.groups,k:by+' groups'}]);outChart(body,'Revenue by '+by,d.rows,by);const top=d.rows[0];await refreshCatalog();synth(body,`Pipeline complete — all in Supabase. <b>${fmt(d.kpis.revenue)}</b> across <b>${d.kpis.txns}</b> transactions. Top ${by}: <b>${esc(top[by])}</b> at <b>${fmt(top.revenue)}</b>.`,true);}
 async function cmdFull(){await cmdIngest('load all');await cmdTransform();await cmdAggregate('category');}
@@ -108,7 +131,7 @@ else if(/load|ingest|bring|extract|import|copy|pull|upload/.test(t)){await cmdIn
 else if(/transform|clean|standardi|map |mapping|gender|replace|description|lookup|join|enrich|cleanse/.test(t)){await cmdTransform();}
 else if(/aggregate|aggreg|sum|total|sales by|revenue by|group by|roll ?up|report|summary|by customer|by category/.test(t)){await cmdAggregate(/customer/.test(t)?'customer':'category');}
 else{const{body}=agentCard('Let me help');synth(body,'I can <b>load</b> CSVs into Supabase, <b>transform</b> them (lookup joins + value mapping), and <b>aggregate</b> the result. Pick a suggestion below.');}
-}finally{busy=false;$('#send').disabled=false;}}
+}catch(err){console.error(err);const{body}=agentCard('Error');synthErr(body,err);}finally{busy=false;$('#send').disabled=false;}}
 const CHIPS=[{t:'Show my connections'},{t:'Load the product table'},{t:'Clean it up: map gender codes & replace category IDs with names'},{t:'Aggregate total sales by category',a:1},{t:'Aggregate sales by customer'},{t:'Run the full pipeline end-to-end',a:1},{t:'Reset warehouse'}];
 function renderChips(){$('#chips').innerHTML=CHIPS.map((c,i)=>`<span class="chip${c.a?' accent':''}" data-i="${i}">${c.t}</span>`).join('');document.querySelectorAll('.chip').forEach(e=>e.onclick=()=>send(CHIPS[e.dataset.i].t));}
 function send(t){if(busy)return;userMsg(t);route(t);}
