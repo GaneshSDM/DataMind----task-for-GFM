@@ -37,14 +37,17 @@ def conn():
 def project_ref():
     m = re.search(r"postgres\.([a-z0-9]+)", DATABASE_URL or ""); return m.group(1) if m else "?"
 
-def is_int(v):   return bool(re.fullmatch(r"-?\d+", v or ""))
+def is_int(v):   return bool(v != "" and re.fullmatch(r"-?\d+", v))
 def is_float(v):
+    if v == "": return False
     try: float(v); return True
     except: return False
-def is_date(v):  return bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", v or ""))
+def is_date(v):  return bool(v != "" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", v))
+def is_timestamp(v): return bool(v != "" and re.fullmatch(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?", v))
 
 def infer_one(name, vals):
     n = name.lower()
+    if vals and "timestamp" in n and all(is_timestamp(x) for x in vals): return "TIMESTAMP"
     if vals and "date" in n and all(is_date(x) for x in vals): return "DATE"
     if vals and all(is_int(x) for x in vals):   return "BIGINT"
     if vals and all(is_float(x) for x in vals): return "DOUBLE PRECISION"
@@ -88,6 +91,8 @@ def conv(v, t):
     if v is None or v == "": return None
     if t == "BIGINT": return int(v)
     if t == "DOUBLE PRECISION": return float(v)
+    if t == "DATE": return v
+    if t == "TIMESTAMP": return v
     return v
 
 def jval(v):
@@ -137,27 +142,30 @@ def ensure_loaded(cur, tables, steps):
             load_table(t); steps.append({"agent": "Ingestion", "label": f"auto-load dependency: {t}"})
 
 def build_dim_product(cur):
-    sql = (f"CREATE TABLE {SCHEMA}.dim_product AS\n"
-           "SELECT p.product_id, p.product_name, p.category_id, c.category_name, p.unit_cost, p.unit_price\n"
-           f"FROM {SCHEMA}.products p JOIN {SCHEMA}.categories c ON p.category_id = c.category_id")
-    cur.execute(f"DROP TABLE IF EXISTS {SCHEMA}.dim_product CASCADE"); cur.execute(sql); return sql + ";"
+    validate_identifier("dim_product", "table name")
+    sql = (f"CREATE TABLE {_qi(SCHEMA)}.{_qi('dim_product')} AS\n"
+           f"SELECT {_qi('p')}.{_qi('product_id')}, {_qi('p')}.{_qi('product_name')}, {_qi('p')}.{_qi('category_id')}, {_qi('c')}.{_qi('category_name')}, {_qi('p')}.{_qi('unit_cost')}, {_qi('p')}.{_qi('unit_price')}\n"
+           f"FROM {_qi(SCHEMA)}.{_qi('products')} {_qi('p')} JOIN {_qi(SCHEMA)}.{_qi('categories')} {_qi('c')} ON {_qi('p')}.{_qi('category_id')} = {_qi('c')}.{_qi('category_id')}")
+    cur.execute(f"DROP TABLE IF EXISTS {_qi(SCHEMA)}.{_qi('dim_product')} CASCADE"); cur.execute(sql); return sql + ";"
 
 def build_dim_customer(cur):
-    sql = (f"CREATE TABLE {SCHEMA}.dim_customer AS\n"
-           "SELECT customer_id, first_name, last_name,\n"
+    validate_identifier("dim_customer", "table name")
+    sql = (f"CREATE TABLE {_qi(SCHEMA)}.{_qi('dim_customer')} AS\n"
+           f"SELECT {_qi('customer_id')}, {_qi('first_name')}, {_qi('last_name')},\n"
            "       CASE gender_code WHEN 1 THEN 'Male' WHEN 2 THEN 'Female' END AS gender, city, country\n"
-           f"FROM {SCHEMA}.customers")
-    cur.execute(f"DROP TABLE IF EXISTS {SCHEMA}.dim_customer CASCADE"); cur.execute(sql); return sql + ";"
+           f"FROM {_qi(SCHEMA)}.{_qi('customers')}")
+    cur.execute(f"DROP TABLE IF EXISTS {_qi(SCHEMA)}.{_qi('dim_customer')} CASCADE"); cur.execute(sql); return sql + ";"
 
 def build_fact(cur):
-    sql = (f"CREATE TABLE {SCHEMA}.fact_sales AS\n"
-           "SELECT t.txn_id, t.txn_date, dc.first_name||' '||dc.last_name AS customer, dc.gender,\n"
-           "       dp.product_name AS product, dp.category_name AS category,\n"
-           "       t.quantity, dp.unit_price, t.quantity*dp.unit_price AS revenue\n"
-           f"FROM {SCHEMA}.transactions t\n"
-           f"JOIN {SCHEMA}.dim_product  dp ON t.product_id  = dp.product_id\n"
-           f"JOIN {SCHEMA}.dim_customer dc ON t.customer_id = dc.customer_id")
-    cur.execute(f"DROP TABLE IF EXISTS {SCHEMA}.fact_sales CASCADE"); cur.execute(sql); return sql + ";"
+    validate_identifier("fact_sales", "table name")
+    sql = (f"CREATE TABLE {_qi(SCHEMA)}.{_qi('fact_sales')} AS\n"
+           f"SELECT {_qi('t')}.{_qi('txn_id')}, {_qi('t')}.{_qi('txn_date')}, {_qi('dc')}.{_qi('first_name')}||' '||{_qi('dc')}.{_qi('last_name')} AS customer, {_qi('dc')}.{_qi('gender')},\n"
+           f"       {_qi('dp')}.{_qi('product_name')} AS product, {_qi('dp')}.{_qi('category_name')} AS category,\n"
+           f"       {_qi('t')}.{_qi('quantity')}, {_qi('dp')}.{_qi('unit_price')}, {_qi('t')}.{_qi('quantity')}*{_qi('dp')}.{_qi('unit_price')} AS revenue\n"
+           f"FROM {_qi(SCHEMA)}.{_qi('transactions')} {_qi('t')}\n"
+           f"JOIN {_qi(SCHEMA)}.{_qi('dim_product')}  {_qi('dp')} ON {_qi('t')}.{_qi('product_id')}  = {_qi('dp')}.{_qi('product_id')}\n"
+           f"JOIN {_qi(SCHEMA)}.{_qi('dim_customer')} {_qi('dc')} ON {_qi('t')}.{_qi('customer_id')} = {_qi('dc')}.{_qi('customer_id')}")
+    cur.execute(f"DROP TABLE IF EXISTS {_qi(SCHEMA)}.{_qi('fact_sales')} CASCADE"); cur.execute(sql); return sql + ";"
 
 @app.get("/api/health")
 def health():
@@ -180,18 +188,75 @@ def sources():
 
 @app.post("/api/upload")
 async def upload(files: List[UploadFile] = File(...)):
-    out = []
+    out = []; skipped = []
     for f in files:
-        if not f.filename.lower().endswith(".csv"): continue
+        if not f.filename.lower().endswith(".csv"):
+            skipped.append({"filename": f.filename, "reason": "not a CSV"})
+            continue
         stem = Path(f.filename).stem
         try:
             validate_identifier(stem, "filename stem")
-        except HTTPException:
-            continue  # skip files with invalid names
+        except HTTPException as e:
+            skipped.append({"filename": f.filename, "reason": e.detail})
+            continue
         p = UPLOADS / (stem + ".csv"); p.write_bytes(await f.read())
         header, rows = read_csv_file(p)
         out.append({"table": p.stem, "rows": len(rows), "columns": profile(header, rows)})
-    return {"uploaded": out}
+    return {"uploaded": out, "skipped": skipped}
+
+@app.get("/api/export/csv/{table}")
+def export_csv(table: str):
+    from fastapi.responses import StreamingResponse
+    import io
+    validate_identifier(table, "table name")
+    c = conn(); cur = c.cursor()
+    try:
+        cur.execute("select 1 from information_schema.tables where table_schema=%s and table_name=%s", (SCHEMA, table))
+        if cur.fetchone() is None:
+            raise HTTPException(404, f"Table {table} not found in schema {SCHEMA}")
+        cur.execute(f"SELECT * FROM {_qi(SCHEMA)}.{_qi(table)}")
+        header = [d[0] for d in cur.description]
+        buf = io.StringIO(); w = csv.writer(buf)
+        w.writerow(header)
+        for row in cur.fetchall():
+            w.writerow([jval(v) for v in row])
+        data = buf.getvalue().encode("utf-8-sig")
+    finally:
+        c.close()
+    return StreamingResponse(io.BytesIO(data), media_type="text/csv; charset=utf-8",
+                             headers={"Content-Disposition": f"attachment; filename={table}.csv"})
+
+@app.get("/api/export/sql")
+def export_sql():
+    """Return a reproducible SQL script for the current demo pipeline."""
+    script = [
+        f"CREATE SCHEMA IF NOT EXISTS {_qi(SCHEMA)};",
+        f"-- Generated by DataMind DataFlow on {datetime.datetime.utcnow().isoformat()}Z",
+    ]
+    for table in ["categories", "products", "customers", "transactions"]:
+        src = find_source(table)
+        if src:
+            header, rows = read_csv_file(src)
+            cols = profile(header, rows)
+            script.append(ddl_for(table, cols))
+            # Best-effort insert placeholders; real values inserted via load_table at runtime.
+            collist = ", ".join(_qi(c["column"]) for c in cols)
+            script.append(f"-- INSERT INTO {_qi(SCHEMA)}.{_qi(table)} ({collist}) VALUES ... ({len(rows)} rows loaded by app)")
+    script.append(build_dim_product.__doc__ or "")
+    # Note: build_dim_product/Customer/Fact require a cursor, so we append their static SQL shapes manually.
+    script.extend([
+        f"DROP TABLE IF EXISTS {_qi(SCHEMA)}.{_qi('dim_product')} CASCADE;",
+        f"CREATE TABLE {_qi(SCHEMA)}.{_qi('dim_product')} AS SELECT p.product_id, p.product_name, p.category_id, c.category_name, p.unit_cost, p.unit_price FROM {_qi(SCHEMA)}.{_qi('products')} p JOIN {_qi(SCHEMA)}.{_qi('categories')} c ON p.category_id = c.category_id;",
+        f"DROP TABLE IF EXISTS {_qi(SCHEMA)}.{_qi('dim_customer')} CASCADE;",
+        f"CREATE TABLE {_qi(SCHEMA)}.{_qi('dim_customer')} AS SELECT customer_id, first_name, last_name, CASE gender_code WHEN 1 THEN 'Male' WHEN 2 THEN 'Female' END AS gender, city, country FROM {_qi(SCHEMA)}.{_qi('customers')};",
+        f"DROP TABLE IF EXISTS {_qi(SCHEMA)}.{_qi('fact_sales')} CASCADE;",
+        f"CREATE TABLE {_qi(SCHEMA)}.{_qi('fact_sales')} AS SELECT t.txn_id, t.txn_date, dc.first_name||' '||dc.last_name AS customer, dc.gender, dp.product_name AS product, dp.category_name AS category, t.quantity, dp.unit_price, t.quantity*dp.unit_price AS revenue FROM {_qi(SCHEMA)}.{_qi('transactions')} t JOIN {_qi(SCHEMA)}.{_qi('dim_product')} dp ON t.product_id = dp.product_id JOIN {_qi(SCHEMA)}.{_qi('dim_customer')} dc ON t.customer_id = dc.customer_id;",
+        f"DROP TABLE IF EXISTS {_qi(SCHEMA)}.{_qi('agg_sales_by_category')} CASCADE;",
+        f"CREATE TABLE {_qi(SCHEMA)}.{_qi('agg_sales_by_category')} AS SELECT category, SUM(quantity) AS units, SUM(revenue) AS revenue, COUNT(*) AS txns FROM {_qi(SCHEMA)}.{_qi('fact_sales')} GROUP BY category ORDER BY revenue DESC;",
+        f"DROP TABLE IF EXISTS {_qi(SCHEMA)}.{_qi('agg_sales_by_customer')} CASCADE;",
+        f"CREATE TABLE {_qi(SCHEMA)}.{_qi('agg_sales_by_customer')} AS SELECT customer, SUM(quantity) AS units, SUM(revenue) AS revenue, COUNT(*) AS txns FROM {_qi(SCHEMA)}.{_qi('fact_sales')} GROUP BY customer ORDER BY revenue DESC;",
+    ])
+    return {"schema": SCHEMA, "sql": "\n\n".join(script)}
 
 @app.get("/api/catalog")
 def catalog():

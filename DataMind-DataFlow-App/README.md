@@ -49,7 +49,8 @@ or upload your own CSV and say "load the <name> table".
 
 ## API
 `GET /api/health` · `GET /api/sources` · `POST /api/upload` · `POST /api/ingest` ·
-`POST /api/transform` · `POST /api/aggregate` · `GET /api/catalog` · `POST /api/reset`
+`POST /api/transform` · `POST /api/aggregate` · `GET /api/catalog` · `POST /api/reset` ·
+`GET /api/export/csv/{table}` · `GET /api/export/sql`
 
 ## Configuration (`.env`)
 ```
