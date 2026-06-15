@@ -1,9 +1,9 @@
-"""Meltano wrapper for DataMind DataFlow.
+'''Meltano wrapper for DataMind DataFlow.
 
 This module is intentionally isolated from app.py so Meltano is purely
 optional.  If Meltano is not installed, calls to run_meltano() return a
 helpful message and the app can fall back to the built-in CSV loader.
-"""
+'''
 
 from __future__ import annotations
 
@@ -11,8 +11,10 @@ import os
 import re
 import shutil
 import subprocess
+import json
 from pathlib import Path
 from typing import Any
+from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -20,8 +22,8 @@ BASE = Path(__file__).resolve().parent
 MELTANO_DIR = BASE / "meltano"
 SAMPLE_DIR = BASE / "sample_data"
 UPLOAD_DIR = BASE / "uploads"
+LOG_DIR = BASE / "meltano_logs"
 
-# Columns used as primary keys for each sample table.
 _KEYS: dict[str, list[str]] = {
     "categories": ["category_id"],
     "customers": ["customer_id"],
@@ -29,148 +31,124 @@ _KEYS: dict[str, list[str]] = {
     "transactions": ["txn_id"],
 }
 
-
 def _parse_url(url: str) -> dict[str, Any]:
-    """Parse a PostgreSQL DATABASE_URL into components for Meltano target-postgres."""
-    pattern = re.compile(
-        r"^postgresql://(?P<user>[^:]+):(?P<password>[^@]+)@(?P<host>[^:/]+)(?::(?P<port>\d+))?/(?P<database>.+)$"
-    )
-    m = pattern.match(url)
-    if not m:
-        raise ValueError("DATABASE_URL is not in the expected postgresql://user:pass@host:port/db format")
-    return {
-        "user": m.group("user"),
-        "password": m.group("password"),
-        "host": m.group("host"),
-        "port": int(m.group("port") or 5432),
-        "database": m.group("database"),
-    }
-
+    try:
+        if "@" not in url:
+            raise ValueError("No '@' found in DATABASE_URL")
+        creds_part, host_part = url.split("@", 1)
+        creds_part = creds_part.replace("postgresql://", "")
+        if ":" in creds_part:
+            user, password = creds_part.split(":", 1)
+        else:
+            user, password = creds_part, ""
+        if "/" in host_part:
+            host_port, database = host_part.split("/", 1)
+        else:
+            host_port, database = host_part, "postgres"
+        if ":" in host_port:
+            host, port = host_port.split(":", 1)
+        else:
+            host, port = host_port, "5432"
+        return {
+            "user": user,
+            "password": password,
+            "host": host,
+            "port": int(port),
+            "database": database,
+        }
+    except Exception as e:
+        raise ValueError(f"DATABASE_URL parsing failed: {str(e)}")
 
 def _build_tap_csv_config(source: str, table_filter: list[str] | None = None) -> dict[str, Any]:
-    """Build a tap-csv file list pointing at source CSVs."""
     files: list[dict[str, Any]] = []
-
     if source == "sample_data" or source == "all":
         for csv_file in sorted(SAMPLE_DIR.glob("*.csv")):
             if table_filter and csv_file.stem not in table_filter:
                 continue
-            files.append(
-                {
-                    "entity": csv_file.stem,
-                    "path": str(csv_file.resolve()),
-                    "keys": _KEYS.get(csv_file.stem, []),
-                }
-            )
-
+            files.append({"entity": csv_file.stem, "path": csv_file.resolve().as_posix(), "keys": _KEYS.get(csv_file.stem, [])})
     if source == "uploads" or source == "all_uploads" or source == "all":
         for csv_file in sorted(UPLOAD_DIR.glob("*.csv")):
             if table_filter and csv_file.stem not in table_filter:
                 continue
-            files.append(
-                {
-                    "entity": csv_file.stem,
-                    "path": str(csv_file.resolve()),
-                    "keys": _KEYS.get(csv_file.stem, []),
-                }
-            )
-
+            files.append({"entity": csv_file.stem, "path": csv_file.resolve().as_posix(), "keys": _KEYS.get(csv_file.stem, [])})
     if not files:
         raise FileNotFoundError(f"No CSV files found for source '{source}'")
-
-    return {"files": files}
-
+    return files
 
 def _has_meltano() -> bool:
-    return shutil.which("meltano") is not None
-
+    standard = shutil.which("meltano")
+    if standard:
+        return True
+    venv_path = BASE / ".venv" / "Scripts" / "meltano.exe"
+    return venv_path.exists()
 
 def _run_meltano_command(args: list[str], env: dict[str, str] | None = None) -> dict[str, Any]:
     if not _has_meltano():
-        return {
-            "ok": False,
-            "stdout": "",
-            "stderr": "Meltano is not installed or not on PATH. Install it with: pip install meltano",
-        }
+        return {"ok": False, "stdout": "", "stderr": "Meltano is not installed or not on PATH. Install it with: pip install meltano"}
 
-    cmd = ["meltano", *args]
+    meltano_bin = str(BASE / ".venv" / "Scripts" / "meltano.exe")
+
+    cmd = [meltano_bin, *args]
+
+    LOG_DIR.mkdir(exist_ok=True)
+    log_file = LOG_DIR / f"meltano_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+
     try:
+        # Run in the meltano directory so it finds meltano.yml
         result = subprocess.run(
             cmd,
-            cwd=str(MELTANO_DIR),
-            env={**os.environ, **(env or {})},
             capture_output=True,
             text=True,
-            timeout=300,
+            cwd=str(MELTANO_DIR),
+            env={**os.environ, **(env or {})},
+            check=False
         )
-        return {
-            "ok": result.returncode == 0,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode,
-        }
-    except subprocess.TimeoutExpired:
-        return {"ok": False, "stdout": "", "stderr": "Meltano command timed out (>5 min)."}
-    except Exception as exc:  # pragma: no cover
-        return {"ok": False, "stdout": "", "stderr": str(exc)}
 
+        with open(log_file, "w", encoding="utf-8") as f:
+            f.write(f"Command: {' '.join(cmd)}\n")
+            f.write(f"Stdout:\n{result.stdout}\n")
+            f.write(f"Stderr:\n{result.stderr}\n")
 
-def install_plugins() -> dict[str, Any]:
-    """Install Meltano plugins declared in meltano.yml."""
-    return _run_meltano_command(["install"])
+        return {"ok": result.returncode == 0, "stdout": result.stdout, "stderr": result.stderr, "log_file": str(log_file)}
+    except Exception as e:
+        return {"ok": False, "stdout": "", "stderr": str(e)}
 
-
-def run_meltano(
-    source: str = "sample_data",
-    table_filter: list[str] | None = None,
-    loader: str = "target-postgres",
-) -> dict[str, Any]:
-    """Run the Meltano tap-csv -> target-* pipeline.
-
-    Args:
-        source: one of 'sample_data', 'uploads', 'all'.
-        table_filter: optional list of table names to include.
-        loader: Meltano loader plugin name, e.g. 'target-postgres' or 'target-jsonl'.
+def run_meltano(source: str, table_filter: list[str] | None = None, loader: str = "target-postgres") -> dict[str, Any]:
     """
-    load_dotenv(BASE / ".env")
-    schema = os.getenv("TARGET_SCHEMA", "dataflow_demo")
+    Orchestrates a Meltano run: extract from CSV -> load to Postgres.
+    """
+    try:
+        # 1. Build CSV config
+        csv_config = _build_tap_csv_config(source, table_filter)
 
-    # Ensure plugins are installed; best-effort, ignore failure.
-    _run_meltano_command(["install"])
-
-    # Build dynamic tap-csv config.
-    tap_config = _build_tap_csv_config(source, table_filter)
-    _write_tap_csv_config(tap_config)
-
-    env: dict[str, str] = {}
-    if loader == "target-postgres":
-        db_url = os.getenv("DATABASE_URL")
+        # 3. Prepare database configuration for loader
+        db_url = os.environ.get("DATABASE_URL", "")
         if not db_url:
-            return {"ok": False, "stdout": "", "stderr": "DATABASE_URL is not set"}
-        creds = _parse_url(db_url)
-        env.update(
-            {
-                "MELTANO_TARGET_POSTGRES_HOST": creds["host"],
-                "MELTANO_TARGET_POSTGRES_PORT": str(creds["port"]),
-                "MELTANO_TARGET_POSTGRES_USER": creds["user"],
-                "MELTANO_TARGET_POSTGRES_PASSWORD": creds["password"],
-                "MELTANO_TARGET_POSTGRES_DB": creds["database"],
-                "MELTANO_TARGET_POSTGRES_SCHEMA": schema,
-            }
-        )
+            return {"ok": False, "stderr": "DATABASE_URL not set in environment"}
 
-    return _run_meltano_command(
-        [
-            "run",
-            "--no-partial-parse",
-            f"tap-csv-{loader.replace('target-', '')}",
-        ],
-        env=env,
-    )
+        # Convert postgresql:// to postgresql+psycopg2:// for SQLAlchemy
+        sqlalchemy_url = db_url.replace("postgresql://", "postgresql+psycopg2://")
 
+        # Explicitly set loader config to ensure it's picked up
+        _run_meltano_command(["config", "set", loader, "sqlalchemy_url", sqlalchemy_url])
 
-def _write_tap_csv_config(config: dict[str, Any]) -> None:
-    import json
+        # 4. Configure tap-csv files via meltano config set
+        # Env var overrides (MELTANO_TAP_CSV_FILES) often fail for complex types like lists of objects.
+        config_json = json.dumps(csv_config)
+        _run_meltano_command(["config", "set", "tap-csv", "files", config_json])
 
-    config_path = MELTANO_DIR / "tap-csv-config.json"
-    config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+        try:
+            # 5. Run the pipeline
+            result = _run_meltano_command(["run", "tap-csv", loader])
+        finally:
+            # 6. Reset config to avoid leaving specific files/credentials in the project config
+            _run_meltano_command(["config", "set", "tap-csv", "files", "[]"])
+            _run_meltano_command(["config", "set", loader, "sqlalchemy_url", ""])
+
+        if not result["ok"]:
+            return {"ok": False, "stderr": f"DEBUG_PONYTAIL: {result['stderr']}"}
+
+        return {"ok": True, "message": "Meltano run completed successfully", "log_file": result.get("log_file")}
+
+    except Exception as e:
+        return {"ok": False, "stderr": str(e)}

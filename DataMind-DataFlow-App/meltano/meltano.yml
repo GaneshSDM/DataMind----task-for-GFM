@@ -1,4 +1,3 @@
-version: 1
 default_environment: dev
 project_id: datamind-dataflow-meltano
 python: python3
@@ -9,28 +8,32 @@ python: python3
 
 plugins:
   extractors:
-    - name: tap-csv
-      variant: meltanolabs
+  - name: tap-csv
+    variant: meltanolabs
+    config:
+      files: []
   loaders:
-    - name: target-postgres
-      variant: meltanolabs
-    - name: target-jsonl
-      variant: andyh1203
-      config:
-        destination_path: output
+  - name: target-postgres
+    variant: meltanolabs
+    config:
+      sqlalchemy_url: ''
+  - name: target-jsonl
+    variant: andyh1203
+    config:
+      destination_path: output
 
 environments:
-  - name: dev
-  - name: test
+- name: dev
+- name: test
 
 schedules:
-  - name: csv-to-postgres
-    extractor: tap-csv
-    loader: target-postgres
-    transform: skip
-    interval: '@once'
-  - name: csv-to-jsonl
-    extractor: tap-csv
-    loader: target-jsonl
-    transform: skip
-    interval: '@once'
+- name: csv-to-postgres
+  interval: '@once'
+  extractor: tap-csv
+  loader: target-postgres
+  transform: skip
+- name: csv-to-jsonl
+  interval: '@once'
+  extractor: tap-csv
+  loader: target-jsonl
+  transform: skip
