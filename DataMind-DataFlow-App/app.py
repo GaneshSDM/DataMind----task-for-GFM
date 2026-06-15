@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import psycopg2
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
+import meltano_service
+
 
 BASE = Path(__file__).resolve().parent
 load_dotenv(BASE / ".env")
@@ -339,6 +341,21 @@ def reset():
     finally:
         c.close()
     return {"ok": True}
+
+
+@app.post("/api/extract/meltano")
+def extract_meltano(payload: dict = Body(default={})):
+    """Run the optional Meltano tap-csv -> target-postgres pipeline."""
+    source = payload.get("source", "sample_data")
+    loader = payload.get("loader", "target-postgres")
+    tables = payload.get("tables")
+    if tables is not None and not isinstance(tables, list):
+        raise HTTPException(400, "'tables' must be a list of strings")
+
+    result = meltano_service.run_meltano(source=source, table_filter=tables, loader=loader)
+    if not result.get("ok"):
+        raise HTTPException(502, result.get("stderr", "Meltano run failed"))
+    return {"ok": True, "source": source, "loader": loader, "details": result}
 
 @app.get("/", response_class=HTMLResponse)
 def index():

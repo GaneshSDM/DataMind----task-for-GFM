@@ -1,0 +1,36 @@
+version: 1
+default_environment: dev
+project_id: datamind-dataflow-meltano
+python: python3
+
+# This Meltano project is used as a drop-in, optional extractor for the
+# DataMind DataFlow app.  It is invoked from app.py via meltano_service.py.
+# Sensitive loader values are provided at runtime from DATABASE_URL / env vars.
+
+plugins:
+  extractors:
+    - name: tap-csv
+      variant: meltanolabs
+  loaders:
+    - name: target-postgres
+      variant: meltanolabs
+    - name: target-jsonl
+      variant: andyh1203
+      config:
+        destination_path: output
+
+environments:
+  - name: dev
+  - name: test
+
+schedules:
+  - name: csv-to-postgres
+    extractor: tap-csv
+    loader: target-postgres
+    transform: skip
+    interval: '@once'
+  - name: csv-to-jsonl
+    extractor: tap-csv
+    loader: target-jsonl
+    transform: skip
+    interval: '@once'

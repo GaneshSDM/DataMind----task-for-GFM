@@ -3,3 +3,5 @@ uvicorn[standard]==0.30.6
 psycopg2-binary==2.9.9
 python-dotenv==1.0.1
 python-multipart>=0.0.27
+# Optional Meltano integration (run: pip install meltano)
+# meltano>=3.0.0

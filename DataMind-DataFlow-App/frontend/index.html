@@ -120,19 +120,34 @@ async function cmdIngest(t){
 async function cmdTransform(){const{steps,body}=agentCard('Transform & standardize');let d;try{d=await api('/api/transform',{});}catch(e){await animateSteps(steps,[{agent:'Transformation',label:'transform'}]);synthErr(body,e);return;}await animateSteps(steps,d.steps);d.sql.forEach((q,i)=>outSQL(body,i===0?'Generated SQL · lookup join':'Generated SQL · value mapping',q));outTable(body,'warehouse.dim_product (from Supabase)',d.previews.dim_product);outTable(body,'warehouse.dim_customer (from Supabase)',d.previews.dim_customer);await refreshCatalog();synth(body,'Standardized dimensions built in Supabase: <b>dim_product</b> carries readable <b>category_name</b>; <b>dim_customer</b> maps <b>1/2 → Male/Female</b>. Next: <b>aggregate sales by category</b>.',true);}
 async function cmdAggregate(by){const{steps,body}=agentCard('Aggregate · sales by '+by);let d;try{d=await api('/api/aggregate',{by});}catch(e){await animateSteps(steps,[{agent:'Transformation',label:'aggregate'}]);synthErr(body,e);return;}await animateSteps(steps,d.steps);d.sql.forEach((q,i)=>outSQL(body,i<d.sql.length-1?'Generated SQL · fact build':'Generated SQL · aggregation',q));outTable(body,'warehouse.agg_sales_by_'+by+' (from Supabase)',d.rows);outKPIs(body,[{v:fmt(d.kpis.revenue),k:'total revenue'},{v:d.kpis.units,k:'units sold'},{v:d.kpis.txns,k:'transactions'},{v:d.kpis.groups,k:by+' groups'}]);outChart(body,'Revenue by '+by,d.rows,by);const top=d.rows[0];await refreshCatalog();synth(body,`Pipeline complete — all in Supabase. <b>${fmt(d.kpis.revenue)}</b> across <b>${d.kpis.txns}</b> transactions. Top ${by}: <b>${esc(top[by])}</b> at <b>${fmt(top.revenue)}</b>.`,true);}
 async function cmdFull(){await cmdIngest('load all');await cmdTransform();await cmdAggregate('category');}
+async function cmdMeltano(){
+  const {steps, body} = agentCard('Extract with Meltano');
+  let d;
+  try { d = await api('/api/extract/meltano', {source:'sample_data', loader:'target-postgres'}); }
+  catch(e) { await animateSteps(steps, [{agent:'Ingestion', label:'run Meltano tap-csv to target-postgres'}]); synthErr(body, e); return; }
+  await animateSteps(steps, [
+    {agent:'Discovery', label:'resolve CSV inputs'},
+    {agent:'Ingestion', label:'run Meltano tap-csv to target-postgres'},
+    {agent:'Quality', label:'validate Meltano exit code'}
+  ]);
+  outSQL(body, 'Meltano stdout', d.details.stdout || '(no output)');
+  await refreshCatalog();
+  synth(body, 'Meltano pipeline finished. <b>' + d.source + '</b> loaded via <b>' + d.loader + '</b>.');
+}
+
 async function cmdReset(){const{steps,body}=agentCard('Reset warehouse');await animateSteps(steps,[{agent:'Publish',label:'drop & recreate demo schema'}]);await api('/api/reset',{});await refreshCatalog();synth(body,'Warehouse schema reset — demo tables dropped. Ready for a fresh run.');}
 function helpMsg(){const{body}=agentCard('How to drive this');synth(body,'I am the <b>DataMind DataFlow agent</b>, wired to your <b>Supabase</b> warehouse. Say <b>load the product table</b>, <b>clean &amp; transform</b>, <b>aggregate sales by category</b>, or <b>run the full pipeline</b>. Upload your own CSVs with the button on the left.');}
 async function route(text){if(busy)return;busy=true;$('#send').disabled=true;try{const t=text.toLowerCase().trim();
 if(/^(hi|hello|hey|help|what can|who are you|start)/.test(t)||t===''){helpMsg();}
 else if(/reset|clear (the )?(warehouse|tables|schema)|drop (all|everything)/.test(t)){await cmdReset();}
 else if(/(full|whole|entire|end[- ]?to[- ]?end)\s*(pipeline|flow)|run (it )?all|do everything|complete pipeline/.test(t)){await cmdFull();}
-else if(/connection|connect|data source|what sources|which database/.test(t)&&!/load|bring|ingest|from /.test(t)){await cmdConnections();}
+else if(/connection|connect|data source|what sources|which database/.test(t)&&!/load|bring|ingest|from /.test(t)){await cmdConnections();}else if(/meltano/.test(t)){await cmdMeltano();}
 else if(/load|ingest|bring|extract|import|copy|pull|upload/.test(t)){await cmdIngest(t);}
 else if(/transform|clean|standardi|map |mapping|gender|replace|description|lookup|join|enrich|cleanse/.test(t)){await cmdTransform();}
 else if(/aggregate|aggreg|sum|total|sales by|revenue by|group by|roll ?up|report|summary|by customer|by category/.test(t)){await cmdAggregate(/customer/.test(t)?'customer':'category');}
 else{const{body}=agentCard('Let me help');synth(body,'I can <b>load</b> CSVs into Supabase, <b>transform</b> them (lookup joins + value mapping), and <b>aggregate</b> the result. Pick a suggestion below.');}
 }catch(err){console.error(err);const{body}=agentCard('Error');synthErr(body,err);}finally{busy=false;$('#send').disabled=false;}}
-const CHIPS=[{t:'Show my connections'},{t:'Load the product table'},{t:'Clean it up: map gender codes & replace category IDs with names'},{t:'Aggregate total sales by category',a:1},{t:'Aggregate sales by customer'},{t:'Run the full pipeline end-to-end',a:1},{t:'Reset warehouse'}];
+const CHIPS=[{t:'Show my connections'},{t:'Load the product table'},{t:'Clean it up: map gender codes & replace category IDs with names'},{t:'Aggregate total sales by category',a:1},{t:'Aggregate sales by customer'},{t:'Run the full pipeline end-to-end',a:1},{t:'Extract with Meltano (tap-csv to target-postgres)'},{t:'Reset warehouse'}];
 function renderChips(){$('#chips').innerHTML=CHIPS.map((c,i)=>`<span class="chip${c.a?' accent':''}" data-i="${i}">${c.t}</span>`).join('');document.querySelectorAll('.chip').forEach(e=>e.onclick=()=>send(CHIPS[e.dataset.i].t));}
 function send(t){if(busy)return;userMsg(t);route(t);}
 $('#send').onclick=()=>{const v=$('#prompt').value.trim();if(v){send(v);$('#prompt').value='';}};

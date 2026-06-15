@@ -50,7 +50,55 @@ or upload your own CSV and say "load the <name> table".
 ## API
 `GET /api/health` · `GET /api/sources` · `POST /api/upload` · `POST /api/ingest` ·
 `POST /api/transform` · `POST /api/aggregate` · `GET /api/catalog` · `POST /api/reset` ·
-`GET /api/export/csv/{table}` · `GET /api/export/sql`
+`GET /api/export/csv/{table}` · `GET /api/export/sql` · `POST /api/extract/meltano`
+
+## Optional Meltano extraction
+
+A Meltano project is included under `meltano/` as an **optional** extractor.
+It runs `tap-csv` to `target-postgres` (or `target-jsonl`) so you can load CSVs
+using the Meltano ELT engine instead of the built-in loader.
+
+### Install Meltano
+
+```bash
+pip install meltano
+```
+
+### Install Meltano plugins
+
+```bash
+cd meltano
+meltano install
+```
+
+### Run from the UI
+
+Click the suggestion chip **Extract with Meltano (tap-csv to target-postgres)**
+or type `meltano` in the chat.
+
+### Run from the API
+
+```bash
+curl -X POST http://localhost:8000/api/extract/meltano \
+  -H "Content-Type: application/json" \
+  -d '{"source": "sample_data", "loader": "target-postgres"}'
+```
+
+### Run from the command line
+
+```bash
+cd meltano
+meltano run tap-csv target-postgres
+```
+
+### How Meltano is wired
+
+* `meltano/meltano.yml` declares `tap-csv` and `target-postgres` plugins.
+* `meltano_service.py` parses `DATABASE_URL` and builds a dynamic `tap-csv`
+  config pointing at `sample_data/` or `uploads/`.
+* `app.py` exposes `POST /api/extract/meltano`.
+* `frontend/index.html` adds a Meltano suggestion chip and routes the keyword
+  `meltano` to the new endpoint.
 
 ## Configuration (`.env`)
 ```
